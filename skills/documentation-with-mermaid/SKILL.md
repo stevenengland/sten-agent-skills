@@ -1,5 +1,5 @@
 ---
-name: documentation-general
+name: documentation-with-mermaid
 description: Diagram-first documentation patterns for any project.  Use when creating or updating docs, ADRs, changelogs, docstrings, or any reference material.
 license: MIT
 metadata:
