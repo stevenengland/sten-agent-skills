@@ -29,7 +29,8 @@ for my approval before proceeding.
 
 ## Phase 4 — Refactor Pass
 
-Review every file touched against the coding guidelines inferred from the repo and known ones like clean-code, SOLID, DRY, etc. Fix any drift. This is the last coding step.
+Review every file touched against the coding guidelines inferred from the repo and known ones like clean-code, SOLID, DRY, etc. Fix any drift. Make sure you were efficient and did not introduce any issues. 
+This is the last coding step.
 
 ## Wrap-up
 
