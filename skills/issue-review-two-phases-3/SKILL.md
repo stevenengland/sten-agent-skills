@@ -8,14 +8,15 @@ description: >
 disable-model-invocation: true
 ---
 
-Work through the plan at $ARGUMENTS.
+Work through the plan at $ARGUMENTS. If the plan file is missing look for a review comment on the issue online. Without this plan you are not good to go.
 
 ## Phase 1 — Evaluation
 
 For each numbered suggestion in the plan:
+
 1. Assess independently whether it is a good idea given the codebase context.
 2. If you conclude it is worth doing, ask me explicitly:
-   *"Suggestion #N: [one-line summary] — implement this?"*
+   _"Suggestion #N: [one-line summary] — implement this?"_
 3. Wait for my yes/no before moving to the next suggestion.
 4. Track the approved list.
 
