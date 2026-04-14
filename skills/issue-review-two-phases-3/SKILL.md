@@ -10,6 +10,17 @@ disable-model-invocation: true
 
 Work through the plan at $ARGUMENTS. If the plan file is missing look for a review comment on the issue online. Without this plan you are not good to go.
 
+## YOLO Mode
+
+If the user says **YOLO** at any point, switch to autonomous mode:
+
+- Skip all interactive questions in Phase 1.
+- Assess every suggestion yourself. Implement only those that provide
+  meaningful value — skip trivial or unnecessary code improvements.
+- Proceed directly to Phase 2 with your self-approved list.
+- Still show a brief summary of what you chose to implement and what you
+  skipped (with one-line reasons) before starting Phase 2.
+
 ## Phase 1 — Evaluation
 
 For each numbered suggestion in the plan:
@@ -22,9 +33,12 @@ For each numbered suggestion in the plan:
 
 Do not implement anything during this phase.
 
+_(Skipped entirely in YOLO mode.)_
+
 ## Phase 2 — Implementation
 
-Implement all approved suggestions from Phase 1 in a single pass.
+Implement all approved suggestions from Phase 1 (or the self-approved list in
+YOLO mode) in a single pass.
 Use code quality skills like clean-code and tdd.
 
 ## Phase 3 — Wrap-up
