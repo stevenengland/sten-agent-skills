@@ -31,5 +31,9 @@ Use code quality skills like clean-code and tdd.
 
 - Update the issue description to reflect what was changed and why.
 - Ask me to confirm the final review is complete.
-- After confirmation: commit (conventional commit format), push the branch,
-  and close the issue.
+- After confirmation: craft a **single** conventional commit that covers the
+  entire issue — all changes from phase 1 through phase 3. The commit message
+  must describe the overall feature, fix, or change delivered by the issue, not
+  just the refactoring applied in this phase. Phase 3 refinements are part of
+  that delivery, not a separate scope.
+- Push the branch and close the issue.
