@@ -14,7 +14,13 @@ Implement issue number $ARGUMENTS.
 
 Interview me relentlessly about every aspect of the plan until we reach a
 shared understanding. Walk down each branch of the design tree and resolve
-dependencies between decisions one-by-one. Do not write any code yet.
+dependencies between decisions one-by-one. For each question, provide your recommended answer.
+
+If a question can be answered by exploring the codebase, explore the codebase instead.
+
+When a recommendation touches a problem that well-known companies (e.g. Stripe, Spotify, GitHub, AWS, Shopify) have solved publicly, research how those industry leaders approach it and weave the relevant patterns or practices into your recommendation. Cite the company and the specific practice so I can evaluate the reasoning.
+
+Do not write any code yet.
 
 ## Phase 2 — Planning
 
