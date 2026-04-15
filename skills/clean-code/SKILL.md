@@ -1,91 +1,92 @@
 ---
 name: clean-code
-description: "Applies principles from Robert C. Martin's 'Clean Code'. Use this skill when writing, reviewing, or refactoring code to ensure high quality, readability, and maintainability. Covers naming, functio..."
+description: >
+  Apply clean code principles when writing, reviewing, or refactoring code.
+  Focus on readability, simplicity, and ease of change for other developers.
+disable-model-invocation: true
 ---
 
 # Clean Code Skill
 
-This skill embodies the principles of "Clean Code" by Robert C. Martin (Uncle Bob). Use it to transform "code that works" into "code that is clean."
-
-## 🧠 Core Philosophy
-> "Code is clean if it can be read, and enhanced by a developer other than its original author." — Grady Booch
+Use this skill to turn "code that works" into "code that is easy to read, change,
+and extend" by any competent developer.
 
 ## When to Use
-Use this skill when:
-- **Writing new code**: To ensure high quality from the start.
-- **Reviewing Pull Requests**: To provide constructive, principle-based feedback.
-- **Refactoring legacy code**: To identify and remove code smells.
-- **Improving team standards**: To align on industry-standard best practices.
 
-## 1. Meaningful Names
-- **Use Intention-Revealing Names**: `elapsedTimeInDays` instead of `d`.
-- **Avoid Disinformation**: Don't use `accountList` if it's actually a `Map`.
-- **Make Meaningful Distinctions**: Avoid `ProductData` vs `ProductInfo`.
-- **Use Pronounceable/Searchable Names**: Avoid `genymdhms`.
-- **Class Names**: Use nouns (`Customer`, `WikiPage`). Avoid `Manager`, `Data`.
-- **Method Names**: Use verbs (`postPayment`, `deletePage`).
+Use this skill whenever you:
 
-## 2. Functions
-- **Small!**: Functions should be shorter than you think.
-- **Do One Thing**: A function should do only one thing, and do it well.
-- **One Level of Abstraction**: Don't mix high-level business logic with low-level details (like regex).
-- **Descriptive Names**: `isPasswordValid` is better than `check`.
-- **Arguments**: 0 is ideal, 1-2 is okay, 3+ requires a very strong justification.
-- **No Side Effects**: Functions shouldn't secretly change global state.
+- Write new production code.
+- Refactor existing code.
+- Review pull requests or staged changes.
+- Apply review or improvement plans.
+
+## Goals
+
+When this skill is active, optimize for:
+
+- Clarity over cleverness.
+- Simple, direct solutions over over-engineered designs.
+- Code that is easy to understand and modify by someone who did not write it.
+
+## 1. Names
+
+- Use intention-revealing names for variables, functions, classes, and modules.
+- Avoid misleading names and unnecessary abbreviations.
+- Prefer names that are easy to pronounce, search, and grep.
+
+## 2. Functions and Methods
+
+- Keep functions small; they should do one thing and do it well.
+- Keep each function at a single level of abstraction.
+- Prefer fewer parameters; avoid long parameter lists and flag parameters.
+- Avoid hidden side effects and surprising global state changes.
 
 ## 3. Comments
-- **Don't Comment Bad Code—Rewrite It**: Most comments are a sign of failure to express ourselves in code.
-- **Explain Yourself in Code**: 
-  ```python
-  # Check if employee is eligible for full benefits
-  if employee.flags & HOURLY and employee.age > 65:
-  ```
-  vs
-  ```python
-  if employee.isEligibleForFullBenefits():
-  ```
-- **Good Comments**: Legal, Informative (regex intent), Clarification (external libraries), TODOs.
-- **Bad Comments**: Mumbling, Redundant, Misleading, Mandated, Noise, Position Markers.
 
-## 4. Formatting
-- **The Newspaper Metaphor**: High-level concepts at the top, details at the bottom.
-- **Vertical Density**: Related lines should be close to each other.
-- **Distance**: Variables should be declared near their usage.
-- **Indentation**: Essential for structural readability.
+- Prefer self-explanatory code over comments.
+- Use comments sparingly to explain *why* something is done, not *what* it does.
+- Remove outdated, redundant, or noisy comments.
 
-## 5. Objects and Data Structures
-- **Data Abstraction**: Hide the implementation behind interfaces.
-- **The Law of Demeter**: A module should not know about the innards of the objects it manipulates. Avoid `a.getB().getC().doSomething()`.
-- **Data Transfer Objects (DTO)**: Classes with public variables and no functions.
+## 4. Structure and Formatting
+
+- Organize code so that high-level ideas appear first, details later.
+- Keep related lines close together; avoid unnecessary vertical distance.
+- Use consistent indentation and spacing to make structure obvious.
+
+## 5. Objects, Data, and Dependencies
+
+- Hide implementation details behind clear interfaces or APIs.
+- Avoid “train-wreck” access like `a.getB().getC().doSomething()`.
+- Keep data structures and behavior cohesive and focused.
 
 ## 6. Error Handling
-- **Use Exceptions instead of Return Codes**: Keeps logic clean.
-- **Write Try-Catch-Finally First**: Defines the scope of the operation.
-- **Don't Return Null**: It forces the caller to check for null every time.
-- **Don't Pass Null**: Leads to `NullPointerException`.
 
-## 7. Unit Tests
-- **The Three Laws of TDD**:
-  1. Don't write production code until you have a failing unit test.
-  2. Don't write more of a unit test than is sufficient to fail.
-  3. Don't write more production code than is sufficient to pass the failing test.
-- **F.I.R.S.T. Principles**: Fast, Independent, Repeatable, Self-Validating, Timely.
+- Prefer clear exception or error handling over scattered return codes.
+- Keep error-handling paths readable and separate from happy-path logic.
+- Avoid silently swallowing errors.
 
-## 8. Classes
-- **Small!**: Classes should have a single responsibility (SRP).
-- **The Stepdown Rule**: We want the code to read like a top-down narrative.
+## 7. Tests
 
-## 9. Smells and Heuristics
-- **Rigidity**: Hard to change.
-- **Fragility**: Breaks in many places.
-- **Immobility**: Hard to reuse.
-- **Viscosity**: Hard to do the right thing.
-- **Needless Complexity/Repetition**.
+- Ensure new or changed behavior is covered by automated tests.
+- Keep tests simple, readable, and independent.
+- Use tests as a safety net for refactoring.
 
-## 🛠️ Implementation Checklist
-- [ ] Is this function smaller than 20 lines?
-- [ ] Does this function do exactly one thing?
-- [ ] Are all names searchable and intention-revealing?
-- [ ] Have I avoided comments by making the code clearer?
-- [ ] Am I passing too many arguments?
-- [ ] Is there a failing test for this change?
+## 8. Smells and Heuristics
+
+Watch for and reduce:
+
+- Duplication of logic or structure.
+- Overly complex or deeply nested code.
+- Classes or functions that have too many responsibilities.
+- Code that is hard to explain in a few sentences.
+
+## Application Checklist
+
+When you invoke this skill on a piece of code, ask:
+
+- [ ] Are names clear and intention-revealing?
+- [ ] Are functions small and focused on one purpose?
+- [ ] Is the structure simple and easy to follow top-to-bottom?
+- [ ] Is duplication minimized?
+- [ ] Is error handling clear and non-intrusive?
+- [ ] Are relevant tests in place and readable?
