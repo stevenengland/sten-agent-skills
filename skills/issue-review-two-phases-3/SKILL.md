@@ -1,53 +1,46 @@
 ---
 name: issue-review-two-phases-3
 description: >
-  Apply an improvement plan interactively, then commit, push, and close the
-  issue. Reviews each plan suggestion with the user before implementing.
-  Use when asked to apply a plan, act on review feedback, or ship an issue.
-  Part 3 of 3 in the issue-review-two-phases workflow.
+  Review staged git changes against an issue. Produces a structured improvement
+  plan — no edits applied. Also identifies test file compaction opportunities.
+  Use when asked to check, review, or validate staged work before committing.
+  Part 3 of 4 in the issue-review-two-phases workflow.
 disable-model-invocation: true
 ---
 
-Work through the plan at $ARGUMENTS. If the plan file is missing look for a review comment on the issue online. Without this plan you are not good to go.
+You are in **plan-only mode**. Do not apply edits, create files, or run any
+state-modifying commands. Your only output is a structured plan that you add
+to the issue as a comment.
 
-## YOLO Mode
+Review staged changes against issue number $ARGUMENTS.
 
-If the user says **YOLO** at any point, switch to autonomous mode:
+## Step 1 — Change Review
 
-- Skip all interactive questions in Phase 1.
-- Assess every suggestion yourself. Implement only those that provide
-  meaningful value — skip trivial or unnecessary code improvements.
-- Proceed directly to Phase 2 with your self-approved list.
-- Still show a brief summary of what you chose to implement and what you
-  skipped (with one-line reasons) before starting Phase 2.
+Invoke your plan-reviewer skill and follow the process to generate a structured
+improvement plan based on the staged changes and the issue.
 
-## Phase 1 — Evaluation
+## Step 2 — Test Compaction
 
-For each numbered suggestion in the plan:
+Invoke your test-file-compaction skill. Identify opportunities to reduce
+test file size without losing coverage.
 
-1. Assess independently whether it is a good idea given the codebase context.
-2. If you conclude it is worth doing, ask me explicitly:
-   _"Suggestion #N: [one-line summary] — implement this?"_
-3. Wait for my yes/no before moving to the next suggestion.
-4. Track the approved list.
+Express test-compaction opportunities as additional suggestions in the same
+plan structure used in Step 1.
 
-Do not implement anything during this phase.
+## Output
 
-_(Skipped entirely in YOLO mode.)_
+Produce a single, numbered list of suggestions that combines the results of
+Step 1 and Step 2. For each item state:
 
-## Phase 2 — Implementation
+1. **What** — what should change.
+2. **Why** — why it improves the code.
+3. **Priority** — low / medium / high.
 
-Implement all approved suggestions from Phase 1 (or the self-approved list in
-YOLO mode) in a single pass.
-Use code quality skills like clean-code and tdd.
+Each suggestion should be concise. Refer to symbols and files by name instead
+of quoting long code fragments.
 
-## Phase 3 — Wrap-up
+Close with a one-line summary: how many suggestions are high, medium, and
+low priority.
 
-- Update the issue description to reflect what was changed and why.
-- Ask me to confirm the final review is complete.
-- After confirmation: craft a **single** conventional commit that covers the
-  entire issue — all changes from phase 1 through phase 3. The commit message
-  must describe the overall feature, fix, or change delivered by the issue, not
-  just the refactoring applied in this phase. Phase 3 refinements are part of
-  that delivery, not a separate scope.
-- Push the branch and close the issue.
+Add the completed improvement plan as a comment on the issue, clearly labeled
+as the review plan for issue $ARGUMENTS.

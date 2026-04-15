@@ -1,34 +1,53 @@
 ---
 name: issue-review-two-phases-2
 description: >
-  Review staged git changes against an issue. Produces a structured improvement
-  plan — no edits applied. Also identifies test file compaction opportunities.
-  Use when asked to check, review, or validate staged work before committing.
-  Part 2 of 3 in the issue-review-two-phases workflow.
+  Implement an issue by following an existing plan with TDD and clean code,
+  then perform a refactor pass and wrap up. Stages changes only — does not
+  commit. Use when a plan already exists on the issue. Part 2 of the
+  issue-review-two-phases workflow.
 disable-model-invocation: true
 ---
 
-You are in **plan-only mode**. Do not apply edits, create files, or run any
-state-modifying commands. Your only output is a structured plan that you add to the issue as a comment and to a local but temporary/untracked file named `issue <number> review plan.md`.
+Implement issue number $ARGUMENTS by following the implementation plan
+attached to the issue as a comment.
 
-Review staged changes against issue number $ARGUMENTS.
+If no suitable implementation plan comment is available for this issue,
+stop and ask the user to run the planning skill first.
 
-## Step 1 — Change Review
+## Phase 1 — ToDo Execution (TDD + Clean Code)
 
-Invoke your plan-reviewer skill and follow the process to generate a structured improvement plan.
+- For all code production, invoke your clean-code skill and your tdd skill.
+- Walk through the plan tasks in order.
+- For each task:
+  - If helpful, translate the task into a short internal ToDo list.
+  - Write or adjust tests first (TDD) unless the task is explicitly
+    non-functional (e.g. docs-only).
+  - Then implement the minimal code needed to make the tests pass.
+- Keep changes focused on the scope described in the plan; avoid broad
+  redesigns beyond what the issue and plan describe.
+- If the plan is clearly inconsistent with the current codebase, pause and
+  ask the user rather than silently re-planning.
 
-## Step 2 — Test Compaction
+Check off each task as you complete it in your running log.
 
-Invoke your test-file-compaction skill. Identify opportunities to reduce
-test file size without losing coverage.
+## Phase 2 — Refactor Pass
 
-## Output
+Review every file touched against:
 
-Produce a numbered list of suggestions. For each item state:
+- Coding guidelines inferred from the repo.
+- Known practices like clean-code, SOLID, DRY and KISS.
 
-1. **What** — what should change
-2. **Why** — why it improves the code
-3. **Priority** — low / medium / high
+Perform a focused refactor pass:
 
-Close with a one-line summary: how many suggestions are high, medium, and
-low priority. Remember to save the plan to `issue <number> review plan.md` and add it as a comment to the issue.
+- Eliminate duplication introduced during TDD steps.
+- Clarify naming and structure where obviously beneficial.
+- Do not introduce new scope beyond what the issue and plan describe.
+
+This is the last coding step.
+
+## Phase 3 — Wrap-up
+
+- Update the issue description and/or comments with the decisions made and
+  the approach taken, referencing the plan tasks.
+- Stage all changes.
+- Do **not** commit.
