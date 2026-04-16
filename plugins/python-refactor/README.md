@@ -27,9 +27,7 @@ STEN-AGENT-SKILLS/                       ← Repo root
 │       │                                  Declares name "python-refactor" →
 │       │                                  creates /python-refactor: namespace
 │       │
-│       ├── hooks.json                   ← SessionStart hook
-│       │                                  Injects skill awareness at session start
-│       │                                  via additionalContext (Copilot CLI v1.0.11+)
+│       ├── hooks.json                   ← Hooks placeholder (empty)
 │       │
 │       ├── marketplace.json             ← Self-hosted marketplace descriptor
 │       │   (referenced as               ← Enables: copilot plugin marketplace add
@@ -291,7 +289,6 @@ This is the same isolation pattern used by Superpowers' subagent-driven-developm
 | Shell commands           | `Bash`               | `runCommand`             |
 | File reads               | `Read`               | `readFile`               |
 | Parallel subagents       | `Agent` tool         | `spawnSubagent`          |
-| SessionStart hook        | hooks.json           | hooks.json (v1.0.11+)    |
 | Reload without restart   | `/reload-plugins`    | `/skills reload`         |
 
 > Skills use Claude Code tool names throughout. On Copilot CLI, substitute as shown
@@ -304,7 +301,7 @@ This is the same isolation pattern used by Superpowers' subagent-driven-developm
 - Python 3.10+
 - pip or pip3
 - gh CLI (for GitHub issue creation in the `architecture` skill)
-- Claude Code (latest) **or** GitHub Copilot CLI (v1.0.11+ for SessionStart hooks)
+- Claude Code (latest) **or** GitHub Copilot CLI
 
 Tools installed automatically on first run:
 `radon`, `vulture`, `bandit`, `semgrep`, `pydeps`, `skylos`, `hypothesis`, `pytest`
