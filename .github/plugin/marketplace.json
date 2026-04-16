@@ -1,19 +1,11 @@
 {
-  "name": "python-refactor-marketplace",
-  "owner": {
-    "name": "python-refactor-suite",
-    "email": "github@steven-england.info"
-  },
-  "metadata": {
-    "description": "Agentic Python codebase analysis — measure, hunt bugs, architect, plan.",
-    "version": "2.0.0"
-  },
+  "name": "sten-agent-skills-marketplace",
   "plugins": [
     {
       "name": "python-refactor",
       "description": "Agentic Python codebase analysis suite. Measures complexity, hunts real bugs via Hypothesis PBT, proposes deep-module architecture RFCs, and generates a dependency-safe refactor plan.",
       "version": "2.0.0",
-      "source": "."
+      "source": "plugins/python-refactor"
     }
   ]
 }
