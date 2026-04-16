@@ -1,6 +1,6 @@
 {
   "name": "python-refactor",
-  "description": "Agentic Python codebase analysis suite. Skills: python-refactor:orchestrate (full pipeline), python-refactor:measure (static analysis via radon/vulture/bandit/semgrep/skylos/pydeps), python-refactor:hunt-bugs (bug exploration + Hypothesis PBT), python-refactor:architecture (deep-module analysis + GitHub RFCs), python-refactor:plan-refactor (prioritized refactor plan). Run python-refactor:orchestrate to chain all phases automatically, or invoke any skill individually.",
+  "description": "Agentic Python codebase analysis suite. Skills: python-refactor:orchestrate (full pipeline), python-refactor:measure (static analysis via radon/vulture/bandit/semgrep/skylos/grimp), python-refactor:hunt-bugs (bug exploration + Hypothesis PBT), python-refactor:architecture (deep-module analysis + GitHub RFCs), python-refactor:plan-refactor (prioritized refactor plan). Run python-refactor:orchestrate to chain all phases automatically, or invoke any skill individually.",
   "version": "2.0.0",
   "author": {
     "name": "StEn",

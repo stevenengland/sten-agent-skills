@@ -43,7 +43,7 @@ STEN-AGENT-SKILLS/                       ← Repo root
 │       │   ├── measure/
 │       │   │   └── SKILL.md            ← /python-refactor:measure
 │       │   │                             Runs radon, vulture, bandit, semgrep,
-│       │   │                             skylos, pydeps in parallel.
+│       │   │                             skylos, grimp in parallel.
 │       │   │                             Writes codebase_metrics.json.
 │       │   │
 │       │   ├── hunt-bugs/
@@ -272,7 +272,7 @@ This is the same isolation pattern used by Superpowers' subagent-driven-developm
 | Dead code                     | measure       | vulture, skylos                      |
 | Security patterns (OWASP)     | measure, plan | bandit, semgrep                      |
 | Taint analysis (SSRF, SQLi)   | measure       | skylos                               |
-| Module coupling graph         | measure, plan | pydeps                               |
+| Module coupling graph         | measure, plan | grimp                                |
 | Real logic bugs               | hunt-bugs     | Hypothesis + organic exploration     |
 | Architecture smells           | architecture  | organic exploration + metrics        |
 | Refactor sequencing           | plan-refactor | topological sort on dependency graph |
@@ -304,4 +304,4 @@ This is the same isolation pattern used by Superpowers' subagent-driven-developm
 - Claude Code (latest) **or** GitHub Copilot CLI
 
 Tools installed automatically on first run:
-`radon`, `vulture`, `bandit`, `semgrep`, `pydeps`, `skylos`, `hypothesis`, `pytest`
+`radon`, `vulture`, `bandit`, `semgrep`, `grimp`, `skylos`, `hypothesis`, `pytest`

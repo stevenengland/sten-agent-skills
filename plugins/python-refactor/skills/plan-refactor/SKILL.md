@@ -109,7 +109,7 @@ Write PROJECT_ROOT/REFACTOR_PLAN.md with this exact structure:
     Fix: one-line description of the correct pattern
 
   ### Circular Imports
-  For each cycle detected in pydeps output:
+  For each cycle detected in grimp adjacency output:
     Cycle: module_a -> module_b -> module_a
     Resolution: description of how to break the cycle
 
