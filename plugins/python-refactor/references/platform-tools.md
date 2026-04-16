@@ -22,16 +22,17 @@ On GitHub Copilot CLI, substitute the equivalent tool as shown.
 | Claude Code    | `.claude/skills/<name>/`         | `~/.claude/skills/<name>/`          |
 | GitHub Copilot | `.github/skills/<name>/`         | `~/.copilot/skills/<name>/`         |
 
-## Plugin namespace (Claude Code only)
+## Plugin namespace
 
-When installed as a plugin (with plugin.json), all skills are namespaced:
+When installed as a plugin (with plugin.json), all skills are namespaced on both platforms:
   /python-refactor:orchestrate
   /python-refactor:measure
   /python-refactor:hunt-bugs
   /python-refactor:architecture
   /python-refactor:plan-refactor
 
-On Copilot CLI (standalone, no plugin.json), skills are invoked without namespace:
+All skill cross-references within this suite use the namespaced form. If you install
+the skills standalone (without plugin.json), adjust invocations to drop the prefix:
   /orchestrate
   /measure
   /hunt-bugs
