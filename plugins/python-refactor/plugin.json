@@ -1,9 +1,9 @@
 {
   "name": "python-refactor",
-  "description": "Agentic Python codebase analysis suite. Measures complexity, hunts real bugs via Hypothesis PBT, proposes deep-module architecture RFCs, and generates a dependency-safe refactor plan. Chain phases with orchestrate or run individually.",
+  "description": "Agentic Python codebase analysis suite. Skills: python-refactor:orchestrate (full pipeline), python-refactor:measure (static analysis via radon/vulture/bandit/semgrep/skylos/pydeps), python-refactor:hunt-bugs (bug exploration + Hypothesis PBT), python-refactor:architecture (deep-module analysis + GitHub RFCs), python-refactor:plan-refactor (prioritized refactor plan). Run python-refactor:orchestrate to chain all phases automatically, or invoke any skill individually.",
   "version": "2.0.0",
   "author": {
-    "name": "python-refactor-suite",
+    "name": "StEn",
     "url": "https://github.com/stevenengland/sten-agent-skills/plugins/python-refactor"
   },
   "license": "MIT",
