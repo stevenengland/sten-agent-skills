@@ -143,9 +143,9 @@ Be opinionated. The user wants a strong read, not a menu.
 
 ---
 
-## 7. Create GitHub issue RFC
+## 7. Create issue RFC
 
-Use Bash to run gh issue create:
+Depending on the infrastructure, for example use Bash to run gh issue create:
 
   gh issue create \
     --title "RFC: Deepen MODULE_NAME — ONE_LINE_DESCRIPTION" \
