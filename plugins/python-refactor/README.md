@@ -124,8 +124,8 @@ Point the install command at the `plugins/python-refactor` subdirectory:
 # From a local clone of STEN-AGENT-SKILLS
 copilot plugin install ./plugins/python-refactor
 
-# Or directly from GitHub (installs the plugin subdirectory from the repo)
-copilot plugin install stevenengland/sten-agent-skills --plugin-path plugins/python-refactor
+# Or directly from GitHub (colon-separated OWNER/REPO:PATH format)
+copilot plugin install stevenengland/sten-agent-skills:plugins/python-refactor
 ```
 
 ### Option B: Via marketplace
@@ -165,7 +165,7 @@ claude /plugin install ./plugins/python-refactor
 ### Option B: From GitHub
 
 ```bash
-claude /plugin install stevenengland/sten-agent-skills --plugin-path plugins/python-refactor
+claude /plugin install stevenengland/sten-agent-skills:plugins/python-refactor
 ```
 
 ### Option C: Project-scoped (no install command, auto-discovered)
