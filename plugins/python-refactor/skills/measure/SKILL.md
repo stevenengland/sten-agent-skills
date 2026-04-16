@@ -50,9 +50,18 @@ Use Bash to launch all tools with & (background) then wait:
   pydeps PACKAGE_NAME --noshow --max-bacon 0 --show-deps --deps-output /tmp/pyr_deps.json 2>/dev/null &
   wait
 
-Replace PROJECT_ROOT with the actual path and PACKAGE_NAME with the detected package name.
-Detect PACKAGE_NAME from pyproject.toml [tool.poetry.name] or [project.name], or from the
-directory containing __init__.py at the project root.
+Replace PROJECT_ROOT with the actual path and PACKAGE_NAME with the detected importable
+package path. Detect PACKAGE_NAME using this priority:
+
+  1. pyproject.toml [project.name] or [tool.poetry.name]
+  2. src-layout: look for src/<name>/__init__.py — if found, use "src/<name>" as the path
+     and pass --root src/ so pydeps can resolve imports
+  3. Flat layout: look for <name>/__init__.py at the project root
+  4. Fallback: skip pydeps and note "could not detect package name for pydeps"
+
+For src-layout projects the pydeps command becomes:
+  cd PROJECT_ROOT && pydeps PACKAGE_NAME --noshow --max-bacon 0 --show-deps --deps-output /tmp/pyr_deps.json 2>/dev/null &
+where PACKAGE_NAME is the directory name under src/ (not the full path).
 
 If any tool is not installed or fails: continue without it, note the gap in the summary.
 
