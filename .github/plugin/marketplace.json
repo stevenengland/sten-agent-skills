@@ -1,5 +1,9 @@
 {
   "name": "sten-agent-skills-marketplace",
+  "owner": {
+    "name": "StEn",
+    "email": "github@steven-england.info"
+  },
   "plugins": [
     {
       "name": "python-refactor",
