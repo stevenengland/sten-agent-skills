@@ -1,0 +1,9 @@
+{
+  "sessionStart": [
+    {
+      "type": "command",
+      "command": "echo '{\"additionalContext\": \"You have the python-refactor skill suite installed. Skills available: /python-refactor:orchestrate (full pipeline), /python-refactor:measure (static analysis), /python-refactor:hunt-bugs (bug exploration + Hypothesis PBT), /python-refactor:architecture (deep module analysis + GitHub RFCs), /python-refactor:plan-refactor (prioritized refactor plan). Run /python-refactor:orchestrate to chain all phases automatically.\"}'",
+      "description": "Inject python-refactor skill awareness at session start"
+    }
+  ]
+}
