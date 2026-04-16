@@ -27,7 +27,11 @@ If none found: stop and report "No Python project detected at PROJECT_ROOT."
 
 ## 2. Install tools
 
-Run as a single command:
+pydeps requires Graphviz (the `dot` command) as a system dependency. Install it first:
+
+  apt-get install -y graphviz 2>/dev/null || brew install graphviz 2>/dev/null || echo "WARNING: Graphviz not found — pydeps will be skipped"
+
+Then install Python packages:
 
   pip install radon vulture bandit semgrep pydeps skylos --quiet 2>/dev/null || pip3 install radon vulture bandit semgrep pydeps skylos --quiet 2>/dev/null
 
