@@ -45,7 +45,7 @@ Use Bash to launch all tools with & (background) then wait:
   radon raw PROJECT_ROOT -j > /tmp/pyr_raw.json &
   python -m vulture PROJECT_ROOT --min-confidence 70 --sort-by-size 2>/dev/null > /tmp/pyr_vulture.txt &
   bandit -r PROJECT_ROOT -f json -o /tmp/pyr_bandit.json -q 2>/dev/null &
-  semgrep --config p/python --config p/owasp-top-ten --json -o /tmp/pyr_semgrep.json PROJECT_ROOT --quiet 2>/dev/null &
+  semgrep --config p/python --config p/owasp-top-ten --json -o /tmp/pyr_semgrep.json PROJECT_ROOT --quiet 2>/dev/null || semgrep --config auto --json -o /tmp/pyr_semgrep.json PROJECT_ROOT --quiet 2>/dev/null || echo '{"results":[],"errors":["semgrep registry unreachable"]}' > /tmp/pyr_semgrep.json &
   skylos PROJECT_ROOT --json 2>/dev/null > /tmp/pyr_skylos.json &
   pydeps PACKAGE_NAME --noshow --max-bacon 0 --show-deps --deps-output /tmp/pyr_deps.json 2>/dev/null &
   wait
