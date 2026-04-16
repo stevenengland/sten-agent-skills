@@ -130,17 +130,7 @@ copilot plugin install stevenengland/sten-agent-skills --plugin-path plugins/pyt
 
 ### Option B: Via marketplace
 
-The `marketplace.json` inside `plugins/python-refactor/` must be referenced by the repo's
-`.github/plugin/marketplace.json`. Add a symlink or copy it there once:
-
-```bash
-mkdir -p .github/plugin
-cp plugins/python-refactor/marketplace.json .github/plugin/marketplace.json
-git add .github/plugin/marketplace.json && git commit -m "chore: register python-refactor marketplace"
-git push
-```
-
-Then from any machine:
+From any machine:
 
 ```bash
 # Register the marketplace (once per machine)
