@@ -2,7 +2,7 @@
 
 All python-refactor skills write output to a dedicated `.python-refactor/` directory
 at the project root. This directory is self-ignoring via an internal `.gitignore` and
-is never committed. The orchestrator cleans it after filing a summary GitHub issue;
+is never committed. The orchestrator cleans it after filing a summary issue;
 standalone skills leave it for manual cleanup via `/python-refactor:cleanup`.
 
 ---

@@ -1,6 +1,6 @@
 ---
 name: orchestrate
-description: Full python-refactor pipeline orchestrator. Chains measure, hunt-bugs, architecture, and plan-refactor in strict sequence using isolated subagents. Each phase receives only a compact JSON handoff from the previous phase — never the full session history. This prevents context rot across a long pipeline. After all phases complete, files a single GitHub summary issue with collapsible detail sections, then cleans up all temporary and deliverable files for this run. All output goes to .python-refactor/ at the project root. Use when the user says "analyze this codebase", "full refactor analysis", "find all issues", or invokes /python-refactor:orchestrate directly.
+description: Full python-refactor pipeline orchestrator. Chains measure, hunt-bugs, architecture, and plan-refactor in strict sequence using isolated subagents. Each phase receives only a compact JSON handoff from the previous phase — never the full session history. This prevents context rot across a long pipeline. After all phases complete, files a single summary issue with collapsible detail sections, then cleans up all temporary and deliverable files for this run. All output goes to .python-refactor/ at the project root. Use when the user says "analyze this codebase", "full refactor analysis", "find all issues", or invokes /python-refactor:orchestrate directly.
 ---
 
 # python-refactor: Orchestrate
@@ -142,7 +142,7 @@ CONFIRMED_BUGS_SUMMARY: <confirmed_bugs array from Phase 2 — id/file/type/impa
 You are an architecture subagent. Invoke the Skill tool with skill name "python-refactor:architecture".
 Follow that skill exactly. Use OUTPUT_DIR and RUN_ID as provided — do NOT generate your own.
 In this pipeline context:
-- Produce architecture candidates only — do NOT create GitHub issues yet.
+- Produce architecture candidates only — do NOT create issues yet.
 - The orchestrator will handle issue creation in a separate step.
 
 When the skill completes, return ONLY this JSON:
@@ -198,13 +198,13 @@ Wait for status DONE. Mark Phase 4 todo complete.
 
 ## Phase 5 — File summary issue
 
-Create a TodoWrite item: "Phase 5: File summary GitHub issue"
+Create a TodoWrite item: "Phase 5: File summary issue"
 
 Read the deliverables from $OUTPUT_DIR:
   - $OUTPUT_DIR/BUG_REPORT_$RUN_ID.md
   - $OUTPUT_DIR/REFACTOR_PLAN_$RUN_ID.md
 
-Compose a GitHub issue body with the summary table at the top and collapsible full content
+Compose an issue body with the summary table at the top and collapsible full content
 for each deliverable. Use the architecture_candidates from Phase 3 handoff (already in memory).
 
 Issue body structure:
@@ -238,17 +238,19 @@ Issue body structure:
 </details>
 ```
 
-Use Bash to create the issue:
+Use the project's issue tracker CLI to create the issue. For example:
 
   gh issue create \
     --title "python-refactor analysis — $RUN_ID" \
     --label "refactor,analysis" \
     --body "$ISSUE_BODY"
 
+Adapt the command for the available CLI tool (e.g. `gh`, `glab`). If no CLI is available, present the formatted issue body for manual creation.
+
 Capture the issue URL from the command output.
 
-If gh CLI fails (not authenticated, not a GitHub repo, etc.):
-  Print: "Could not file GitHub issue — deliverables retained in $OUTPUT_DIR"
+If the CLI call fails (not authenticated, no remote repo, etc.):
+  Print: "Could not file issue — deliverables retained in $OUTPUT_DIR"
   Skip Phase 6 cleanup of deliverables (only clean tmp/ and tool caches).
   Proceed to Final summary showing file paths instead of issue URL.
 
@@ -298,12 +300,12 @@ Phase           Output                    Findings
 5  Issue        <ISSUE_URL>               Summary + full reports filed
 6  Cleanup      Done                      Temporary files removed
 
-All findings are preserved in the GitHub issue: <ISSUE_URL>
+All findings are preserved in the issue: <ISSUE_URL>
 
 Next steps:
   Fix all P0 items before any refactoring (bugs + security + circular imports)
   Write missing tests for P0/P1 modules — see Test Gap Analysis in the issue
-  Run /python-refactor:architecture to generate GitHub issue RFCs for P1 clusters
+  Run /python-refactor:architecture to generate issue RFCs for P1 clusters
   Re-run /python-refactor:measure after each P1 completion to update baseline
   Re-run /python-refactor:hunt-bugs after major refactors to catch regressions
 ```

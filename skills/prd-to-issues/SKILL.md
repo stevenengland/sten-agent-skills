@@ -1,19 +1,19 @@
 ---
 name: prd-to-issues
-description: Break a PRD into independently-grabbable GitLab issues using tracer-bullet vertical slices. Use when user wants to convert a PRD to issues, create implementation tickets, or break down a PRD into work items.
+description: Break a PRD into independently-grabbable issues using tracer-bullet vertical slices. Use when user wants to convert a PRD to issues, create implementation tickets, or break down a PRD into work items.
 ---
 
 # PRD to Issues
 
-Break a PRD into independently-grabbable GitLab issues using vertical slices (tracer bullets).
+Break a PRD into independently-grabbable issues using vertical slices (tracer bullets).
 
 ## Process
 
 ### 1. Locate the PRD
 
-Ask the user for the PRD GitLab issue number (or URL).
+Ask the user for the PRD issue number (or URL).
 
-If the PRD is not already in your context window, fetch it with `glab issue view <number>` (with comments).
+If the PRD is not already in your context window, fetch the issue content (including comments) using the project's issue tracker CLI (e.g. `gh issue view`, `glab issue view`). If no CLI is available, ask the user to provide the PRD content.
 
 ### 2. Explore the codebase (optional)
 
@@ -49,9 +49,9 @@ Ask the user:
 
 Iterate until the user approves the breakdown.
 
-### 5. Create the GitLab issues
+### 5. Create the issues
 
-For each approved slice, create a GitLab issue using `glab issue create`. Use the issue body template below.
+For each approved slice, create an issue in the project's issue tracker. If a CLI tool is available (e.g. `gh`, `glab`), use it; otherwise present the formatted issue body for manual creation. Use the issue body template below.
 
 Create issues in dependency order (blockers first) so you can reference real issue numbers in the "Blocked by" field.
 

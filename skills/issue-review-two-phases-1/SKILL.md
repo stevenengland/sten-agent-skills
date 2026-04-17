@@ -1,7 +1,7 @@
 ---
 name: issue-review-two-phases-1
 description: >
-  Understand and plan a GitHub/GitLab issue end-to-end. Run a design interview,
+  Understand and plan an issue end-to-end. Run a design interview,
   explore the codebase, and produce a compact, executable implementation plan
   including a testing strategy. No code changes applied. Use when asked to
   design or plan an issue before implementation. Part 1 of the

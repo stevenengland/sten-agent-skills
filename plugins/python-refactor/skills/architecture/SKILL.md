@@ -1,6 +1,6 @@
 ---
 name: architecture
-description: Explore a Python codebase to find opportunities to deepen shallow modules, reduce coupling, and improve testability. Reads codebase_metrics.json from .python-refactor/ (auto-runs measure if missing) and cross-references BUG_REPORT_<RUN_ID>.md if present to show which architectural patterns are hiding confirmed bugs. Presents numbered candidates, spawns parallel design subagents for the chosen candidate, recommends the strongest interface design, and creates GitHub issue RFCs. Use when the user wants architecture review, module deepening, or coupling reduction.
+description: Explore a Python codebase to find opportunities to deepen shallow modules, reduce coupling, and improve testability. Reads codebase_metrics.json from .python-refactor/ (auto-runs measure if missing) and cross-references BUG_REPORT_<RUN_ID>.md if present to show which architectural patterns are hiding confirmed bugs. Presents numbered candidates, spawns parallel design subagents for the chosen candidate, recommends the strongest interface design, and creates issue RFCs. Use when the user wants architecture review, module deepening, or coupling reduction.
 ---
 
 # python-refactor: Architecture
@@ -172,7 +172,7 @@ Be opinionated. The user wants a strong read, not a menu.
 
 ## 7. Create issue RFC
 
-Depending on the infrastructure, for example use Bash to run gh issue create:
+Create a refactor RFC as an issue in the project's issue tracker. If a CLI tool is available (e.g. `gh`, `glab`), use it; otherwise present the formatted issue body for manual creation. For example:
 
   gh issue create \
     --title "RFC: Deepen MODULE_NAME — ONE_LINE_DESCRIPTION" \

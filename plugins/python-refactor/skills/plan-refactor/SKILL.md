@@ -217,7 +217,7 @@ After writing the file, print:
   Recommended execution order:
   1. Fix all P0 items before any refactoring — bugs + security + circular imports
   2. Write missing tests for all P0/P1 files listed in Test Gap Analysis
-  3. Run /python-refactor:architecture on P1 clusters to generate GitHub issue RFCs
+  3. Run /python-refactor:architecture on P1 clusters to generate issue RFCs
   4. Implement changes in the topological sequence order
   5. Re-run /python-refactor:measure after each P1 batch to update the baseline
   6. Re-run /python-refactor:hunt-bugs after major refactors to catch regressions

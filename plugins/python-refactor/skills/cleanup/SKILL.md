@@ -1,6 +1,6 @@
 ---
 name: cleanup
-description: Remove all python-refactor plugin output and project-root tool caches. Deletes the entire .python-refactor/ directory (all runs, all deliverables) and project-root tool caches (.hypothesis/, .pytest_cache/, .semgrep/, .skylos_cache/) unconditionally. This is a hard nuke — use when you are done with all analysis and want a clean project root. Safe to run multiple times. Does not touch global tool caches or filed GitHub issues.
+description: Remove all python-refactor plugin output and project-root tool caches. Deletes the entire .python-refactor/ directory (all runs, all deliverables) and project-root tool caches (.hypothesis/, .pytest_cache/, .semgrep/, .skylos_cache/) unconditionally. This is a hard nuke — use when you are done with all analysis and want a clean project root. Safe to run multiple times. Does not touch global tool caches or filed issues.
 ---
 
 # python-refactor: Cleanup
@@ -76,7 +76,7 @@ Deleted:
   .skylos_cache/        — skylos analysis cache (if existed)
 
 Global tool caches (~/.semgrep/ etc.) were NOT touched.
-Filed GitHub issues were NOT affected.
+Filed issues were NOT affected.
 ```
 
 Only list directories that actually existed and were deleted.
