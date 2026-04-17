@@ -1,6 +1,6 @@
 ---
 name: plan-refactor
-description: Generate a prioritized, dependency-safe refactor plan from codebase_metrics.json and BUG_REPORT.md. Produces REFACTOR_PLAN.md with P0-P3 triage, per-finding action items, bug fix stubs with minimal reproductions, security fix stubs with CWE references, a topologically-sorted execution sequence respecting module dependencies, and a test gap analysis listing all P0/P1 files with no test coverage. Auto-runs measure if codebase_metrics.json is missing. Incorporates BUG_REPORT.md if present. When invoked by the orchestrator, returns a compact JSON handoff.
+description: Generate a prioritized, dependency-safe refactor plan from codebase_metrics.json and BUG_REPORT_<RUN_ID>.md in .python-refactor/. Produces REFACTOR_PLAN_<RUN_ID>.md with P0-P3 triage, per-finding action items, bug fix stubs with minimal reproductions, security fix stubs with CWE references, a topologically-sorted execution sequence respecting module dependencies, and a test gap analysis listing all P0/P1 files with no test coverage. Auto-runs measure if codebase_metrics.json is missing. Incorporates BUG_REPORT if present. When invoked by the orchestrator, returns a compact JSON handoff.
 ---
 
 # python-refactor: Plan Refactor
@@ -11,15 +11,41 @@ Announce: "Using python-refactor:plan-refactor to generate the refactor plan."
 
 **Platform note:** Claude Code tool names used. On Copilot CLI: Bash -> runCommand, Write -> writeFile.
 
+**Output convention:** All output goes to `.python-refactor/`. See references/output-convention.md.
+
 ---
 
-## 0. Load inputs
+## 0. Scaffolding and load inputs
 
-**Required:** Check for PROJECT_ROOT/codebase_metrics.json.
+If OUTPUT_DIR and RUN_ID were provided by the orchestrator, use those values.
+Otherwise (standalone invocation), run the scaffolding preamble:
+
+  OUTPUT_DIR="PROJECT_ROOT/.python-refactor"
+  RUN_ID=$(date -u +"%Y-%m-%dT%H-%M-%S")
+  mkdir -p "$OUTPUT_DIR/tmp" "$OUTPUT_DIR/tests"
+  [ -f "$OUTPUT_DIR/.gitignore" ] || echo '*' > "$OUTPUT_DIR/.gitignore"
+
+  # Snapshot pre-existing tool caches (only if manifest does not exist yet)
+  if [ ! -f "$OUTPUT_DIR/manifest.json" ]; then
+    PRE_EXISTING="[]"
+    for d in .hypothesis .pytest_cache .semgrep .skylos_cache; do
+      [ -d "PROJECT_ROOT/$d" ] && PRE_EXISTING=$(echo "$PRE_EXISTING" | python3 -c "import sys,json; l=json.load(sys.stdin); l.append('$d'); print(json.dumps(l))")
+    done
+    cat > "$OUTPUT_DIR/manifest.json" <<MANIFEST
+    {
+      "run_id": "$RUN_ID",
+      "pre_existing": $PRE_EXISTING,
+      "created_caches": [],
+      "deliverables": []
+    }
+    MANIFEST
+  fi
+
+**Required:** Check for $OUTPUT_DIR/codebase_metrics.json.
 If missing: invoke Skill tool with skill name "python-refactor:measure" first, then continue.
 
-**Optional:** Check for PROJECT_ROOT/BUG_REPORT.md.
-If found: print "Incorporating confirmed bugs from BUG_REPORT.md" and load confirmed_bugs.
+**Optional:** Check for BUG_REPORT_*.md in $OUTPUT_DIR (prefer $RUN_ID match, else most recent).
+If found: print "Incorporating confirmed bugs from BUG_REPORT" and load confirmed_bugs.
 
 ---
 
@@ -85,15 +111,15 @@ one sentence explaining why it is at this position in the sequence.
 
 ---
 
-## 3. Write REFACTOR_PLAN.md
+## 3. Write REFACTOR_PLAN
 
-Write PROJECT_ROOT/REFACTOR_PLAN.md with this exact structure:
+Write $OUTPUT_DIR/REFACTOR_PLAN_$RUN_ID.md with this exact structure:
 
 ---
 
   # Refactor Plan — PROJECT_NAME
   Generated: ISO8601_TIMESTAMP
-  Inputs: codebase_metrics.json + BUG_REPORT.md (if present)
+  Inputs: codebase_metrics.json + BUG_REPORT_$RUN_ID.md (if present)
 
   ## P0 — Fix Immediately
 
@@ -186,7 +212,7 @@ Write PROJECT_ROOT/REFACTOR_PLAN.md with this exact structure:
 
 After writing the file, print:
 
-  REFACTOR_PLAN.md written to PROJECT_ROOT.
+  REFACTOR_PLAN written to $OUTPUT_DIR/REFACTOR_PLAN_$RUN_ID.md
 
   Recommended execution order:
   1. Fix all P0 items before any refactoring — bugs + security + circular imports
@@ -195,16 +221,17 @@ After writing the file, print:
   4. Implement changes in the topological sequence order
   5. Re-run /python-refactor:measure after each P1 batch to update the baseline
   6. Re-run /python-refactor:hunt-bugs after major refactors to catch regressions
+  7. Run /python-refactor:cleanup to remove all plugin output when done
 
 ---
 
 ## Handoff to orchestrator (when invoked by orchestrator)
 
-After writing REFACTOR_PLAN.md, return ONLY this JSON:
+After writing the refactor plan, return ONLY this JSON:
 
 {
   "status": "DONE",
-  "plan_path": "PROJECT_ROOT/REFACTOR_PLAN.md",
+  "plan_path": "$OUTPUT_DIR/REFACTOR_PLAN_$RUN_ID.md",
   "p0_count": N,
   "p1_count": N,
   "p2_count": N,

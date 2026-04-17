@@ -37,8 +37,8 @@ STEN-AGENT-SKILLS/                       ← Repo root
 │       │   ├── orchestrate/
 │       │   │   └── SKILL.md            ← /python-refactor:orchestrate
 │       │   │                             Full pipeline controller. Chains all four
-│       │   │                             phases via isolated subagents. Compact JSON
-│       │   │                             handoff between phases prevents context rot.
+│       │   │                             phases via isolated subagents. Files a
+│       │   │                             GitHub summary issue, then cleans up.
 │       │   │
 │       │   ├── measure/
 │       │   │   └── SKILL.md            ← /python-refactor:measure
@@ -51,7 +51,7 @@ STEN-AGENT-SKILLS/                       ← Repo root
 │       │   │                             Phase 1: Organic exploration of high-signal
 │       │   │                             files with step-by-step reasoning.
 │       │   │                             Phase 2: Hypothesis PBT to confirm bugs.
-│       │   │                             Writes BUG_REPORT.md + test files.
+│       │   │                             Writes BUG_REPORT + test files.
 │       │   │
 │       │   ├── architecture/
 │       │   │   └── SKILL.md            ← /python-refactor:architecture
@@ -59,15 +59,21 @@ STEN-AGENT-SKILLS/                       ← Repo root
 │       │   │                             subagents design multiple interfaces.
 │       │   │                             Creates GitHub issue RFCs via gh CLI.
 │       │   │
-│       │   └── plan-refactor/
-│       │       └── SKILL.md            ← /python-refactor:plan-refactor
-│       │                                 P0-P3 triage, topological execution
-│       │                                 sequence, bug/security fix stubs,
-│       │                                 test gap analysis.
-│       │                                 Writes REFACTOR_PLAN.md.
+│       │   ├── plan-refactor/
+│       │   │   └── SKILL.md            ← /python-refactor:plan-refactor
+│       │   │                             P0-P3 triage, topological execution
+│       │   │                             sequence, bug/security fix stubs,
+│       │   │                             test gap analysis.
+│       │   │                             Writes REFACTOR_PLAN.
+│       │   │
+│       │   └── cleanup/
+│       │       └── SKILL.md            ← /python-refactor:cleanup
+│       │                                 Removes .python-refactor/ and all
+│       │                                 project-root tool caches.
 │       │
 │       ├── references/
-│       │   └── platform-tools.md       ← Claude Code → Copilot CLI tool name map
+│       │   ├── platform-tools.md       ← Claude Code → Copilot CLI tool name map
+│       │   └── output-convention.md    ← Output directory layout and cleanup rules
 │       │
 │       └── README.md                   ← This file
 │
@@ -79,16 +85,29 @@ STEN-AGENT-SKILLS/                       ← Repo root
 └── SOURCES.md
 ```
 
-### Output files written to your project root (at analysis time)
+### Output files written to `.python-refactor/` (at analysis time)
+
+All output is written to a `.python-refactor/` directory at the project root. This directory
+contains a `.gitignore` with `*` so nothing is ever committed. Each run uses a timestamped
+suffix (RUN_ID) to distinguish files across multiple invocations.
 
 ```
 your-python-project/
-├── codebase_metrics.json               ← Written by: measure
-├── BUG_REPORT.md                       ← Written by: hunt-bugs
-├── REFACTOR_PLAN.md                    ← Written by: plan-refactor
-└── tests/
-    └── test_pyr_hunt_*.py              ← Written by: hunt-bugs (Hypothesis tests)
+└── .python-refactor/                       ← git-ignored (self-ignoring .gitignore)
+    ├── .gitignore                          ← contains "*"
+    ├── manifest.json                       ← run metadata + pre-existence snapshot
+    ├── tmp/                                ← raw tool scratch (cleaned by measure)
+    │   └── pyr_*.json                      ← radon, bandit, semgrep, skylos, grimp
+    ├── codebase_metrics.json               ← canonical (latest, always overwritten)
+    ├── codebase_metrics_<RUN_ID>.json      ← archive copy
+    ├── BUG_REPORT_<RUN_ID>.md              ← Written by: hunt-bugs
+    ├── REFACTOR_PLAN_<RUN_ID>.md           ← Written by: plan-refactor
+    └── tests/
+        └── test_pyr_hunt_*_<RUN_ID>.py     ← Written by: hunt-bugs (Hypothesis tests)
 ```
+
+When run via the orchestrator, all deliverables are filed as a GitHub issue and then
+cleaned up automatically. See references/output-convention.md for full details.
 
 ---
 
@@ -104,6 +123,7 @@ Skill folder:  measure          →  /python-refactor:measure
 Skill folder:  hunt-bugs        →  /python-refactor:hunt-bugs
 Skill folder:  architecture     →  /python-refactor:architecture
 Skill folder:  plan-refactor    →  /python-refactor:plan-refactor
+Skill folder:  cleanup          →  /python-refactor:cleanup
 ```
 
 > ⚠️ The `name` field inside each `SKILL.md` must be plain kebab-case with **no prefix**.
@@ -145,7 +165,7 @@ copilot plugin install python-refactor@sten-agent-skills-marketplace
 
 ```bash
 copilot plugin list
-# → python-refactor  2.0.0
+# → python-refactor  3.0.0
 
 /python-refactor:measure
 ```
@@ -219,10 +239,12 @@ the `/python-refactor:` namespace.
 ```
 
 Chains all four phases via isolated subagents:
-1. **measure** — runs all static analysis tools, writes `codebase_metrics.json`
-2. **hunt-bugs** — explores high-signal files, runs Hypothesis PBT, writes `BUG_REPORT.md`
+1. **measure** — runs all static analysis tools, writes `codebase_metrics.json` to `.python-refactor/`
+2. **hunt-bugs** — explores high-signal files, runs Hypothesis PBT, writes `BUG_REPORT` to `.python-refactor/`
 3. **architecture** — identifies deep-module candidates, cross-references confirmed bugs
-4. **plan-refactor** — triages all findings, sequences by dependency graph, writes `REFACTOR_PLAN.md`
+4. **plan-refactor** — triages all findings, sequences by dependency graph, writes `REFACTOR_PLAN` to `.python-refactor/`
+5. **file issue** — creates a single GitHub issue with collapsible full content of all deliverables
+6. **cleanup** — deletes all temporary files and deliverables from `.python-refactor/`
 
 Each phase subagent receives only the compact JSON handoff from the previous phase.
 Your session context stays clean throughout.
@@ -234,6 +256,7 @@ Your session context stays clean throughout.
 /python-refactor:hunt-bugs         # Bug hunt only — auto-runs measure if needed
 /python-refactor:architecture      # Architecture review — presents candidates, creates GitHub RFCs
 /python-refactor:plan-refactor     # Refactor plan only — auto-runs measure, incorporates bug report
+/python-refactor:cleanup           # Remove all .python-refactor/ output and tool caches
 ```
 
 ---
@@ -254,11 +277,17 @@ Phase 2 (hunt-bugs)    →  handoff: confirmed_bugs array
 Phase 3 (architecture) →  handoff: architecture_candidates array
 
 Phase 4 (plan-refactor) ←  consumes all three handoffs +
-                            reads codebase_metrics.json security detail directly
+                            reads codebase_metrics.json from .python-refactor/ directly
+
+Phase 5 (file issue)   →  files single GitHub issue with collapsible detail sections
+
+Phase 6 (cleanup)      →  deletes .python-refactor/ and plugin-created tool caches
 ```
 
 The full `codebase_metrics.json` is never forwarded between phases — only distilled signals.
-This is the same isolation pattern used by Superpowers' subagent-driven-development skill.
+All intermediate and deliverable files live in `.python-refactor/` and are cleaned after
+the summary issue is filed. This is the same isolation pattern used by Superpowers'
+subagent-driven-development skill.
 
 ---
 
@@ -290,6 +319,7 @@ This is the same isolation pattern used by Superpowers' subagent-driven-developm
 | File reads               | `Read`               | `readFile`               |
 | Parallel subagents       | `Agent` tool         | `spawnSubagent`          |
 | Reload without restart   | `/reload-plugins`    | `/skills reload`         |
+| Cleanup                  | `/python-refactor:cleanup` | `/python-refactor:cleanup` |
 
 > Skills use Claude Code tool names throughout. On Copilot CLI, substitute as shown
 > in `references/platform-tools.md`.

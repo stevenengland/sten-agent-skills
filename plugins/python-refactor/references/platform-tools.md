@@ -30,6 +30,7 @@ When installed as a plugin (with plugin.json), all skills are namespaced on both
   /python-refactor:hunt-bugs
   /python-refactor:architecture
   /python-refactor:plan-refactor
+  /python-refactor:cleanup
 
 All skill cross-references within this suite use the namespaced form. If you install
 the skills standalone (without plugin.json), adjust invocations to drop the prefix:
@@ -38,5 +39,6 @@ the skills standalone (without plugin.json), adjust invocations to drop the pref
   /hunt-bugs
   /architecture
   /plan-refactor
+  /cleanup
 
 Or reference them by description in a chat prompt.

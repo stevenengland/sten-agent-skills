@@ -1,6 +1,6 @@
 ---
 name: architecture
-description: Explore a Python codebase to find opportunities to deepen shallow modules, reduce coupling, and improve testability. Reads codebase_metrics.json (auto-runs measure if missing) and cross-references BUG_REPORT.md if present to show which architectural patterns are hiding confirmed bugs. Presents numbered candidates, spawns parallel design subagents for the chosen candidate, recommends the strongest interface design, and creates GitHub issue RFCs. Use when the user wants architecture review, module deepening, or coupling reduction.
+description: Explore a Python codebase to find opportunities to deepen shallow modules, reduce coupling, and improve testability. Reads codebase_metrics.json from .python-refactor/ (auto-runs measure if missing) and cross-references BUG_REPORT_<RUN_ID>.md if present to show which architectural patterns are hiding confirmed bugs. Presents numbered candidates, spawns parallel design subagents for the chosen candidate, recommends the strongest interface design, and creates GitHub issue RFCs. Use when the user wants architecture review, module deepening, or coupling reduction.
 ---
 
 # python-refactor: Architecture
@@ -11,18 +11,45 @@ Announce: "Using python-refactor:architecture to analyze codebase architecture."
 
 **Platform note:** Claude Code tool names used. On Copilot CLI: Bash -> runCommand, Read -> readFile.
 
+**Output convention:** All output goes to `.python-refactor/`. See references/output-convention.md.
+
 A **deep module** (Ousterhout, A Philosophy of Software Design) has a small interface hiding a
 large implementation. Deep modules are more testable, more AI-navigable, and let you test at the
 boundary instead of inside the implementation.
 
 ---
 
-## 0. Load inputs
+## 0. Scaffolding and load inputs
 
-Check for PROJECT_ROOT/codebase_metrics.json. If missing: invoke Skill tool with skill name
+If OUTPUT_DIR and RUN_ID were provided by the orchestrator, use those values.
+Otherwise (standalone invocation), run the scaffolding preamble:
+
+  OUTPUT_DIR="PROJECT_ROOT/.python-refactor"
+  RUN_ID=$(date -u +"%Y-%m-%dT%H-%M-%S")
+  mkdir -p "$OUTPUT_DIR/tmp" "$OUTPUT_DIR/tests"
+  [ -f "$OUTPUT_DIR/.gitignore" ] || echo '*' > "$OUTPUT_DIR/.gitignore"
+
+  # Snapshot pre-existing tool caches (only if manifest does not exist yet)
+  if [ ! -f "$OUTPUT_DIR/manifest.json" ]; then
+    PRE_EXISTING="[]"
+    for d in .hypothesis .pytest_cache .semgrep .skylos_cache; do
+      [ -d "PROJECT_ROOT/$d" ] && PRE_EXISTING=$(echo "$PRE_EXISTING" | python3 -c "import sys,json; l=json.load(sys.stdin); l.append('$d'); print(json.dumps(l))")
+    done
+    cat > "$OUTPUT_DIR/manifest.json" <<MANIFEST
+    {
+      "run_id": "$RUN_ID",
+      "pre_existing": $PRE_EXISTING,
+      "created_caches": [],
+      "deliverables": []
+    }
+    MANIFEST
+  fi
+
+Check for $OUTPUT_DIR/codebase_metrics.json. If missing: invoke Skill tool with skill name
 "python-refactor:measure" first, then continue.
 
-If BUG_REPORT.md exists: load confirmed_bugs for cross-reference in step 3.
+If a BUG_REPORT_*.md exists in $OUTPUT_DIR (use glob, prefer the one matching $RUN_ID,
+otherwise the most recent): load confirmed_bugs for cross-reference in step 3.
 
 ---
 

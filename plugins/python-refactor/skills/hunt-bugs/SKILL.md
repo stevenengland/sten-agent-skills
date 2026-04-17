@@ -1,6 +1,6 @@
 ---
 name: hunt-bugs
-description: Actively hunt real bugs in a Python codebase using two phases. Phase 1 is free agentic organic exploration guided by static metrics — the agent reads high-signal files completely, reasons step-by-step through logic errors, Python footguns, semantic drift, and integration failures, and builds a candidate list. Phase 2 uses Hypothesis property-based testing to confirm and reproduce each candidate. Outputs BUG_REPORT.md and Hypothesis test files. Auto-runs python-refactor:measure if codebase_metrics.json is missing. When invoked by the orchestrator, returns a compact JSON handoff.
+description: Actively hunt real bugs in a Python codebase using two phases. Phase 1 is free agentic organic exploration guided by static metrics — the agent reads high-signal files completely, reasons step-by-step through logic errors, Python footguns, semantic drift, and integration failures, and builds a candidate list. Phase 2 uses Hypothesis property-based testing to confirm and reproduce each candidate. Outputs BUG_REPORT_<RUN_ID>.md and Hypothesis test files to .python-refactor/. Auto-runs python-refactor:measure if codebase_metrics.json is missing. When invoked by the orchestrator, returns a compact JSON handoff.
 ---
 
 # python-refactor: Hunt Bugs
@@ -14,6 +14,8 @@ Announce: "Using python-refactor:hunt-bugs to hunt real bugs via exploration and
 **Platform note:** Claude Code tool names used throughout.
 On Copilot CLI: Bash -> runCommand, Read -> readFile, Write -> writeFile.
 
+**Output convention:** All output goes to `.python-refactor/`. See references/output-convention.md.
+
 **Research basis:** Agentic PBT (Maaz et al., NeurIPS 2025, Anthropic + Northeastern).
 An agent crawls code, infers invariants from code and docstrings, writes Hypothesis tests, runs
 them in a self-reflective validation loop. Result: 56% of generated bug reports were valid bugs;
@@ -21,9 +23,33 @@ them in a self-reflective validation loop. Result: 56% of generated bug reports 
 
 ---
 
-## 0. Load baseline
+## 0. Scaffolding and load baseline
 
-Check for PROJECT_ROOT/codebase_metrics.json.
+If OUTPUT_DIR and RUN_ID were provided by the orchestrator, use those values.
+Otherwise (standalone invocation), run the scaffolding preamble:
+
+  OUTPUT_DIR="PROJECT_ROOT/.python-refactor"
+  RUN_ID=$(date -u +"%Y-%m-%dT%H-%M-%S")
+  mkdir -p "$OUTPUT_DIR/tmp" "$OUTPUT_DIR/tests"
+  [ -f "$OUTPUT_DIR/.gitignore" ] || echo '*' > "$OUTPUT_DIR/.gitignore"
+
+  # Snapshot pre-existing tool caches (only if manifest does not exist yet)
+  if [ ! -f "$OUTPUT_DIR/manifest.json" ]; then
+    PRE_EXISTING="[]"
+    for d in .hypothesis .pytest_cache .semgrep .skylos_cache; do
+      [ -d "PROJECT_ROOT/$d" ] && PRE_EXISTING=$(echo "$PRE_EXISTING" | python3 -c "import sys,json; l=json.load(sys.stdin); l.append('$d'); print(json.dumps(l))")
+    done
+    cat > "$OUTPUT_DIR/manifest.json" <<MANIFEST
+    {
+      "run_id": "$RUN_ID",
+      "pre_existing": $PRE_EXISTING,
+      "created_caches": [],
+      "deliverables": []
+    }
+    MANIFEST
+  fi
+
+Check for $OUTPUT_DIR/codebase_metrics.json.
 If present: load summary fields (avg_cc, avg_mi, complexity, halstead, maintainability).
 If missing: invoke Skill tool with skill name "python-refactor:measure" first, then continue.
 
@@ -134,7 +160,7 @@ Install if needed: pip install hypothesis pytest --quiet
 For each HIGH or MEDIUM confidence candidate, write a property test that expresses the
 testable property from the candidate record.
 
-Save all tests to: tests/test_pyr_hunt_MODULENAME.py
+Save all tests to: $OUTPUT_DIR/tests/test_pyr_hunt_MODULENAME_$RUN_ID.py
 
 Test structure — follow this pattern:
 
@@ -155,7 +181,7 @@ Strategy selection guide:
   Domain objects: st.builds(MyClass, field=st.integers())
   Filter invalid inputs: st.assume(condition) — not try/except — inside the test body
 
-Run: pytest tests/test_pyr_hunt_*.py -v --tb=short
+Run: pytest $OUTPUT_DIR/tests/test_pyr_hunt_*$RUN_ID.py -v --tb=short
 
 **For each failing test:**
 
@@ -173,7 +199,7 @@ Run: pytest tests/test_pyr_hunt_*.py -v --tb=short
 
 ## Output
 
-Write PROJECT_ROOT/BUG_REPORT.md with these sections:
+Write $OUTPUT_DIR/BUG_REPORT_$RUN_ID.md with these sections:
 
   # Bug Report — PROJECT_NAME
   Generated: ISO8601 by python-refactor:hunt-bugs
@@ -186,7 +212,7 @@ Write PROJECT_ROOT/BUG_REPORT.md with these sections:
   Minimal reproduction:
     (exact code to trigger the bug — from Hypothesis counterexample)
   Fix sketch: (one-paragraph description of the correct fix)
-  Test: tests/test_pyr_hunt_MODULE.py::test_FUNCTION_NAME
+  Test: $OUTPUT_DIR/tests/test_pyr_hunt_MODULE_$RUN_ID.py::test_FUNCTION_NAME
 
   ## Unconfirmed Candidates (N)
   (Candidates Hypothesis did not falsify. Real bugs may exist but require manual review.)
@@ -201,7 +227,7 @@ Write PROJECT_ROOT/BUG_REPORT.md with these sections:
 
 ## Handoff to orchestrator (when invoked by orchestrator)
 
-After writing BUG_REPORT.md, return ONLY this JSON:
+After writing the bug report, return ONLY this JSON:
 
 {
   "status": "DONE",
@@ -210,7 +236,7 @@ After writing BUG_REPORT.md, return ONLY this JSON:
      "type": "...", "impact": "HIGH|MEDIUM|LOW",
      "reproduction": "one-line reproduction", "fix_sketch": "one-line fix description"}
   ],
-  "test_files_written": ["tests/test_pyr_hunt_MODULE.py"],
+  "test_files_written": ["$OUTPUT_DIR/tests/test_pyr_hunt_MODULE_$RUN_ID.py"],
   "unconfirmed_count": 0,
   "false_alarm_count": 0
 }
