@@ -135,10 +135,10 @@ From any machine:
 copilot plugin marketplace add stevenengland/sten-agent-skills
 
 # Browse available plugins
-copilot plugin marketplace browse
+copilot plugin marketplace browse sten-agent-skills-marketplace
 
 # Install
-copilot plugin install python-refactor@sten-agent-skills
+copilot plugin install python-refactor@sten-agent-skills-marketplace
 ```
 
 ### Verify
