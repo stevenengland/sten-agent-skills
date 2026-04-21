@@ -15,11 +15,14 @@ Plan the implementation of issue number $ARGUMENTS.
 
 Interview me relentlessly about every aspect of the plan until we reach a
 shared understanding. Walk down each branch of the design tree and resolve
-dependencies between decisions one-by-one. For each question, provide your
-recommended answer.
+dependencies between decisions one-by-one. 
 
-If a question can be answered by exploring the codebase, explore the codebase
+- For each question, provide your recommended answer and reasoning.
+- If a question can be answered by exploring the codebase, explore the codebase
 instead.
+- Propose 2-3 different approaches with trade-offs.
+- Lead with your recommended option and explain why.
+- Go back and clarify when something doesn't make sense
 
 When a recommendation touches a problem that well-known companies
 (e.g. Stripe, Spotify, GitHub, AWS, Shopify) have solved publicly, research
@@ -65,6 +68,16 @@ Constraints:
 - Keep tasks as small as needed for TDD, but avoid micro-tasks that a
   competent model can trivially decompose.
 - Avoid long, repetitive prose; make the plan compact and scannable.
+
+Spec Self-Review:
+After writing the implementation plan, look at it with fresh eyes:
+
+1. Placeholder scan: Any "TBD", "TODO", incomplete sections, or vague requirements? Fix them.
+2. Internal consistency: Do any sections contradict each other? Does the architecture match the feature descriptions?
+3. Scope check: Is this focused enough for a single implementation plan, or does it need decomposition?
+4. Ambiguity check: Could any requirement be interpreted two different ways? If so, pick one and make it explicit.
+
+Fix any issues inline. No need to re-review — just fix and move on.
 
 Present the final plan as a numbered list of tasks.
 

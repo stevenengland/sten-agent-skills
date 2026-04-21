@@ -3,11 +3,16 @@ name: grill-me
 description: Interview the user relentlessly about a plan or design until reaching shared understanding, resolving each branch of the decision tree. Use when user wants to stress-test a plan, get grilled on their design, or mentions "grill me".
 ---
 
-Interview me relentlessly about every aspect of this plan until we reach a shared understanding. Walk down each branch of the design tree, resolving dependencies between decisions one-by-one. For each question, provide your
-recommended answer.
+Interview me relentlessly about every aspect of the plan until we reach a
+shared understanding. Walk down each branch of the design tree and resolve
+dependencies between decisions one-by-one. 
 
-If a question can be answered by exploring the codebase, explore the codebase
+- For each question, provide your recommended answer and reasoning.
+- If a question can be answered by exploring the codebase, explore the codebase
 instead.
+- Propose 2-3 different approaches with trade-offs.
+- Lead with your recommended option and explain why.
+- Go back and clarify when something doesn't make sense
 
 When a recommendation touches a problem that well-known companies
 (e.g. Stripe, Spotify, GitHub, AWS, Shopify) have solved publicly, research

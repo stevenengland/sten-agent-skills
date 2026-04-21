@@ -9,11 +9,16 @@ This skill will be invoked when the user wants to create a PRD. You may skip ste
 
 2. Explore the repo to verify their assertions and understand the current state of the codebase.
 
-3. Interview the user relentlessly about every aspect of this plan until you reach a shared understanding. Walk down each branch of the design tree, resolving dependencies between decisions one-by-one. For each question, provide your
-recommended answer.
+3. Interview me relentlessly about every aspect of the plan until we reach a
+shared understanding. Walk down each branch of the design tree and resolve
+dependencies between decisions one-by-one. 
 
-If a question can be answered by exploring the codebase, explore the codebase
+- For each question, provide your recommended answer and reasoning.
+- If a question can be answered by exploring the codebase, explore the codebase
 instead.
+- Propose 2-3 different approaches with trade-offs.
+- Lead with your recommended option and explain why.
+- Go back and clarify when something doesn't make sense
 
 When a recommendation touches a problem that well-known companies
 (e.g. Stripe, Spotify, GitHub, AWS, Shopify) have solved publicly, research
