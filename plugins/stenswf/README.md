@@ -23,6 +23,8 @@ Contains three coordinated workflows plus always-on craft skills.
 ```
 /stenswf:plan <issue-num>      → design interview + implementation plan comment
 /stenswf:ship <issue-num>      → TDD + clean code + PR + CI + merge → shipped
+/stenswf:ship-light <issue>    → single-session lite path: branch + TDD + PR + CI
+                                 (for crisp Lite-eligible slices; replaces plan+ship)
 /stenswf:review <target>       → plan-only review; slice-mode (suggestions) OR
                                  PRD-mode (5-axis capstone after all slices shipped)
 /stenswf:apply <target>        → slice-mode: interactive apply + close;
@@ -37,6 +39,25 @@ Contains three coordinated workflows plus always-on craft skills.
 PRD-mode `review` is **gated**: refuses to run while any slice is still
 open. Ship or `abandoned`-label them first.
 
+### When to use `ship-light` vs `plan` + `ship`
+
+Use **`ship-light`** when ALL of:
+
+- Slice is single-subsystem, plausibly ≤ ~5 files, no schema migration.
+- ACs are crisp checkbox items (no "figure out X" wording).
+- `Lite-eligible: true` in the issue body (set by `prd-to-issues`).
+- No open `Blocked by`.
+
+Use **`plan` + `ship`** when ANY of:
+
+- Multi-subsystem, schema/migration involved, architecturally uncertain.
+- HITL slice (human design review wanted).
+- `Lite-eligible: false` or absent.
+- You want the full PRD-aware plan comment for downstream `review` cross-reference.
+
+`ship-light`'s preflight gate aborts cleanly to `plan` + `ship` if a slice
+doesn't qualify — nothing is posted to the issue on abort.
+
 ### Recommended model routing
 
 These workflow skills benefit from different model strengths. Configure
@@ -49,6 +70,7 @@ your harness (or manually invoke) accordingly.
 | `/stenswf:prd-to-issues` | Sonnet | Structured slicing; tight templates |
 | `/stenswf:plan` | Opus | Architecture, invariants, deep file-structure reasoning |
 | `/stenswf:ship` | Sonnet | Orchestrator dispatch; subagents do the heavy lifting |
+| `/stenswf:ship-light` | Sonnet | Single-session lite path; no subagents, ~140-line skill |
 | `/stenswf:review` | Opus | Capstone synthesis; 5-axis architectural critique |
 | `/stenswf:apply` | Sonnet | Execution against a structured findings list |
 
@@ -84,6 +106,7 @@ STEN-AGENT-SKILLS/                       ← Repo root
 │       ├── skills/                      ← All plugin skills
 │       │   ├── plan/
 │       │   ├── ship/
+│       │   ├── ship-light/
 │       │   ├── review/
 │       │   ├── apply/
 │       │   ├── grill-me/
@@ -181,10 +204,14 @@ Claude Code discovers and loads it automatically. Reload if already running:
 2. **Write the PRD.** `/stenswf:prd-from-grill-me` → issue filed; PRD base SHA recorded (git tag `prd-<N>-base`).
 3. **Break it down.** `/stenswf:prd-to-issues` → vertical-slice issues.
 4. **For each slice:**
-   1. `/stenswf:plan <slice-N>` → plan comment on the slice.
-   2. `/stenswf:ship <slice-N>` → code, tests, PR, CI green, merged → `shipped`.
-   3. *(optional)* `/stenswf:review <slice-N>` → slice-mode suggestions.
-   4. *(optional)* `/stenswf:apply <slice-N>` → interactive apply + close.
+   - **Lite path** (slice marked `Lite-eligible: true`):
+     1. `/stenswf:ship-light <slice-N>` → branch, TDD, PR, CI green in one
+        Sonnet session.
+   - **Full path** (HITL, multi-subsystem, or `Lite-eligible: false`):
+     1. `/stenswf:plan <slice-N>` → plan comment on the slice.
+     2. `/stenswf:ship <slice-N>` → code, tests, PR, CI green, merged → `shipped`.
+   - *(optional, both paths)* `/stenswf:review <slice-N>` → slice-mode suggestions.
+   - *(optional, both paths)* `/stenswf:apply <slice-N>` → interactive apply + close.
 5. **When all slices are `shipped` (or `abandoned`):**
    1. `/stenswf:review <PRD-N>` → PRD-mode 5-axis capstone review.
    2. `/stenswf:apply <PRD-N>` → PRD-mode themed cleanup PR → `applied`.

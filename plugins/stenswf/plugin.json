@@ -1,7 +1,7 @@
 {
   "name": "stenswf",
-  "description": "Sten Software Workflow bundle. Issue lifecycle (plan → ship → review → apply, with PRD-mode capstone), PRD inception (grill-me → prd-from-grill-me → prd-to-issues), and always-on craft skills (clean-code, tdd, lint-escape, architecture, brevity, plan-reviewer, test-file-compaction).",
-  "version": "0.1.0",
+  "description": "Sten Software Workflow bundle. Issue lifecycle (plan → ship → review → apply, with PRD-mode capstone, plus ship-light single-session lite path), PRD inception (grill-me → prd-from-grill-me → prd-to-issues), and always-on craft skills (clean-code, tdd, lint-escape, architecture, brevity, plan-reviewer, test-file-compaction).",
+  "version": "0.2.0",
   "author": {
     "name": "StEn",
     "url": "https://github.com/stevenengland/sten-agent-skills/plugins/stenswf"

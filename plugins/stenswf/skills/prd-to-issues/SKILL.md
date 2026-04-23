@@ -95,6 +95,9 @@ Present the proposed breakdown as a numbered list. For each slice, show:
 - **Type**: HITL / AFK
 - **Blocked by**: which other slices (if any) must complete first
 - **User stories covered**: which user stories from the PRD this addresses
+- **Lite-eligible**: `true` / `false` — whether the slice plausibly fits
+  the `ship-light` envelope (≤ ~5 files, 1 subsystem, no schema migration,
+  AFK-typed, no architectural unknowns). Default `false` when in doubt.
 
 Ask the user:
 
@@ -102,6 +105,7 @@ Ask the user:
 - Are the dependency relationships correct?
 - Should any slices be merged or split further?
 - Are the correct slices marked as HITL and AFK?
+- Are the `Lite-eligible` flags right?
 
 > *Note: solo-dev assumption. On mid-batch failure, manually delete partial
 > slice issues before re-running, or duplicates will be created.*
@@ -165,11 +169,30 @@ Reference by number from the parent PRD:
 - User story 3
 - User story 7
 
+## Files (hint)
+
+Optional bridge for `ship-light`. List the files this slice will likely
+touch, with a one-line responsibility each. Best-effort only — drawn
+from the Step 2 module exploration. Omit the section if exploration
+produced nothing reliable.
+
+- Create: `path/to/new.py` — <one-line responsibility>
+- Modify: `path/to/existing.py` — <what changes>
+- Test:   `tests/path/to/test_file.py` — <what it covers>
+
+## Lite-eligible
+
+`true` if this slice plausibly fits the `ship-light` envelope (≤ ~5
+files, 1 subsystem, no schema migration, AFK-typed, no architectural
+unknowns). `false` otherwise. When in doubt, set `false` — `ship-light`
+will abort to `plan`+`ship` anyway.
+
 ## Implementation log
 
 <!-- Leave blank. The `plan` skill appends the
        implementation plan here as a comment, and `ship`
-     appends progress entries during execution. -->
+     appends progress entries during execution.
+     `ship-light` does not write here. -->
 
 </issue-template>
 
@@ -177,6 +200,13 @@ Do NOT close or modify the parent PRD issue.
 
 **After creating all issues, tell the user:**
 
-> All slice issues created. For each issue, run the
-> `plan` skill (passing the issue number) to produce
-> an implementation plan. Start with issues that have no blockers.
+> All slice issues created. For each issue, choose one path:
+>
+> - **Lite path** — `/stenswf:ship-light <issue>` for slices marked
+>   `Lite-eligible: true` (single subsystem, crisp ACs, AFK).
+>   Branches, TDDs, PRs, watches CI in one Sonnet session.
+> - **Full path** — `/stenswf:plan <issue>` then `/stenswf:ship <issue>`
+>   for HITL slices, `Lite-eligible: false`, or anything architecturally
+>   uncertain.
+>
+> Start with issues that have no blockers.
