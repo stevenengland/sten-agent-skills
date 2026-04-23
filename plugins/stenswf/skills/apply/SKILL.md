@@ -5,6 +5,15 @@ description: Apply an improvement plan interactively, then commit, push, and clo
 disable-model-invocation: true
 ---
 
+## Token Efficiency
+
+**Load and apply the `brevity` sibling skill now, before the first response.**
+It governs the interactive loop, YOLO-mode summaries, and reasoning. Commit
+messages, PR bodies, and issue/PR comments are full-prose artifacts (already
+excluded by `brevity`'s Scope section) — write them normally.
+
+---
+
 Work through the review plan for issue number $ARGUMENTS.
 
 If no suitable plan comment is available on the issue (for example, a comment

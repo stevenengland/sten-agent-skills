@@ -36,7 +36,7 @@ Contains three coordinated workflows plus always-on craft skills.
 | `/stenswf:lint-escape` | Tiered protocol for unresolvable lint/type errors |
 | `/stenswf:architecture` | Architectural decision guidance |
 | `/stenswf:conventional-commits` | Conventional Commits v1.0.0 messages |
-| `/stenswf:caveman` | Ultra-compressed response mode (~75% fewer tokens) |
+| `/stenswf:brevity` | Plain-English brevity for internal reasoning (full prose for artifacts) |
 | `/stenswf:test-file-compaction` | Lossless test-file compaction |
 
 ---
@@ -63,7 +63,7 @@ STEN-AGENT-SKILLS/                       ← Repo root
 │       │   ├── lint-escape/
 │       │   ├── architecture/
 │       │   ├── conventional-commits/    (+ references/)
-│       │   ├── caveman/
+│       │   ├── brevity/
 │       │   └── test-file-compaction/
 │       └── README.md                    ← This file
 │
@@ -87,7 +87,7 @@ Skill folder: tdd      →  /stenswf:tdd
 
 > ⚠️ The `name` field inside each `SKILL.md` is plain kebab-case with **no prefix**. The platform adds the prefix automatically. Writing `stenswf:plan` in the `name` field causes the skill to silently fail to load.
 
-Sibling-skill references inside a SKILL.md body use bare names too (e.g. `` `caveman` ``, `` `tdd` ``, `` `clean-code` ``). The loader resolves them within the plugin.
+Sibling-skill references inside a SKILL.md body use bare names too (e.g. `` `brevity` ``, `` `tdd` ``, `` `clean-code` ``). The loader resolves them within the plugin.
 
 ---
 
@@ -154,7 +154,7 @@ Claude Code discovers and loads it automatically. Reload if already running:
 6. **Self-review.** `/stenswf:review <N>` → review plan posted as comment.
 7. **Polish.** `/stenswf:apply <N>` → interactive apply + close.
 
-The craft skills (`tdd`, `clean-code`, `conventional-commits`, `lint-escape`, `caveman`, `test-file-compaction`) are invoked by the workflow skills automatically. You can also invoke any of them directly.
+The craft skills (`tdd`, `clean-code`, `conventional-commits`, `lint-escape`, `brevity`, `test-file-compaction`) are invoked by the workflow skills automatically. You can also invoke any of them directly.
 
 ---
 

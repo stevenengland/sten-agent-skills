@@ -1,6 +1,6 @@
 {
   "name": "stenswf",
-  "description": "Sten Software Workflow bundle. Issue lifecycle (plan → ship → review → apply), PRD inception (grill-me → prd-from-grill-me → prd-to-issues), and always-on craft skills (clean-code, tdd, lint-escape, architecture, conventional-commits, caveman, test-file-compaction).",
+  "description": "Sten Software Workflow bundle. Issue lifecycle (plan → ship → review → apply), PRD inception (grill-me → prd-from-grill-me → prd-to-issues), and always-on craft skills (clean-code, tdd, lint-escape, architecture, conventional-commits, brevity, test-file-compaction).",
   "version": "0.1.0",
   "author": {
     "name": "StEn",

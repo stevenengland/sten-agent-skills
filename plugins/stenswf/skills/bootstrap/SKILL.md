@@ -6,6 +6,14 @@ description: One-shot, human-invoked setup for repo-level artifacts (issue-track
 disable-model-invocation: true
 ---
 
+## Token Efficiency
+
+**Load and apply the `brevity` sibling skill now, before the first response.**
+It governs setup prompts, detection output, and status updates throughout
+this one-shot flow.
+
+---
+
 # Bootstrap
 
 **Human-invoked only.** Subagents and model-initiated flows must not call

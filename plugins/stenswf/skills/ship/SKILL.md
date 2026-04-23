@@ -7,9 +7,14 @@ disable-model-invocation: true
 
 ## Token Efficiency
 
-Activate the `caveman` sibling skill. Deactivate it only for commit
-messages, PR body, `CI_BLOCKER` reports, subagent delegation messages, and
-the Phase 5 wrap-up comment.
+**Load and apply the `brevity` sibling skill now, before the first response
+in this session.** It governs every internal reasoning step, status update,
+and tool-use narration across all phases. Self-check every message against
+its rules before sending — do not drift into full prose on internal thinking.
+
+The `brevity` skill already excludes commit messages, PR bodies,
+`CI_BLOCKER` reports, subagent delegation messages, and the Phase 5 wrap-up
+comment from its scope (see its Scope section). Write those in full prose.
 
 ---
 

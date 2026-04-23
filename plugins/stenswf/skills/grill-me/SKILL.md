@@ -3,6 +3,14 @@ name: grill-me
 description: Interview the user relentlessly about a plan or design until reaching shared understanding, resolving each branch of the decision tree. Use when user wants to stress-test a plan, get grilled on their design, or mentions "grill me".
 ---
 
+## Token Efficiency
+
+**Load and apply the `brevity` sibling skill now, before the first question.**
+Keep interview questions, reasoning, and recommendations tight. Self-check
+every message against its rules before sending.
+
+---
+
 Interview me relentlessly about every aspect of the plan until we reach a
 shared understanding. Walk down each branch of the design tree and resolve
 dependencies between decisions one-by-one. 

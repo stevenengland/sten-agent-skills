@@ -4,6 +4,15 @@ description: Review changes against an issue/pr.
 disable-model-invocation: true
 ---
 
+## Token Efficiency
+
+**Load and apply the `brevity` sibling skill now, before the first response.**
+It governs reasoning and status updates during the review. The review-plan
+comment posted to the issue is a full-prose artifact (already excluded by
+`brevity`'s Scope section) — write it normally.
+
+---
+
 You are in **plan-only mode**. Do not apply edits, create files, or run any
 state-modifying commands. Your only output is a structured plan that you add
 to the issue as a comment.

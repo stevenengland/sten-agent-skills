@@ -4,6 +4,15 @@ description: Create a PRD through user interview, codebase exploration, and modu
   design, then submit as an issue.
 ---
 
+## Token Efficiency
+
+**Load and apply the `brevity` sibling skill now, before the first response.**
+It governs the interview, codebase exploration narration, and module-design
+dialogue. The PRD document itself is a full-prose artifact (already excluded
+by `brevity`'s Scope section) — write it normally.
+
+---
+
 This skill will be invoked when the user wants to create a PRD. You may skip
 steps if you don't consider them necessary.
 

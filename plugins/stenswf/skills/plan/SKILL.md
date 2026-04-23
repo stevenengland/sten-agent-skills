@@ -7,10 +7,13 @@ disable-model-invocation: true
 
 ## Token Efficiency
 
-Activate the `caveman` sibling skill for Phase 0 and Phase 1 dialogue to
-reduce output tokens by ~65–75% without loss of technical content. Deactivate
-it before writing the Phase 2 plan — the plan document must be read by a
-context-naive implementer agent and requires full prose clarity.
+**Load and apply the `brevity` sibling skill now, before the first response
+in this session.** It governs all Phase 0 and Phase 1 dialogue, including
+internal reasoning and tool-use narration. Self-check every message against
+its rules before sending — do not drift into full prose on internal thinking.
+
+Do not apply `brevity` to the Phase 2 plan document itself — the plan is
+written in full prose for a context-naive implementer agent.
 
 ---
 
@@ -137,7 +140,8 @@ continuing.
 
 ## Phase 2 — Implementation Plan
 
-Deactivate the `caveman` skill before writing this plan.
+The `brevity` skill does not apply to the plan document (see its Scope
+section). Write the plan in full prose.
 
 Produce a single plan document with the structure below. Keep it compact:
 reference existing code by symbol path (`path/to/file.py::ClassName.method`)
