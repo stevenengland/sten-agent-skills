@@ -8,6 +8,6 @@
   },
   "license": "MIT",
   "keywords": ["python", "refactor", "security", "architecture", "bugs"],
-  "skills": "skills/",
-  "hooks": "hooks.json"
+  "skills": "./skills/",
+  "hooks": "./hooks.json"
 }

@@ -8,6 +8,6 @@
   },
   "license": "MIT",
   "keywords": ["sdlc", "tdd", "prd", "issues", "workflow", "clean-code"],
-  "skills": "skills/",
-  "hooks": "hooks.json"
+  "skills": "./skills/",
+  "hooks": "./hooks.json"
 }
