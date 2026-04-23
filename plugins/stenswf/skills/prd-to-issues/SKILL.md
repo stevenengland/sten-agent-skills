@@ -22,7 +22,11 @@ Break a PRD into independently-grabbable issues using vertical slices
 
 ### 1. Locate the PRD
 
-Ask the user for the PRD issue number (or URL).
+**Fast-path:** if the PRD is already in your context from a chained
+`prd-from-grill-me` run in this session, skip the fetch — note the issue
+number and continue.
+
+Otherwise, ask the user for the PRD issue number (or URL).
 
 If the PRD is not already in your context window, fetch the issue content
 (including comments) using the project's issue tracker CLI (e.g.
@@ -30,6 +34,10 @@ If the PRD is not already in your context window, fetch the issue content
 to provide the PRD content.
 
 ### 2. Explore the codebase (optional, via subagent)
+
+**Fast-path:** if module exploration on the same modules (named in the
+PRD's Implementation Decisions) was already performed in this session,
+skip — proceed to Step 3 using prior findings.
 
 If you have not already explored the codebase in this session, **delegate
 exploration to an Explore subagent** rather than reading files directly.
@@ -94,6 +102,9 @@ Ask the user:
 - Are the dependency relationships correct?
 - Should any slices be merged or split further?
 - Are the correct slices marked as HITL and AFK?
+
+> *Note: solo-dev assumption. On mid-batch failure, manually delete partial
+> slice issues before re-running, or duplicates will be created.*
 
 Iterate until the user approves the breakdown.
 

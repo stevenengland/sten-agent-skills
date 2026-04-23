@@ -97,12 +97,24 @@ steps if you don't consider them necessary.
    issue-tracker CLI is available. Labels are
    created once per repo via the `bootstrap` skill.
 
-   **After creating and labelling the issue, tell the user the issue number
-   and suggest the next step:**
+   **After creating and labelling the issue, offer the chained handover:**
 
-   > PRD created as issue #N. When ready, run the `prd-to-issues` skill with
-   > this issue number to break it into independently-implementable vertical
-   > slices.
+   Display this prompt verbatim:
+
+   > PRD created as issue #N.
+   >
+   > Continue directly into slicing now? Saves ~5–10K tokens vs. a fresh
+   > run. (For more $ savings, run `prd-to-issues` separately on a smaller
+   > model — see README routing table.)
+   >   [y]es  /  [N]o, I'll review first
+   >
+   > Default: N
+
+   If the user's response is `y`, `yes`, `proceed`, or `go` (case-insensitive),
+   immediately invoke the `prd-to-issues` procedure starting at its **Step 3**,
+   treating Steps 1–2 as already done (the PRD body and module exploration
+   are still in your context). Any other response — including empty,
+   ambiguous, or `N` — stop. Do not invoke `prd-to-issues`.
 
 <prd-template>
 
