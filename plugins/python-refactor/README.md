@@ -162,19 +162,17 @@ copilot plugin list
 
 ## Install — Claude Code
 
-### Option A: Direct install from local clone
+Claude Code discovers plugins via the repo-level `.claude-plugin/marketplace.json`.
 
-```bash
-claude /plugin install ./plugins/python-refactor
+```
+# Register the marketplace (once)
+/plugin marketplace add stevenengland/sten-agent-skills
+
+# Install
+/plugin install python-refactor@sten-agent-skills
 ```
 
-### Option B: From GitHub
-
-```bash
-claude /plugin install stevenengland/sten-agent-skills:plugins/python-refactor
-```
-
-### Option C: Project-scoped (no install command, auto-discovered)
+### Project-scoped (auto-discovered)
 
 Copy the plugin into the project you want to analyze:
 

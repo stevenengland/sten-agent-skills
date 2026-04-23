@@ -175,16 +175,14 @@ copilot plugin list
 
 ## Install — Claude Code
 
-### Direct install from local clone
+Claude Code discovers plugins via a repo-level `.claude-plugin/marketplace.json`.
 
-```bash
-claude /plugin install ./plugins/stenswf
 ```
+# Register the marketplace (once)
+/plugin marketplace add stevenengland/sten-agent-skills
 
-### From GitHub
-
-```bash
-claude /plugin install stevenengland/sten-agent-skills:plugins/stenswf
+# Install
+/plugin install stenswf@sten-agent-skills
 ```
 
 ### Project-scoped (auto-discovered)

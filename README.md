@@ -29,12 +29,13 @@ copilot plugin install python-refactor@sten-agent-skills-marketplace
 
 ### Claude Code
 
-```bash
-claude /plugin install ./plugins/stenswf
-claude /plugin install ./plugins/python-refactor
+Claude Code discovers plugins via the repo-level
+`.claude-plugin/marketplace.json`:
 
-# Or directly from GitHub:
-claude /plugin install stevenengland/sten-agent-skills:plugins/stenswf
+```
+/plugin marketplace add stevenengland/sten-agent-skills
+/plugin install stenswf@sten-agent-skills
+/plugin install python-refactor@sten-agent-skills
 ```
 
 See each plugin's README for namespace prefix, command reference, and

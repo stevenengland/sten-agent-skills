@@ -1,0 +1,22 @@
+{
+  "name": "sten-agent-skills",
+  "description": "Sten agent skills: opinionated SDLC workflow and Python refactor suite",
+  "owner": {
+    "name": "StEn",
+    "email": "github@steven-england.info"
+  },
+  "plugins": [
+    {
+      "name": "stenswf",
+      "description": "Sten Software Workflow bundle. Issue lifecycle (plan → ship → review → apply, with PRD-mode capstone, plus ship-light single-session lite path), PRD inception (grill-me → prd-from-grill-me → prd-to-issues), and always-on craft skills (clean-code, tdd, lint-escape, architecture, brevity, plan-reviewer, test-file-compaction).",
+      "version": "0.2.0",
+      "source": "./plugins/stenswf"
+    },
+    {
+      "name": "python-refactor",
+      "description": "Agentic Python codebase analysis suite. Measures complexity, hunts real bugs via Hypothesis PBT, proposes deep-module architecture RFCs, and generates a dependency-safe refactor plan.",
+      "version": "2.0.0",
+      "source": "./plugins/python-refactor"
+    }
+  ]
+}
