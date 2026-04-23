@@ -1,10 +1,7 @@
 ---
-name: issue-review-two-phases-4
-description: >
-  Apply an improvement plan interactively, then commit, push, and close the
-  issue. Reviews each plan suggestion with the user before implementing.
-  Use when asked to apply a plan, act on review feedback, or ship an issue.
-  Part 4 of 4 in the issue-review-two-phases workflow.
+name: apply
+description: Apply an improvement plan interactively, then commit, push, and close the
+  issue. 
 disable-model-invocation: true
 ---
 

@@ -1,10 +1,6 @@
 ---
-name: issue-review-two-phases-3
-description: >
-  Review staged git changes against an issue. Produces a structured improvement
-  plan — no edits applied. Also identifies test file compaction opportunities.
-  Use when asked to check, review, or validate staged work before committing.
-  Part 3 of 4 in the issue-review-two-phases workflow.
+name: review
+description: Review changes against an issue/pr. 
 disable-model-invocation: true
 ---
 

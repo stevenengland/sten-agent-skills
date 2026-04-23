@@ -1,0 +1,13 @@
+{
+  "name": "stenswf",
+  "description": "Sten Software Workflow bundle. Issue lifecycle (plan → ship → review → apply), PRD inception (grill-me → prd-from-grill-me → prd-to-issues), and always-on craft skills (clean-code, tdd, lint-escape, architecture, conventional-commits, caveman, test-file-compaction).",
+  "version": "0.1.0",
+  "author": {
+    "name": "StEn",
+    "url": "https://github.com/stevenengland/sten-agent-skills/plugins/stenswf"
+  },
+  "license": "MIT",
+  "keywords": ["sdlc", "tdd", "prd", "issues", "workflow", "clean-code"],
+  "skills": "skills/",
+  "hooks": "hooks.json"
+}

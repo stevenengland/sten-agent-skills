@@ -1,15 +1,16 @@
 ---
-name: issue-review-two-phases-1
-description: Understand and plan an issue end-to-end.
+name: plan
+description: Understand and plan an issue end-to-end. Produces an implementation plan
+  posted as a comment on the issue.
 disable-model-invocation: true
 ---
 
 ## Token Efficiency
 
-Activate the `caveman` sibling skill for Phase 1 dialogue to reduce output
-tokens by ~65–75% without loss of technical content. Deactivate it before
-writing the Phase 2 plan — the plan document must be read by a context-naive
-implementer and requires full prose clarity.
+Activate the `caveman` sibling skill for Phase 0 and Phase 1 dialogue to
+reduce output tokens by ~65–75% without loss of technical content. Deactivate
+it before writing the Phase 2 plan — the plan document must be read by a
+context-naive implementer agent and requires full prose clarity.
 
 ---
 
@@ -18,22 +19,59 @@ Plan the implementation of issue number $ARGUMENTS.
 ## Audience
 
 The planner (you, in this skill) is highly skilled and has full codebase
-context. The implementer (Part 2 of this workflow) is a skilled developer but:
+context. The implementer (the `ship` skill) is a skilled
+developer but:
 
 - Has zero context for this codebase.
 - Knows almost nothing about its toolset or problem domain.
 - Has weak test-design instincts.
 - May be a mid-tier LLM.
+- Executes **one task at a time** in a fresh subagent session with no memory
+  of previous tasks.
 
-Write the plan for that implementer. Document exactly which files to touch,
-which existing code to read first, which tests to write, which commands to
-run, and what to commit. Bite-sized tasks. DRY. YAGNI. TDD. Frequent commits.
+Write the plan for that implementer. Each task must be fully self-contained:
+document exactly which files to touch, which existing code to read first,
+which tests to write, which commands to run, and what to commit. Bite-sized
+tasks. DRY. YAGNI. TDD. Frequent commits.
 
 ## Scope Check
 
 If the issue spans multiple independent subsystems, stop and suggest splitting
-it into sub-issues before planning. Each plan should produce working,
-testable software on its own.
+it into sub-issues using the `prd-to-issues` skill before planning. Each plan
+should produce working, testable software on its own.
+
+---
+
+## Phase 0 — Issue Pre-flight
+
+Complete this phase before any codebase exploration or interview questions.
+
+Fetch the issue and read it fully:
+
+```
+gh issue view $ARGUMENTS   # or glab issue view $ARGUMENTS
+```
+
+Extract and record:
+
+- [ ] **Parent PRD** issue number (from `## Parent PRD` section).
+- [ ] **Type** — HITL or AFK (from `## Type` section). If absent, treat as
+      HITL.
+- [ ] **Acceptance criteria** — list every criterion verbatim. Each must map
+      to at least one plan task.
+- [ ] **Blocked by** — fetch and skim each blocking issue's implementation
+      plan comment to note what interfaces it exposes. These are available
+      to use; do not re-derive or re-implement them.
+- [ ] **Interview depth** — set based on Type:
+  - **AFK**: abbreviated interview. Confirm orientation checklist, produce
+    3–5 Design Decision entries, then proceed directly to Phase 2. Skip
+    speculative design branches.
+  - **HITL**: full interview. Resolve all design branches before proceeding.
+
+If the issue body is missing required sections (Type, Acceptance criteria),
+note the gaps and proceed with HITL mode.
+
+---
 
 ## Phase 1 — Design Interview
 
@@ -42,8 +80,8 @@ testable software on its own.
 Before asking any interview questions, explore the codebase to ground your
 recommendations. Complete all items:
 
-- [ ] Locate the test runner config (`pytest.ini`, `pyproject.toml`, `Makefile`,
-  or equivalent). Note the test command and any markers.
+- [ ] Locate the test runner config (`pytest.ini`, `pyproject.toml`,
+  `Makefile`, or equivalent). Note the test command and any markers.
 - [ ] Find the test file most analogous to the issue's affected module. Note
   its structure, fixture patterns, and naming conventions.
 - [ ] Identify 1–3 existing implementations that are structurally similar to
@@ -65,8 +103,8 @@ shared understanding. Walk down each branch of the design tree and resolve
 dependencies between decisions one-by-one.
 
 - For each question, provide your recommended answer and reasoning.
-- If a question can be answered by exploring the codebase, explore the codebase
-  instead.
+- If a question can be answered by exploring the codebase, explore the
+  codebase instead.
 - Propose 2–3 different approaches with trade-offs.
 - Lead with your recommended option and explain why.
 - Go back and clarify when something doesn't make sense.
@@ -82,9 +120,9 @@ Do not write any code in this phase.
 
 ### Design Decisions Log
 
-After each major design branch is resolved (a decision between two or more
-approaches has been made), append a one-line entry to a running log at the
-top of your response under the heading `## Design Decisions`:
+After each major design branch is resolved, append a one-line entry to a
+running log at the top of your response under the heading
+`## Design Decisions`:
 
     ## Design Decisions
     - [topic]: [chosen approach] — [one-sentence rationale]
@@ -92,7 +130,10 @@ top of your response under the heading `## Design Decisions`:
 
 This log is the primary input to Phase 2. If the log exceeds ~10 entries
 before the interview is complete, the issue likely spans independent
-subsystems — stop and suggest splitting before continuing.
+subsystems — stop and suggest splitting via the `prd-to-issues` skill before
+continuing.
+
+---
 
 ## Phase 2 — Implementation Plan
 
@@ -104,15 +145,18 @@ rather than pasting it. Write new code in the plan only where no analogous
 code exists in the repo, and only as much as the implementer needs.
 
 Sibling skills `tdd`, `clean-code`, and `conventional-commits` are invoked by
-the implementer in Part 2; do not duplicate their content here — reference
-them by name.
+the implementer; do not duplicate their content here — reference them by name.
 
 ### Plan header
 
 ```
 # Implementation plan for issue $ARGUMENTS — <one-line title>
 
+**Parent PRD:** #<prd-issue-number>
 **Goal:** <one sentence: what this delivers>
+**Acceptance criteria addressed:** <copy criteria verbatim from the issue>
+**Blocked by:** #<issue-number> — read its plan comment for available
+interfaces before starting. Or "None".
 
 **Design summary:** <3–5 sentences on the approach: key components,
 interfaces, data/error flow.>
@@ -125,8 +169,10 @@ interfaces, data/error flow.>
   cases.
 - Commit at the end of every slice using the pre-written message. Format per
   the `conventional-commits` skill.
-- If a task is inconsistent with the codebase, pause and ask — do not
+- If a task is inconsistent with the codebase, pause and report — do not
   re-plan silently.
+- You will receive one task at a time. Do not read ahead or attempt other
+  tasks.
 ```
 
 ### File structure
@@ -149,8 +195,12 @@ one observable behavior end-to-end and could ship alone. Soft cap: if a slice
 needs more than ~5 test cases or touches more than ~4 files, split it. One
 commit per slice, at the end, after refactor.
 
-Each task uses this structure, with every step as a `- [ ]` checkbox so the
-implementer can track progress:
+Each task must be **fully self-contained** — a subagent receiving only this
+task block (with no other plan context) must be able to execute it correctly.
+Never write "similar to Task N" or reference a previous task's code; repeat
+what the implementer needs.
+
+Each task uses this structure, with every step as a `- [ ]` checkbox:
 
 ```
 ### Task N: <slice name>
@@ -164,7 +214,7 @@ implementer can track progress:
 - `path/to/analogous_code.py::symbol` — existing pattern to mirror
 - `tdd` skill — if unsure about test shape
 - <any external doc only if genuinely non-obvious>
-**Done when:** <crisp acceptance criterion>
+**Done when:** <crisp acceptance criterion — must match an issue AC>
 **Commit:** `<type>(<scope>): <subject>` (conventional-commits format)
 
 Per test in this slice, repeat steps 1–4:
@@ -204,7 +254,7 @@ After all tests in the slice are green:
 #### Documentation Task (always last)
 
 Every plan must end with a documentation task. Fill in the actual file list
-from the Phase 1 orientation checklist. Use this structure:
+from the Phase 1 orientation checklist.
 
 ```
 ### Task N: Update documentation
@@ -212,13 +262,15 @@ from the Phase 1 orientation checklist. Use this structure:
 **Goal:** All affected documentation reflects the post-implementation state.
 **Files:**
 - Modify: `CLAUDE.md` — update if new patterns or conventions were introduced
-- Modify: `README.md` — update architecture or usage sections if public shape changed
+- Modify: `README.md` — update architecture or usage sections if public shape
+  changed
 - Modify: `docs/<relevant>.md` — update API or design doc if applicable
 **Pre-reading:**
 - Results of Phase 1 orientation doc checklist
-**Done when:** Every doc file from the orientation checklist has been reviewed.
-Files that required changes are updated and committed. Files requiring no
-changes are noted explicitly ("no update needed — not affected by this issue").
+**Done when:** Every doc file from the orientation checklist has been
+reviewed. Files that required changes are updated and committed. Files
+requiring no changes are noted explicitly ("no update needed — not affected
+by this issue").
 **Commit:** `docs(<scope>): update documentation for issue $ARGUMENTS`
 
 - [ ] Review each file from the Phase 1 orientation doc checklist.
@@ -243,8 +295,8 @@ These are plan failures — never write them:
 - "Add appropriate error handling" / "add validation" / "handle edge cases"
   without saying which cases.
 - "Write tests for the above" without the actual test code.
-- "Similar to Task N" — repeat the test code; the implementer may read tasks
-  out of order.
+- "Similar to Task N" — repeat the test code; the implementer reads tasks in
+  isolation.
 - Test steps without test code.
 - References to types, functions, or methods not defined in any task and not
   already present in the repo at a named path.
@@ -252,9 +304,6 @@ These are plan failures — never write them:
 ### Review Step
 
 Append the following section to the end of every plan, after all tasks.
-Fill in the invariants, regression tests, and checklist items specific to
-this issue. All items are advisory except where an architectural invariant
-test file is created — those run in CI.
 
 ```
 ---
@@ -292,24 +341,49 @@ behavior changes.
 
 After writing the plan, look at it with fresh eyes:
 
-1. **Spec coverage** — every requirement in the issue maps to a task. List
-   gaps, then add tasks for them.
-2. **Placeholder scan** — search for the patterns in "No placeholders" above.
+1. **AC coverage** — every acceptance criterion from the issue maps to a
+   task's "Done when" field. List gaps, then add tasks for them.
+2. **Placeholder scan** — search for patterns in "No placeholders" above.
    Fix them.
 3. **Pointer check** — every task names at least one existing file/symbol to
    read, modify, or mirror, or explicitly states "net-new, no analogous code
    in repo."
-4. **Type consistency** — names, signatures, and paths used in later tasks
-   match earlier tasks. No `clearLayers()` in Task 3 and `clearFullLayers()`
-   in Task 7.
-5. **Scope** — focused enough for a single plan, or does it need splitting?
-6. **Ambiguity** — any requirement readable two ways? Pick one, make it
+4. **Self-containment check** — every task can be handed to a context-naive
+   subagent with no other plan context and executed correctly.
+5. **Type consistency** — names, signatures, and paths used in later tasks
+   match earlier tasks.
+6. **Scope** — focused enough for a single plan, or does it need splitting?
+7. **Ambiguity** — any requirement readable two ways? Pick one, make it
    explicit.
 
 Fix issues inline. No re-review.
 
+---
+
 ## Wrap-up
 
-- Add the plan to the issue as a comment.
-- Clearly label it as the implementation plan for issue $ARGUMENTS.
-- Stop after the plan is produced. Do not implement any changes.
+- Post the plan as a comment on issue $ARGUMENTS.
+- Prefix the comment clearly: "Implementation plan for issue $ARGUMENTS".
+- Swap lifecycle labels on the issue: add `planned`, remove `needs-plan`.
+  (Labels are created once per repo via the `bootstrap` skill. Use whichever
+  issue-tracker CLI is available.)
+- Append a progress table to the **issue body** (not a comment) under the
+  `## Implementation log` section. Create the section if absent.
+
+  ```
+  ## Implementation log
+
+  | Task | Status | Commit SHA |
+  |------|--------|------------|
+  | Task 1: <name> | ⬜ pending | — |
+  | Task 2: <name> | ⬜ pending | — |
+  | ...  | ...    | ...        |
+  | Review step    | ⬜ pending | — |
+  | PR / CI        | ⬜ pending | — |
+  ```
+
+- Stop after the plan and log table are posted. Do not implement any changes.
+- Tell the user:
+
+  > Plan posted on issue #$ARGUMENTS. Run the `ship`
+  > skill with this issue number to begin implementation.

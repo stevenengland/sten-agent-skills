@@ -1,0 +1,80 @@
+# Registry of tracked skills and their upstream sources.
+# Consumed by the `sync-upstream-skills` skill.
+#
+# Fields:
+#   skill          - path to local skill folder or file
+#   upstream       - URL to upstream folder (preferred) or file
+#   ref            - upstream commit SHA last reviewed (empty = no baseline yet)
+#   last_reviewed  - ISO date of last sync decision
+#   status         - tracked | own-invention | unknown-source | abandoned
+#   notes          - intentional divergences, rename history, rejected imports
+
+- skill: skills/architecture
+  upstream: ""
+  ref: ""
+  last_reviewed: ""
+  status: own-invention
+  notes: ""
+
+- skill: skills/design-an-interface
+  upstream: https://github.com/mattpocock/skills
+  ref: ""
+  last_reviewed: ""
+  status: tracked
+  notes: ""
+
+- skill: skills/improve-codebase-architecture
+  upstream: https://github.com/mattpocock/skills
+  ref: ""
+  last_reviewed: ""
+  status: tracked
+  notes: ""
+
+- skill: plugins/stenswf/skills/grill-me
+  upstream: https://github.com/mattpocock/skills
+  ref: ""
+  last_reviewed: ""
+  status: tracked
+  notes: ""
+
+- skill: plugins/stenswf/skills/prd-from-grill-me
+  upstream: https://github.com/mattpocock/skills
+  ref: ""
+  last_reviewed: ""
+  status: tracked
+  notes: ""
+
+- skill: plugins/stenswf/skills/prd-to-issues
+  upstream: https://github.com/mattpocock/skills
+  ref: ""
+  last_reviewed: ""
+  status: tracked
+  notes: ""
+
+- skill: plugins/stenswf/skills/tdd
+  upstream: https://github.com/mattpocock/skills
+  ref: ""
+  last_reviewed: ""
+  status: tracked
+  notes: ""
+
+- skill: plugins/stenswf/skills/conventional-commits
+  upstream: ""
+  ref: ""
+  last_reviewed: ""
+  status: unknown-source
+  notes: "Original source unknown; fill in upstream before first sync."
+
+- skill: plugins/stenswf/skills/caveman
+  upstream: https://github.com/JuliusBrussee/caveman/tree/main/skills/caveman
+  ref: ""
+  last_reviewed: ""
+  status: tracked
+  notes: ""
+
+- skill: plugins/stenswf/skills/lint-escape
+  upstream: ""
+  ref: ""
+  last_reviewed: ""
+  status: own-invention
+  notes: ""
