@@ -147,21 +147,26 @@ Sibling-skill references inside a SKILL.md body use bare names too (e.g. `` `bre
 
 ## Install — GitHub Copilot CLI
 
-### Direct install
+GitHub Copilot CLI only supports plugins via a registered marketplace —
+direct install from a local path or `OWNER/REPO:PATH` is no longer
+supported.
 
 ```bash
-# From a local clone of STEN-AGENT-SKILLS
-copilot plugin install ./plugins/stenswf
+# Register the marketplace (once per machine)
+copilot plugin marketplace add stevenengland/sten-agent-skills
 
-# Or directly from GitHub (colon-separated OWNER/REPO:PATH)
-copilot plugin install stevenengland/sten-agent-skills:plugins/stenswf
+# Browse available plugins
+copilot plugin marketplace browse sten-agent-skills-marketplace
+
+# Install
+copilot plugin install stenswf@sten-agent-skills-marketplace
 ```
 
 ### Verify
 
 ```bash
 copilot plugin list
-# → stenswf  0.1.0
+# → stenswf  0.2.0
 
 /stenswf:plan 123
 ```

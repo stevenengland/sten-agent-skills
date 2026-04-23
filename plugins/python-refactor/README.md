@@ -134,21 +134,9 @@ Skill folder:  cleanup          →  /python-refactor:cleanup
 
 ## Install — GitHub Copilot CLI
 
-### Option A: Direct install from the STEN-AGENT-SKILLS repo
-
-Point the install command at the `plugins/python-refactor` subdirectory:
-
-```bash
-# From a local clone of STEN-AGENT-SKILLS
-copilot plugin install ./plugins/python-refactor
-
-# Or directly from GitHub (colon-separated OWNER/REPO:PATH format)
-copilot plugin install stevenengland/sten-agent-skills:plugins/python-refactor
-```
-
-### Option B: Via marketplace
-
-From any machine:
+GitHub Copilot CLI only supports plugins via a registered marketplace —
+direct install from a local path or `OWNER/REPO:PATH` is no longer
+supported.
 
 ```bash
 # Register the marketplace (once per machine)
