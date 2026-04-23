@@ -63,6 +63,9 @@ gh label create afk        --color 2ecc71 --description "Slice can be completed 
 gh label create needs-plan --color e67e22 --description "Slice issue awaits an implementation plan" --force
 gh label create planned    --color 3498db --description "Implementation plan posted"                --force
 gh label create shipping   --color 1f77b4 --description "Implementation in progress"                --force
+gh label create shipped    --color 0e8a16 --description "Slice PR merged to main"                    --force
+gh label create abandoned  --color 6a737d --description "Slice abandoned; excluded from PRD review"  --force
+gh label create applied    --color 2ea44f --description "PRD capstone cleanup PR merged"             --force
 ```
 
 ### GitLab (`glab`) — translation reference
@@ -76,7 +79,10 @@ for pair in \
   "afk:#2ecc71:Slice can be completed without human input" \
   "needs-plan:#e67e22:Slice issue awaits an implementation plan" \
   "planned:#3498db:Implementation plan posted" \
-  "shipping:#1f77b4:Implementation in progress" ; do
+  "shipping:#1f77b4:Implementation in progress" \
+  "shipped:#0e8a16:Slice PR merged to main" \
+  "abandoned:#6a737d:Slice abandoned; excluded from PRD review" \
+  "applied:#2ea44f:PRD capstone cleanup PR merged" ; do
     name="${pair%%:*}"; rest="${pair#*:}"; color="${rest%%:*}"; desc="${rest#*:}"
     glab label create --name "$name" --color "$color" --description "$desc" || \
     glab label update "$name" --color "$color" --description "$desc"
@@ -87,7 +93,8 @@ done
 
 Adapt the name/color/description triples above to the platform's label API.
 Canonical names (must match exactly): `prd`, `sliced`, `slice`, `hitl`,
-`afk`, `needs-plan`, `planned`, `shipping`.
+`afk`, `needs-plan`, `planned`, `shipping`, `shipped`, `abandoned`,
+`applied`.
 
 ## Lifecycle overview
 
@@ -99,4 +106,7 @@ Canonical names (must match exactly): `prd`, `sliced`, `slice`, `hitl`,
 | `hitl`/`afk`  | `prd-to-issues` (each child)       | —                     |
 | `needs-plan`  | `prd-to-issues` (each child)       | `plan`                |
 | `planned`     | `plan`                             | —                     |
-| `shipping`    | `ship` (Phase 1 start)             | `ship` (Phase 5 end)  |
+| `shipping`    | `ship` (Phase 1 start)             | `ship` (Phase 4 merge)|
+| `shipped`     | `ship` (Phase 4 after PR merge)    | —                     |
+| `abandoned`   | human (marks a slice as withdrawn) | —                     |
+| `applied`     | `apply` (PRD-mode, after cleanup PR merge) | —             |

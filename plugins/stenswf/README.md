@@ -22,10 +22,38 @@ Contains three coordinated workflows plus always-on craft skills.
 
 ```
 /stenswf:plan <issue-num>      → design interview + implementation plan comment
-/stenswf:ship <issue-num>      → TDD + clean code + PR + CI loop to green
-/stenswf:review <issue-num>    → plan-only review of staged changes, posts comment
-/stenswf:apply <issue-num>     → interactively apply the review plan, close issue
+/stenswf:ship <issue-num>      → TDD + clean code + PR + CI + merge → shipped
+/stenswf:review <target>       → plan-only review; slice-mode (suggestions) OR
+                                 PRD-mode (5-axis capstone after all slices shipped)
+/stenswf:apply <target>        → slice-mode: interactive apply + close;
+                                 PRD-mode: themed cleanup PR → applied label
 ```
+
+`review` and `apply` auto-detect **mode** from the target issue's labels:
+
+- Label `prd` → PRD-mode (capstone review / themed cleanup).
+- Label `slice` (or neither) → Slice-mode (per-slice suggestions).
+
+PRD-mode `review` is **gated**: refuses to run while any slice is still
+open. Ship or `abandoned`-label them first.
+
+### Recommended model routing
+
+These workflow skills benefit from different model strengths. Configure
+your harness (or manually invoke) accordingly.
+
+| Skill | Recommended model | Rationale |
+|---|---|---|
+| `/stenswf:grill-me` | Sonnet | Fast interactive Q&A; relentlessness over depth |
+| `/stenswf:prd-from-grill-me` | Opus | Long-context design synthesis; industry-pattern research |
+| `/stenswf:prd-to-issues` | Sonnet | Structured slicing; tight templates |
+| `/stenswf:plan` | Opus | Architecture, invariants, deep file-structure reasoning |
+| `/stenswf:ship` | Sonnet | Orchestrator dispatch; subagents do the heavy lifting |
+| `/stenswf:review` | Opus | Capstone synthesis; 5-axis architectural critique |
+| `/stenswf:apply` | Sonnet | Execution against a structured findings list |
+
+Craft skills (`tdd`, `clean-code`, `lint-escape`, etc.) run in whatever
+parent session invokes them — no separate routing.
 
 ### Craft skills (invoked by the above, or standalone)
 
@@ -35,9 +63,12 @@ Contains three coordinated workflows plus always-on craft skills.
 | `/stenswf:tdd` | Red-green-refactor; integration-style tests |
 | `/stenswf:lint-escape` | Tiered protocol for unresolvable lint/type errors |
 | `/stenswf:architecture` | Architectural decision guidance |
-| `/stenswf:conventional-commits` | Conventional Commits v1.0.0 messages |
 | `/stenswf:brevity` | Plain-English brevity for internal reasoning (full prose for artifacts) |
 | `/stenswf:test-file-compaction` | Lossless test-file compaction |
+| `/stenswf:plan-reviewer` | Multi-perspective plan critique (used by `review` slice-mode) |
+
+Conventional Commits formatting is inlined in `plan`, `ship`, and `apply`
+— no separate skill load needed.
 
 ---
 
@@ -62,8 +93,8 @@ STEN-AGENT-SKILLS/                       ← Repo root
 │       │   ├── tdd/                     (+ adjacent reference .md files)
 │       │   ├── lint-escape/
 │       │   ├── architecture/
-│       │   ├── conventional-commits/    (+ references/)
 │       │   ├── brevity/
+│       │   ├── plan-reviewer/
 │       │   └── test-file-compaction/
 │       └── README.md                    ← This file
 │
@@ -147,14 +178,20 @@ Claude Code discovers and loads it automatically. Reload if already running:
 ## Typical end-to-end flow
 
 1. **Capture the idea.** `/stenswf:grill-me` → shared understanding.
-2. **Write the PRD.** `/stenswf:prd-from-grill-me` → issue filed.
+2. **Write the PRD.** `/stenswf:prd-from-grill-me` → issue filed; PRD base SHA recorded (git tag `prd-<N>-base`).
 3. **Break it down.** `/stenswf:prd-to-issues` → vertical-slice issues.
-4. **Pick an issue.** `/stenswf:plan <N>` → plan comment on the issue.
-5. **Implement.** `/stenswf:ship <N>` → code, tests, PR, CI green.
-6. **Self-review.** `/stenswf:review <N>` → review plan posted as comment.
-7. **Polish.** `/stenswf:apply <N>` → interactive apply + close.
+4. **For each slice:**
+   1. `/stenswf:plan <slice-N>` → plan comment on the slice.
+   2. `/stenswf:ship <slice-N>` → code, tests, PR, CI green, merged → `shipped`.
+   3. *(optional)* `/stenswf:review <slice-N>` → slice-mode suggestions.
+   4. *(optional)* `/stenswf:apply <slice-N>` → interactive apply + close.
+5. **When all slices are `shipped` (or `abandoned`):**
+   1. `/stenswf:review <PRD-N>` → PRD-mode 5-axis capstone review.
+   2. `/stenswf:apply <PRD-N>` → PRD-mode themed cleanup PR → `applied`.
 
-The craft skills (`tdd`, `clean-code`, `conventional-commits`, `lint-escape`, `brevity`, `test-file-compaction`) are invoked by the workflow skills automatically. You can also invoke any of them directly.
+The craft skills (`tdd`, `clean-code`, `lint-escape`, `brevity`,
+`test-file-compaction`, `architecture`, `plan-reviewer`) are invoked by
+the workflow skills automatically. You can also invoke any of them directly.
 
 ---
 

@@ -29,10 +29,37 @@ If the PRD is not already in your context window, fetch the issue content
 `gh issue view`, `glab issue view`). If no CLI is available, ask the user
 to provide the PRD content.
 
-### 2. Explore the codebase (optional)
+### 2. Explore the codebase (optional, via subagent)
 
-If you have not already explored the codebase, do so to understand the
-current state of the code.
+If you have not already explored the codebase in this session, **delegate
+exploration to an Explore subagent** rather than reading files directly.
+The subagent returns a ≤300-word report that stays compact in the
+orchestrator trajectory.
+
+First, extract the list of modules named in the PRD's **Implementation
+Decisions** section — those are the only modules the subagent should
+read. For each named module, the subagent reads **only the primary source
+file + its most relevant test file**. Do not let the subagent wander the
+repo.
+
+Dispatch message:
+
+> For each module listed below (from the PRD's Implementation Decisions),
+> read ONLY its primary source file and the most directly associated test
+> file. Do not read other files.
+>
+> Modules:
+> - <module 1 name> — likely path: <path or "search by name">
+> - <module 2 name> — likely path: <path or "search by name">
+> - …
+>
+> Return a single report of ≤300 words total covering, per module: current
+> shape in one sentence, integration points, and where a tracer-bullet
+> slice would likely cut in. Thoroughness: quick.
+
+Escape hatch: if the returned report leaves specific ambiguities, dispatch
+a targeted follow-up subagent for just those files. Do not read the
+codebase in the parent session.
 
 ### 3. Draft vertical slices
 

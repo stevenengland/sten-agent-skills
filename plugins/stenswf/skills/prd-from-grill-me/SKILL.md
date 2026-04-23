@@ -20,15 +20,27 @@ steps if you don't consider them necessary.
    solve and any potential ideas for solutions.
 
 2. Explore the repo to verify their assertions and understand the current
-   state of the codebase.
+   state of the codebase. **Delegate this to an Explore subagent** rather
+   than reading files directly — the subagent returns a compact report
+   (≤300 words) so the orchestrator trajectory stays light. Dispatch
+   message:
+
+   > Explore the codebase to verify these claims and map the current state
+   > for a PRD on <topic>. Focus on: <the user's specific assertions> and
+   > <the modules likely affected>. Return a report of ≤300 words covering
+   > what exists, what's missing, and any risks. Thoroughness: medium.
+
+   Escape hatch: if the returned report is insufficient, ask a targeted
+   follow-up subagent rather than reading files in the parent session.
 
 3. Interview me relentlessly about every aspect of the plan until we reach a
    shared understanding. Walk down each branch of the design tree and resolve
    dependencies between decisions one-by-one.
 
    - For each question, provide your recommended answer and reasoning.
-   - If a question can be answered by exploring the codebase, explore the
-     codebase instead.
+   - If a question can be answered by exploring the codebase, dispatch a
+     targeted Explore subagent (as in Step 2) instead of reading files
+     directly.
    - Propose 2–3 different approaches with trade-offs.
    - Lead with your recommended option and explain why.
    - Go back and clarify when something doesn't make sense.
@@ -46,6 +58,9 @@ steps if you don't consider them necessary.
    the implementation. Actively look for opportunities to extract deep modules
    that can be tested in isolation.
 
+   **Consult the `architecture` sibling skill** for the deep-vs-shallow
+   heuristic and for the criteria on when to extract an abstraction.
+
    A deep module (as opposed to a shallow module) is one which encapsulates a
    lot of functionality in a simple, testable interface which rarely changes.
 
@@ -57,6 +72,26 @@ steps if you don't consider them necessary.
    the project's issue tracker. If a CLI tool is available (e.g. `gh`,
    `glab`), use it to create the issue; otherwise present the formatted issue
    body for manual creation.
+
+   **Before creating the issue, record the PRD base SHA.** This is the
+   commit the delivered PRD will be reviewed against by `review` in
+   PRD-mode. Use the current `HEAD` of the default integration branch
+   (typically `main`):
+
+   ```bash
+   git fetch origin
+   PRD_BASE=$(git rev-parse origin/main)
+   echo "PRD base SHA: $PRD_BASE"
+   ```
+
+   Embed `**PRD base SHA:** <PRD_BASE>` as a line in the PRD body (see
+   template). After the issue is created and its number `<N>` is known,
+   tag that commit so `review` can resolve it later:
+
+   ```bash
+   git tag "prd-<N>-base" "$PRD_BASE"
+   git push origin "prd-<N>-base"
+   ```
 
    After creating the issue, apply the `prd` lifecycle label using whichever
    issue-tracker CLI is available. Labels are
@@ -70,6 +105,8 @@ steps if you don't consider them necessary.
    > slices.
 
 <prd-template>
+
+**PRD base SHA:** <PRD_BASE>
 
 ## Problem Statement
 
