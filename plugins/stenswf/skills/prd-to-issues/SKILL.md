@@ -69,16 +69,58 @@ Escape hatch: if the returned report leaves specific ambiguities, dispatch
 a targeted follow-up subagent for just those files. Do not read the
 codebase in the parent session.
 
-### 3. Draft vertical slices
+### 3. HITL triage
+
+Before drafting slices, list every decision that would normally trigger a
+HITL slice. For each, classify:
+
+- **Bikeshed** (naming, shape, layout, test layout, error surfacing,
+  vocabulary) → should already live in the PRD's `## Conventions` section.
+  If missing, stop and ask the user to add it before continuing. These do
+  NOT warrant HITL slices.
+- **Novel pattern** (new architectural idea, action vocabulary for a state
+  machine, etc.) → two options:
+  - Lock the shape in the PRD's `## Conventions` section, then treat the
+    slice as AFK.
+  - Introduce a **spike slice**: a tiny AFK+Lite slice that lands the
+    types / vocabulary / one representative test — no consumers. Later
+    slices consume the locked shape. Use this when the shape is hard to
+    fully specify without touching code.
+- **Genuine judgment call** (irreducible — the decision truly can only be
+  made once implementation starts) → keep HITL, but write the escape hatch
+  into the slice: state the fallback plan if the judgment call goes the
+  "wrong" way.
+
+Goal: zero HITL slices at the end of triage except irreducible judgment
+calls. Present the triage table to the user for confirmation before
+drafting slices.
+
+### 4. Draft vertical slices (Lite-first)
 
 Break the PRD into **tracer bullet** issues. Each issue is a thin vertical
 slice that cuts through ALL integration layers end-to-end, NOT a horizontal
 slice of one layer.
 
+**Draft slices assuming each MUST fit the Lite envelope.** The `ship-light`
+envelope is:
+
+- ≤ 15 files changed (no distinction between src and test files)
+- One top-level module directory. Intra-directory helpers are allowed and
+  do not count as a second subsystem.
+- No schema migration
+- No architectural unknowns (resolved in PRD `## Conventions` or a spike
+  slice)
+- AFK-typed
+
+A slice may exceed the envelope only if it is genuinely irreducible —
+splitting would break the vertical-slice rule (no observable behavior) or
+introduce a doc-only slice that ships nothing.
+
 Slices may be 'HITL' or 'AFK'. HITL slices require human interaction, such
 as an architectural decision or a design review. AFK slices can be
 implemented and merged without human interaction. Prefer AFK over HITL
-where possible.
+where possible — the Step 3 triage should have already eliminated most
+HITL candidates.
 
 <vertical-slice-rules>
 - Each slice delivers a narrow but COMPLETE path through every layer
@@ -87,7 +129,7 @@ where possible.
 - Prefer many thin slices over few thick ones
 </vertical-slice-rules>
 
-### 4. Quiz the user
+### 5. Quiz the user
 
 Present the proposed breakdown as a numbered list. For each slice, show:
 
@@ -95,32 +137,53 @@ Present the proposed breakdown as a numbered list. For each slice, show:
 - **Type**: HITL / AFK
 - **Blocked by**: which other slices (if any) must complete first
 - **User stories covered**: which user stories from the PRD this addresses
-- **Lite-eligible**: `true` / `false` — whether the slice plausibly fits
-  the `ship-light` envelope (≤ ~5 files, 1 subsystem, no schema migration,
-  AFK-typed, no architectural unknowns). Default `false` when in doubt.
+- **Lite-eligible**: `true` / `false`. Default `true` when borderline —
+  set `false` only when you can name a specific disqualifier (see below).
+- **If `false`**: cite the disqualifier tag and the split axis you
+  considered and rejected.
+
+Disqualifier tags (pick exactly one for non-Lite slices):
+
+- `files>15` — exceeds file cap
+- `cross-module` — touches more than one top-level module directory
+- `schema-migration` — includes a schema change
+- `arch-unknown` — architectural decision not resolved in PRD
+- `hitl-cat3` — genuine irreducible judgment call
 
 Ask the user:
 
 - Does the granularity feel right? (too coarse / too fine)
 - Are the dependency relationships correct?
-- Should any slices be merged or split further?
+- Should any slices be merged or split further? **For every non-Lite
+  slice, is the rejected split axis convincing? If weak, split.**
 - Are the correct slices marked as HITL and AFK?
-- Are the `Lite-eligible` flags right?
+- Are the `Lite-eligible` flags and disqualifier tags right?
 
 > *Note: solo-dev assumption. On mid-batch failure, manually delete partial
 > slice issues before re-running, or duplicates will be created.*
 
 Iterate until the user approves the breakdown.
 
-### 5. Create the issues
+### 6. Create the issues
 
 Use whichever issue-tracker CLI is available;
 otherwise present the formatted issue body for manual creation. Lifecycle
 labels (`slice`, `hitl`, `afk`, `needs-plan`, `sliced`) are created once per
 repo via the `bootstrap` skill — assume they exist.
 
+Before creating issues, extract the PRD's `## Conventions` section into a
+scratch file:
+
+```bash
+gh issue view <prd-number> --json body -q .body > /tmp/prd-<prd-number>.md
+awk '/^## Conventions/,/^## /' /tmp/prd-<prd-number>.md | sed '$d' \
+  > /tmp/prd-<prd-number>-conventions.md
+wc -l /tmp/prd-<prd-number>-conventions.md   # confirm; do not cat
+```
+
 For each approved slice, create an issue in the project's issue tracker
-using the body template below.
+using the body template below, inlining the Conventions file verbatim
+where indicated.
 
 Create issues in dependency order (blockers first) so you can reference real
 issue numbers in the "Blocked by" field.
@@ -131,6 +194,9 @@ Immediately after creating each slice issue, apply these labels:
 - `hitl` or `afk` — matches the slice's Type.
 - `needs-plan` — indicates no implementation plan has been posted yet (the
   `plan` skill removes this label when it posts a plan).
+- `spike` — only for spike slices (see Step 3). `ship-light` preflight
+  skips the `arch-unknown` disqualifier for spike slices since their
+  purpose is to resolve unknowns.
 
 After all slice issues have been created, apply the `sliced` label to the
 parent PRD issue so it is clearly marked as broken down.
@@ -149,6 +215,18 @@ parent PRD issue so it is clearly marked as broken down.
 A concise description of this vertical slice. Describe the end-to-end
 behavior, not layer-by-layer implementation. Reference specific sections of
 the parent PRD rather than duplicating content.
+
+## Conventions (from PRD)
+
+<!--
+Copy the PRD's `## Conventions` section verbatim here (contents only —
+do not repeat the `## Conventions` heading from the PRD). Slices are
+self-contained; downstream skills (plan, ship, ship-light) read this
+section as hard spec without chasing back to the PRD.
+
+If the PRD's Conventions section says `None — slice-local decisions
+only.`, copy that line verbatim.
+-->
 
 ## Acceptance criteria
 
@@ -182,10 +260,22 @@ produced nothing reliable.
 
 ## Lite-eligible
 
-`true` if this slice plausibly fits the `ship-light` envelope (≤ ~5
-files, 1 subsystem, no schema migration, AFK-typed, no architectural
-unknowns). `false` otherwise. When in doubt, set `false` — `ship-light`
-will abort to `plan`+`ship` anyway.
+<!--
+For Lite slices, write exactly:
+
+    `true`
+
+For non-Lite slices, write the structured block:
+
+    `false`
+
+    **Disqualifier:** <one of: files>15 | cross-module | schema-migration | arch-unknown | hitl-cat3>
+    **Reason:** <one sentence — what specifically triggers the disqualifier>
+    **Split axis considered:** <one sentence — what split was rejected and why>
+
+Default is `true` when borderline. Only set `false` with a named
+disqualifier.
+-->
 
 ## Implementation log
 

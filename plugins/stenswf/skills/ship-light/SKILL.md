@@ -20,13 +20,40 @@ subagents, no plan comment, no XML extraction. The issue body IS the spec.
 
 - Body lacks an `Acceptance criteria` section with ≥1 checkbox.
 - Open `Blocked by #N` exists.
-- Scope plausibly exceeds ~5 files / 1 subsystem / no schema migration
-  (read `What to build` and `Files (hint)` if present; when in doubt, abort).
-- Body declares `Lite-eligible: false`.
+- Body declares `Lite-eligible: false`. If a structured disqualifier
+  block is present (`Disqualifier: <tag>`), echo the tag in the one-line
+  abort reason (e.g. `aborting — files>15`). Exception: for issues
+  labelled `spike`, ignore a `Disqualifier: arch-unknown` — spike slices
+  exist to resolve unknowns.
+- Scope plausibly exceeds the Lite envelope and the issue body did not
+  already declare it non-Lite:
+  - **> 15 files** changed (no distinction between src/test).
+  - Crosses **more than one top-level module directory** (intra-directory
+    helpers are fine).
+  - Includes a schema migration.
+  - Introduces an architectural decision not already resolved in
+    `## Conventions (from PRD)`.
+  Read `What to build`, `Files (hint)`, and `## Conventions (from PRD)`
+  before judging. When in doubt, proceed — the `apply` skill's
+  per-suggestion loop and `ship-light` Phase 3 rubberduck will catch
+  drift.
 
 ## Phase 1 — Setup
 
 - Read `CLAUDE.md` (or `AGENTS.md`) once. **Honour CLAUDE.md throughout.**
+- Extract the slice's `## Conventions (from PRD)` section and read once.
+  Treat as hard spec alongside Acceptance criteria — do not invent
+  alternative names, shapes, or layouts:
+
+  ```bash
+  gh issue view $ARGUMENTS --json body -q .body > /tmp/slice-$ARGUMENTS.md
+  awk '/^## Conventions \(from PRD\)/,/^## /' /tmp/slice-$ARGUMENTS.md \
+    | sed '$d' > /tmp/slice-$ARGUMENTS-conventions.md
+  wc -l /tmp/slice-$ARGUMENTS-conventions.md
+  ```
+
+  If the extracted content is `None — slice-local decisions only.`, there
+  are no cross-cutting conventions — proceed normally.
 - Load exactly: `tdd`, `clean-code`, `lint-escape`. No others.
 - Branch off default:
 
@@ -43,7 +70,10 @@ subagents, no plan comment, no XML extraction. The issue body IS the spec.
 
 For each AC in order, follow the `tdd` skill: failing test → minimal
 code → green → refactor (apply `clean-code`) → commit. One commit per
-behavioural change. Conventional Commits, `Refs #$ARGUMENTS` footer:
+behavioural change. Names, shapes, and layouts used here must match
+`## Conventions (from PRD)` verbatim — if a convention conflicts with
+the codebase, stop and hand off to `/stenswf:plan`+`/stenswf:ship` rather
+than improvising. Conventional Commits, `Refs #$ARGUMENTS` footer:
 
 ```bash
 git commit -m "<type>(<scope>): <imperative subject>" -m "Refs #$ARGUMENTS"
@@ -60,6 +90,10 @@ what that skill does not:
 
 - **AC → test mapping.** For each AC in the body, name the test proving
   it. Missing → add one.
+- **Convention drift.** Grep the diff for symbols introduced by this
+  slice; confirm every new module path, function name, class name, and
+  field set matches `## Conventions (from PRD)` verbatim. Any drift →
+  fix or hand off.
 - **Scope drift.** Read `git diff $BASE_SHA..HEAD`. Anything not required
   by an AC → delete or justify in one sentence.
 - **Untested error path.** Grep diff for new/changed
@@ -157,5 +191,8 @@ gate, or multi-axis review — use `/stenswf:review $ARGUMENTS`
 separately. No `shipping`/`shipped` labels. No implementation-log
 table. No worktrees.
 
-If the slice grows past the preflight envelope mid-flight: stop, hand
-off to `/stenswf:plan` + `/stenswf:ship`. Do not silently re-plan.
+If the slice grows past the preflight envelope mid-flight (exceeds 15
+files, crosses into a second top-level module directory, surfaces a
+schema migration, or reveals an architectural unknown not covered by
+`## Conventions (from PRD)`): stop, hand off to `/stenswf:plan` +
+`/stenswf:ship`. Do not silently re-plan.

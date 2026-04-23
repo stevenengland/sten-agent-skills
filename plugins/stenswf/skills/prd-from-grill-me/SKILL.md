@@ -67,6 +67,25 @@ steps if you don't consider them necessary.
    Check with the user that these modules match their expectations. Check with
    the user which modules they want tests written for.
 
+4a. **Lock bikeshed decisions now.** Before writing the PRD, surface every
+    decision that would otherwise be re-litigated inside individual slice
+    issues (naming, shape, layout, test layout, error surfacing, action
+    vocabularies for state machines). These are one-time calls; resolve
+    them in the PRD so slices stay AFK and Lite.
+
+    For each, ask the user their preference (with your recommendation),
+    then record the resolved decision in the `## Conventions` section of
+    the PRD (see template). This section is copied verbatim into every
+    slice by `prd-to-issues`, so write it crisply and concretely.
+
+    Typical prompts — use whichever apply to the PRD topic:
+    - Module / file naming pattern for new helpers.
+    - Exported function naming (`build_<op>_request` vs `<op>_request`).
+    - Descriptor shape (frozen dataclass vs NamedTuple vs TypedDict; field set).
+    - Test-file split (sibling vs nested; paired sync+async collapse).
+    - Error surfacing (raise vs Result-style vs terminal-action).
+    - Any domain-specific vocabulary (enum members, action types).
+
 5. Once you have a complete understanding of the problem and solution, use the
    template below to write the PRD. The PRD should be submitted as an issue in
    the project's issue tracker. If a CLI tool is available (e.g. `gh`,
@@ -111,10 +130,10 @@ steps if you don't consider them necessary.
    > Default: N
 
    If the user's response is `y`, `yes`, `proceed`, or `go` (case-insensitive),
-   immediately invoke the `prd-to-issues` procedure starting at its **Step 3**,
-   treating Steps 1–2 as already done (the PRD body and module exploration
-   are still in your context). Any other response — including empty,
-   ambiguous, or `N` — stop. Do not invoke `prd-to-issues`.
+   immediately invoke the `prd-to-issues` procedure starting at its **Step 3
+   (HITL triage)**, treating Steps 1–2 as already done (the PRD body and
+   module exploration are still in your context). Any other response —
+   including empty, ambiguous, or `N` — stop. Do not invoke `prd-to-issues`.
 
 <prd-template>
 
@@ -157,6 +176,29 @@ A list of implementation decisions that were made. This can include:
 
 Do NOT include specific file paths or code snippets. They may end up being
 outdated very quickly.
+
+## Conventions
+
+Bikeshed decisions resolved upfront so individual slices do not re-litigate
+them. `prd-to-issues` copies this section verbatim into every slice's body
+as `## Conventions (from PRD)`. Plans and ship dispatches read it as hard
+spec. Keep it concrete and terse — one bullet per decision.
+
+Typical contents (include only what applies):
+
+- **Naming.** Helper module `_<x>_helpers.py`; exported function
+  `build_<op>`; descriptor class `<Op>Descriptor`.
+- **Shape.** Frozen dataclass with fields `{method, path, json_body,
+  query_params, headers}`.
+- **Test layout.** Pure helpers in `tests/<module>/test_<x>_helpers.py`;
+  dispatch tests (one sync + one async per method) stay in existing file.
+- **Error surfacing.** Raise `<ExistingError>` from the helper; drivers do
+  not translate.
+- **Action vocabulary** (state machines only): `Poll`, `Sleep(delay)`,
+  `Return(value)`, `Raise(error)`.
+
+Omit subsections that do not apply. If no bikeshed decisions are needed,
+write `None — slice-local decisions only.` and move on.
 
 ## Testing Decisions
 

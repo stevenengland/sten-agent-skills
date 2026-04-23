@@ -74,6 +74,22 @@ Extract and record:
       `Out of Scope` line items to avoid.
 - [ ] **Type** — HITL or AFK (from `## Type` section). If absent, treat as
       HITL.
+- [ ] **Conventions (from PRD)** — extract the `## Conventions (from PRD)`
+      section from the slice body. This is hard spec — naming, shape,
+      layout, error surfacing, vocabulary resolved in the parent PRD.
+      Copy verbatim into the Phase 2 `<conventions>` block.
+
+      ```bash
+      gh issue view $ARGUMENTS --json body -q .body > /tmp/slice-$ARGUMENTS.md
+      awk '/^## Conventions \(from PRD\)/,/^## /' /tmp/slice-$ARGUMENTS.md \
+        | sed '$d' > /tmp/slice-$ARGUMENTS-conventions.md
+      wc -l /tmp/slice-$ARGUMENTS-conventions.md
+      ```
+
+      If the extracted content is `None — slice-local decisions only.`, the
+      slice has no cross-cutting conventions; still emit the
+      `<conventions>` block with that exact line so `ship` dispatches stay
+      cache-stable.
 - [ ] **Acceptance criteria** — list every criterion verbatim. Each must map
       to at least one plan task.
 - [ ] **Blocked by** — for each blocking issue, fetch its implementation
@@ -182,10 +198,11 @@ exact sections via `awk`. The prose inside tags is plain markdown.
 - `brevity` Rules APPLY to: `<house-rules>`, `<design-summary>`,
   `<assumptions>`. These are read repeatedly across subagents — keep them
   tight (short sentences, no filler, bullets for 3+ items).
-- `brevity` Rules DO NOT apply to task bodies, test code, commands, file
-  paths, `<file-structure>` descriptions, or the `<review-step>` — these
-  are prescriptive artifacts for a weak-test-instinct implementer. Full
-  prose, exact details.
+- `brevity` Rules DO NOT apply to `<conventions>` (copied verbatim from
+  the slice body — do not paraphrase), task bodies, test code, commands,
+  file paths, `<file-structure>` descriptions, or the `<review-step>` —
+  these are prescriptive artifacts for a weak-test-instinct implementer.
+  Full prose, exact details.
 
 Produce the document compactly: reference existing code by symbol path
 (`path/to/file.py::ClassName.method`) rather than pasting it. Write new
@@ -231,11 +248,23 @@ exactly one `<task>` `Done when` below.
 - AC2: …
 </acceptance-criteria>
 
+<conventions>
+Copy the slice's `## Conventions (from PRD)` section verbatim here
+(contents only, not the heading). If the slice has no cross-cutting
+conventions, write the single line:
+
+None — slice-local decisions only.
+
+Downstream: `ship` pastes this block into every subagent dispatch's
+stable prefix; `ship-light` Phase 2 reads it as hard spec.
+</conventions>
+
 <house-rules>
 Read before starting every task. Brevity Rules apply.
 
 - Follow the `tdd` skill: one failing test, then minimal code, then next. No writing all tests up front.
 - Follow the `clean-code` skill.
+- Follow `<conventions>` verbatim — do not invent alternative names, shapes, or layouts. Escalate if a convention conflicts with the codebase.
 - DRY, YAGNI. No speculative abstractions. No error handling for impossible cases.
 - Use the pre-written commit message at the end of each task verbatim.
 - If a task conflicts with the codebase, pause and report — do not re-plan silently.
@@ -452,7 +481,7 @@ failures inline; no re-review pass.
 P=/tmp/plan-draft-$ARGUMENTS.md
 
 # 1. Every required top-level tag exists exactly once.
-for tag in design-summary acceptance-criteria house-rules file-structure assumptions review-step; do
+for tag in design-summary acceptance-criteria conventions house-rules file-structure assumptions review-step; do
   n=$(grep -c "<$tag>" "$P")
   [ "$n" = "1" ] || echo "FAIL: <$tag> appears $n times (expected 1)"
 done

@@ -79,6 +79,15 @@ user to run the `plan` planning skill first.
   and LINT command from assumptions.
 - [ ] Extract `<house-rules>` and read once. This is the stable prefix you
   will paste into every subagent dispatch message (see Phase 1a).
+- [ ] Extract `<conventions>` and read once. This block is PRD-level hard
+  spec (naming, shape, layout, vocabulary) — paste verbatim into every
+  dispatch's stable prefix alongside `<house-rules>`:
+
+  ```bash
+  awk '/<conventions>/,/<\/conventions>/' /tmp/plan-$ARGUMENTS.md \
+    > /tmp/plan-$ARGUMENTS-conventions.md
+  wc -l /tmp/plan-$ARGUMENTS-conventions.md
+  ```
 - [ ] Read `CLAUDE.md` OR `AGENTS.md` and extract all hard constraints:
   untouchable files, forbidden suppressions, required tooling, enforced
   commands. Compress filler per `brevity` Rules while keeping verbatim
@@ -109,7 +118,7 @@ task:
 Dispatch the task to an implementer subagent. The dispatch message is
 **stable-prefix-first** so prompt caching hits on dispatches 2..N. Every
 dispatch in this `ship` run reuses the same prefix (SKILLS → HARD
-CONSTRAINTS → TEST/LINT → HOUSE RULES). Only the tail varies.
+CONSTRAINTS → TEST/LINT → HOUSE RULES → CONVENTIONS). Only the tail varies.
 
 Construct the dispatch message exactly in this order:
 
@@ -124,6 +133,9 @@ LINT COMMAND: <exact lint/check command from <assumptions>>
 
 HOUSE RULES (from the plan, read before every task):
 <paste the <house-rules> block extracted in Prerequisites>
+
+CONVENTIONS (from parent PRD — hard spec, follow verbatim):
+<paste the <conventions> block extracted in Prerequisites>
 
 REASONING STYLE: Keep internal reasoning terse. No pre-summaries, no
 restating the task, no filler. Commit messages, PR bodies, and error quotes
