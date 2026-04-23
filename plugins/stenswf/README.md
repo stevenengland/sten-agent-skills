@@ -141,7 +141,7 @@ Skill folder: tdd      →  /stenswf:tdd
 
 > ⚠️ The `name` field inside each `SKILL.md` is plain kebab-case with **no prefix**. The platform adds the prefix automatically. Writing `stenswf:plan` in the `name` field causes the skill to silently fail to load.
 
-Sibling-skill references inside a SKILL.md body use bare names too (e.g. `` `brevity` ``, `` `tdd` ``, `` `clean-code` ``). The loader resolves them within the plugin.
+Skill-to-skill references inside a SKILL.md body use bare names too (e.g. `` `brevity` ``, `` `tdd` ``, `` `clean-code` ``). The loader resolves them within the plugin — do not treat them as filesystem paths.
 
 ---
 

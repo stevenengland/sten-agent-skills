@@ -6,7 +6,7 @@ description: Create a PRD through user interview, codebase exploration, and modu
 
 ## Token Efficiency
 
-**Load and apply the `brevity` sibling skill now, before the first response.**
+**Load and apply the `brevity` skill now, before the first response.**
 It governs the interview, codebase exploration narration, and module-design
 dialogue. The PRD document itself is a full-prose artifact (already excluded
 by `brevity`'s Scope section) — write it normally.
@@ -58,7 +58,7 @@ steps if you don't consider them necessary.
    the implementation. Actively look for opportunities to extract deep modules
    that can be tested in isolation.
 
-   **Consult the `architecture` sibling skill** for the deep-vs-shallow
+   **Consult the `architecture` skill** for the deep-vs-shallow
    heuristic and for the criteria on when to extract an abstraction.
 
    A deep module (as opposed to a shallow module) is one which encapsulates a

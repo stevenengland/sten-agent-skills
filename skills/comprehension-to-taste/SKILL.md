@@ -5,7 +5,7 @@ description: Research a codebase, then interview the user through three scoped q
 
 ## Token Efficiency
 
-**Load and apply the `brevity` sibling skill now, before the first response.**
+**Load and apply the `brevity` skill now, before the first response.**
 It governs codebase-research narration, interview questions, and tool-use
 status. The final `TASTE.md` artifact is a full-prose document (already
 excluded by `brevity`'s Scope section) — write it normally.

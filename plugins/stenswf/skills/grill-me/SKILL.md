@@ -5,7 +5,7 @@ description: Interview the user relentlessly about a plan or design until reachi
 
 ## Token Efficiency
 
-**Load and apply the `brevity` sibling skill now, before the first question.**
+**Load and apply the `brevity` skill now, before the first question.**
 Keep interview questions, reasoning, and recommendations tight. Self-check
 every message against its rules before sending.
 

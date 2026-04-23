@@ -6,7 +6,7 @@ disable-model-invocation: true
 
 ## Token Efficiency
 
-Activate the `caveman` sibling skill for running log entries (task tracking,
+Activate the `caveman` skill for running log entries (task tracking,
 tier logs, status notes). Deactivate it for code, commit messages, PR body,
 `LINT_BLOCKER` reports, and the Phase 3 wrap-up comment.
 
@@ -28,9 +28,9 @@ first.
 - [ ] Read `CLAUDE.md` and note all hard constraints: untouchable files,
   forbidden suppressions, required tooling, enforced commands. These
   constraints are non-negotiable and supersede all other instructions.
-- [ ] Load the `lint-escape` sibling skill. Apply it whenever a lint or
+- [ ] Load the `lint-escape` skill. Apply it whenever a lint or
   static-analysis error cannot be resolved with clean code.
-- [ ] Load the `tdd`, `clean-code`, and `conventional-commits` sibling skills.
+- [ ] Load the `tdd`, `clean-code`, and `conventional-commits` skills.
 - [ ] Confirm the test command and lint/check command from the plan's
   Assumptions section.
 

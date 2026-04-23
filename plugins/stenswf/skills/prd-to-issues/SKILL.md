@@ -6,7 +6,7 @@ description: Break a PRD into independently-grabbable issues using tracer-bullet
 
 ## Token Efficiency
 
-**Load and apply the `brevity` sibling skill now, before the first response.**
+**Load and apply the `brevity` skill now, before the first response.**
 It governs dialogue, exploration narration, and slice reasoning. Issue
 bodies (titles, descriptions, acceptance criteria) are full-prose artifacts
 (already excluded by `brevity`'s Scope section) — write them normally.

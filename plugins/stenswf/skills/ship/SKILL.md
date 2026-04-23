@@ -7,7 +7,7 @@ disable-model-invocation: true
 
 ## Token Efficiency
 
-**Load and apply the `brevity` sibling skill now, before the first response
+**Load and apply the `brevity` skill now, before the first response
 in this session.** It governs the orchestrator parent session: internal
 reasoning, tool-use narration, status updates between phases. Self-check
 every message against its rules before sending.

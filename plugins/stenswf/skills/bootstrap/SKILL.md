@@ -8,7 +8,7 @@ disable-model-invocation: true
 
 ## Token Efficiency
 
-**Load and apply the `brevity` sibling skill now, before the first response.**
+**Load and apply the `brevity` skill now, before the first response.**
 It governs setup prompts, detection output, and status updates throughout
 this one-shot flow.
 

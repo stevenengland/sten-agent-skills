@@ -6,7 +6,7 @@ disable-model-invocation: true
 
 ## Token Efficiency
 
-**Load and apply the `brevity` sibling skill now, before the first response.**
+**Load and apply the `brevity` skill now, before the first response.**
 It governs the interactive loop, YOLO-mode summaries, and reasoning. Commit
 messages, PR bodies, and issue/PR comments are full-prose artifacts (already
 excluded by `brevity`'s Scope section) — write them normally.
@@ -202,7 +202,7 @@ For each approved axis group, in order of severity (critical → high →
 medium → low):
 
 1. Implement all findings in the group. Use TDD where it fits. Apply the
-   `clean-code` sibling skill. Apply `lint-escape` if strictly required.
+   `clean-code` skill. Apply `lint-escape` if strictly required.
 2. Run tests. All must pass before moving on.
 3. Commit with a themed conventional message:
 
@@ -227,7 +227,7 @@ comment (same structure as `ship`'s `TASK_BLOCKER`) on the PRD issue.
 
 ## Phase 3 — Ship the cleanup PR (reuse ship Phase 4–5)
 
-This phase **reuses the `ship` sibling skill's Phase 4 sub-procedure**
+This phase **reuses the `ship` skill's Phase 4 sub-procedure**
 (PR, CI loop, merge wait) and Phase 5 (wrap-up). Do not re-implement that
 logic here. Read `ship/SKILL.md` Phase 4 and Phase 5 and follow them
 verbatim with these parameter substitutions:

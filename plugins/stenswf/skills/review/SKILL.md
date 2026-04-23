@@ -6,7 +6,7 @@ disable-model-invocation: true
 
 ## Token Efficiency
 
-**Load and apply the `brevity` sibling skill now, before the first response.**
+**Load and apply the `brevity` skill now, before the first response.**
 It governs reasoning, status updates, axis-by-axis narration, and
 orchestration chatter. The review-plan / PRD-review comment posted to the
 issue is a full-prose artifact (already excluded by `brevity`'s Scope
@@ -44,12 +44,12 @@ Review staged changes against issue number $ARGUMENTS.
 
 ## Step 1 — Change Review
 
-Invoke your `plan-reviewer` sibling skill and follow its process to generate
+Invoke the `plan-reviewer` skill and follow its process to generate
 a structured improvement plan based on the staged changes and the issue.
 
 ## Step 2 — Test Compaction
 
-Invoke your `test-file-compaction` sibling skill. Identify opportunities to
+Invoke the `test-file-compaction` skill. Identify opportunities to
 reduce test file size without losing coverage.
 
 Express test-compaction opportunities as additional suggestions in the same

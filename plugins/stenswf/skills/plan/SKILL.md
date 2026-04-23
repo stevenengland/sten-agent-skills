@@ -7,7 +7,7 @@ disable-model-invocation: true
 
 ## Token Efficiency
 
-**Load and apply the `brevity` sibling skill now, before the first response
+**Load and apply the `brevity` skill now, before the first response
 in this session.** It governs all Phase 0 and Phase 1 dialogue, including
 internal reasoning and tool-use narration. Self-check every message against
 its rules before sending — do not drift into full prose on internal thinking.
@@ -192,7 +192,7 @@ Produce the document compactly: reference existing code by symbol path
 code in the plan only where no analogous code exists in the repo, and only
 as much as the implementer needs.
 
-Sibling skills `tdd` and `clean-code` are invoked by the implementer; do
+The `tdd` and `clean-code` skills are invoked by the implementer; do
 not duplicate their content here — reference them by name. Commit messages
 are pre-written verbatim in each task (see `<task>` template below) — the
 implementer copies them; no commit-format skill needed.
