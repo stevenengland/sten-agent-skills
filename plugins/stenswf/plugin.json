@@ -7,7 +7,5 @@
     "url": "https://github.com/stevenengland/sten-agent-skills/plugins/stenswf"
   },
   "license": "MIT",
-  "keywords": ["sdlc", "tdd", "prd", "issues", "workflow", "clean-code"],
-  "skills": "./skills/",
-  "hooks": "./hooks.json"
+  "keywords": ["sdlc", "tdd", "prd", "issues", "workflow", "clean-code"]
 }

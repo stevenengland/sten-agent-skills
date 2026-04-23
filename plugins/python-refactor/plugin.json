@@ -7,7 +7,5 @@
     "url": "https://github.com/stevenengland/sten-agent-skills/plugins/python-refactor"
   },
   "license": "MIT",
-  "keywords": ["python", "refactor", "security", "architecture", "bugs"],
-  "skills": "./skills/",
-  "hooks": "./hooks.json"
+  "keywords": ["python", "refactor", "security", "architecture", "bugs"]
 }
