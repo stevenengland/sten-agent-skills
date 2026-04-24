@@ -38,6 +38,44 @@ subagents, no plan comment, no XML extraction. The issue body IS the spec.
   per-suggestion loop and `ship-light` Phase 3 rubberduck will catch
   drift.
 
+## Phase 0.5 — Plan-light detection (optional)
+
+If `plan-light` has been run for this issue, a pair of artifacts is on
+disk. Detect and (if current) consume as advisory guidance:
+
+```bash
+PLAN_MD=".stenswf/$ARGUMENTS/plan-light.md"
+PLAN_JSON=".stenswf/$ARGUMENTS/plan-light.json"
+
+if [ -s "$PLAN_MD" ] && [ -s "$PLAN_JSON" ]; then
+  gh issue view $ARGUMENTS --json body -q .body > /tmp/slice-$ARGUMENTS.md
+  CUR_SIG=$( { \
+    awk '/^## What to build/,/^## /'            /tmp/slice-$ARGUMENTS.md | sed '$d'; \
+    awk '/^## Conventions \(from PRD\)/,/^## /' /tmp/slice-$ARGUMENTS.md | sed '$d'; \
+    awk '/^## Acceptance criteria/,/^## /'      /tmp/slice-$ARGUMENTS.md | sed '$d'; \
+  } | sha256sum | cut -d' ' -f1)
+  PLAN_SIG=$(jq -r .source_signature "$PLAN_JSON")
+
+  if [ "$CUR_SIG" = "$PLAN_SIG" ]; then
+    echo "plan-light current; using as advisory guidance"
+    # Read plan-light.md ONCE. Use its ## Tasks for implementation
+    # ordering and file mapping. Use its ## Assumptions as context.
+    # Issue body ACs remain authoritative for Done-when.
+  else
+    echo "plan-light stale (issue body drifted); ignoring, proceeding from issue body"
+    # Do NOT delete the file. Proceed as if no plan existed.
+  fi
+fi
+```
+
+**Precedence.** Issue body ACs are authoritative for "done."
+`plan-light.md` is advisory only — task ordering, file mapping,
+approach hints, recorded assumptions. If the plan and the issue body
+disagree on what an AC means, the issue body wins.
+
+If no plan-light artifact exists, skip this phase silently and
+proceed as if running standalone.
+
 ## Phase 1 — Setup
 
 - Read `CLAUDE.md` (or `AGENTS.md`) once. **Honour CLAUDE.md throughout.**
@@ -83,6 +121,16 @@ git commit -m "<type>(<scope>): <imperative subject>" -m "Refs #$ARGUMENTS"
 lower-case, no period, ≤72 chars. Apply `lint-escape` if a lint/type
 error blocks progress. Do not squash.
 
+**Ambiguity handling (silent-or-escalate).** When an AC or convention
+allows two materially different implementations and the codebase
+offers no tiebreaker: stop and emit `ROUTE_HEAVY: <one-sentence
+reason>` as your FINAL line of output. One-line reason to the user,
+nothing posted to the issue. Do not improvise between equally
+plausible behaviors. Minor implementation choices (naming within
+established conventions, local helper extraction, test shape within
+the prevailing pattern) are educated guesses — record them in the PR
+body's `## Notable assumptions` section (Phase 4) and proceed.
+
 ## Phase 3 — Pre-push rubberduck
 
 Same session, no subagent. Orthogonal to `clean-code` — only catches
@@ -124,6 +172,10 @@ Closes #$ARGUMENTS
 ## Tests added (red → green)
 - \`<test name 1>\`
 - \`<test name 2>\`
+
+## Notable assumptions
+- <only include this section if any silent assumptions were recorded;
+  otherwise omit the section entirely>
 EOF
 )
 ```
@@ -196,3 +248,20 @@ files, crosses into a second top-level module directory, surfaces a
 schema migration, or reveals an architectural unknown not covered by
 `## Conventions (from PRD)`): stop, hand off to `/stenswf:plan` +
 `/stenswf:ship`. Do not silently re-plan.
+
+## Envelope form (when dispatched by `slice-e2e`)
+
+When `ship-light` is invoked directly by the user, abort paths use the
+prose handoff messages above. When `ship-light` runs as a subagent
+dispatched by `/stenswf:slice-e2e`, its FINAL line of output must be
+exactly one of:
+
+```
+MERGED <pr-url>
+CI_BLOCKER <pr-url>
+ROUTE_HEAVY: <one-sentence reason>
+```
+
+Both forms are equivalent; the envelope is just a machine-parseable
+terminal state. When in doubt, emit the envelope — humans can read it
+too.

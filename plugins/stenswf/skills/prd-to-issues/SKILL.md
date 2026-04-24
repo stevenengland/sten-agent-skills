@@ -311,11 +311,22 @@ added), skip silently — `review` will backfill on first PRD-mode run.
 
 > All slice issues created. For each issue, choose one path:
 >
-> - **Lite path** — `/stenswf:ship-light <issue>` for slices marked
->   `Lite-eligible: true` (single subsystem, crisp ACs, AFK).
->   Branches, TDDs, PRs, watches CI in one Sonnet session.
-> - **Full path** — `/stenswf:plan <issue>` then `/stenswf:ship <issue>`
->   for HITL slices, `Lite-eligible: false`, or anything architecturally
->   uncertain.
+> - **Lite shortest** — `/stenswf:ship-light <issue>`
+>   Issue body IS the spec. No local plan. Single session.
+>   Best for: crisp ACs, ≤ ~5 files, established patterns,
+>   `Lite-eligible: true`.
+>
+> - **Lite guided one-shot** — `/stenswf:slice-e2e <issue>`
+>   Dispatches `plan-light` + `ship-light` as separate subagent
+>   sessions for context separation. A light plan is saved to
+>   `.stenswf/<issue>/plan-light.md`. Best for: borderline-lite slices
+>   where a plan helps but heavy `plan` + `ship` is overkill.
+>
+> - **Full pipeline** — `/stenswf:plan <issue>` then
+>   `/stenswf:ship <issue>`.
+>   Full local plan tree, per-task subagent dispatch, prompt caching,
+>   drift detection, archived state. Best for: HITL slices,
+>   multi-subsystem, `Lite-eligible: false`, or architecturally
+>   uncertain work.
 >
 > Start with issues that have no blockers.
