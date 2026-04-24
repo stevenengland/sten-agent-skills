@@ -83,15 +83,15 @@
   upstream: https://github.com/mattpocock/skills
   ref: ""
   last_reviewed: ""
-  status: tracked
-  notes: ""
+  status: diverged
+  notes: "Heavily diverged from Matt Pocock original: adds stenswf:v1 front-matter, decision-anchor integration, @{upstream} base resolution, PRD template externalized to references/prd-template.md."
 
 - skill: plugins/stenswf/skills/prd-to-issues
   upstream: https://github.com/mattpocock/skills
   ref: ""
   last_reviewed: ""
-  status: tracked
-  notes: ""
+  status: diverged
+  notes: "Heavily diverged from Matt Pocock original: emits stenswf:v1 HTML-comment front-matter per references/front-matter-schema.md, slice issue template externalized to references/issue-template.md, lite_eligible routing, portable extractors."
 
 - skill: plugins/stenswf/skills/tdd
   upstream: https://github.com/mattpocock/skills

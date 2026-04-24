@@ -22,7 +22,7 @@ If the user says **YOLO**:
 For each numbered suggestion:
 
 1. Assess independently whether it is a good idea.
-2. If worth doing, ask explicitly:
+2. If worth doing, ask:
    _"Suggestion #N: [one-line summary] — implement this?"_
 3. Wait for yes/no.
 4. Track approvals in `apply-state.json` under `entries.S<n>`:
@@ -48,25 +48,24 @@ Implement all approved suggestions in a single pass.
 - Apply `clean-code`.
 - Keep changes focused.
 
-If the review artifact contains an AC coverage matrix, any
-`not covered` / `partially covered` row whose promoted finding is
-approved must be addressed in this phase. Re-check the matrix after
-implementation; if a previously `not covered` AC is still not covered
-by the new diff, stop and report.
+If the review artifact contains an AC coverage matrix, any approved
+`not covered` / `partially covered` row must be addressed. Re-check
+the matrix after; if still uncovered, stop and report. Log
+`contract_violation`.
 
 If an applied suggestion contradicts an active entry in
 `.stenswf/$ARGUMENTS/decisions.md`, append a superseding entry (same
-category, source `apply`) and strikethrough the old header —
-[contract](../../README.md#decision-anchor-contract). Otherwise no
-anchor write is needed.
+category, source `apply`) and strikethrough the old header per
+[../../references/decision-anchor-link.md](../../references/decision-anchor-link.md).
 
 ## Phase 3 — Wrap-up (Slice-mode)
 
 - Update the issue description / add a brief comment reflecting what
   changed and why (referencing suggestion numbers).
 - Ask the user to confirm the final review is complete.
-- After confirmation: craft a **single conventional commit** covering
-  the entire issue's phase-1-through-3 delivery:
+- After confirmation: craft a **single conventional commit** for the
+  review-fix delivery (does NOT squash prior `ship`/`ship-light`
+  commits — this is one additional commit on top):
 
   ```
   <type>(<scope>): <imperative summary, lower case, no period, ≤72 chars>
@@ -79,3 +78,5 @@ anchor write is needed.
   `type`: `feat|fix|refactor|perf|docs|test|chore|build|ci|style|revert`.
 
 - Push the branch and close the issue. No labels applied.
+
+Emit the feedback-log boundary ping.

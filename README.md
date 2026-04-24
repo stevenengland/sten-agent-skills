@@ -7,7 +7,7 @@ installable plugins for **Claude Code** and **GitHub Copilot CLI**.
 
 | Plugin | Description |
 |---|---|
-| [`stenswf`](plugins/stenswf/README.md) | Opinionated SDLC bundle: PRD → slice issues → plan → ship → review → apply, plus always-on craft skills (tdd, clean-code, lint-escape, architecture, brevity, …). Maintains a cross-skill [decision anchor](plugins/stenswf/README.md#decision-anchor-contract) with committed excerpts under `docs/stenswf/decisions/`. |
+| [`stenswf`](plugins/stenswf/README.md) | Opinionated SDLC bundle spanning four tracks — heavy slice (plan → ship → review/slice → apply/slice), lite slice (plan-light → ship-light → review/slice → apply/slice), PRD capstone (review/prd → apply/prd), and PRD inception (prd-from-grill-me → prd-to-issues) — plus always-on craft skills (tdd, clean-code, lint-escape, architecture, brevity, …). Maintains a cross-skill [decision anchor](plugins/stenswf/README.md#decision-anchor-contract) with committed excerpts under `docs/stenswf/decisions/`. |
 | [`stenswr`](plugins/stenswr/README.md) | Language-agnostic refactor bundle: orthogonal skills across four phases — understand, discover (architecture / functional bugs / security bugs), critique (plan-reviewer), test hygiene (lossless + lossy). One distinct refactor purpose per skill. |
 | [`python-refactor`](plugins/python-refactor/README.md) | Agentic Python codebase analysis suite (complexity, PBT bug hunting, architecture RFCs, refactor plan). |
 

@@ -8,6 +8,40 @@ Contains three coordinated workflows plus always-on craft skills.
 
 ---
 
+## Four tracks at a glance
+
+```
+                     ┌─────────────────────────────────────────┐
+                     │    front-matter: stenswf:v1 marker      │
+                     │    (type, lite_eligible, prd_ref, …)    │
+                     └──────────────────┬──────────────────────┘
+                                        │
+                 ┌──────────────────────┼──────────────────────┐
+                 │                      │                      │
+          lite_eligible:true     lite_eligible:false    type: PRD
+                 │                      │                      │
+         ┌───────┴────────┐             │                      │
+         │                │             │                      │
+   ship-light       slice-e2e        plan                   review
+   (single-         (plan-light      + ship                 (PRD-mode
+    session)         + ship-light)    (heavy tree)           capstone)
+                                                                 │
+                                                                 ↓
+                                                              apply
+                                                              (themed
+                                                               cleanup PR)
+```
+
+| Track | Entry command | Planner | Shipper | Typical slice |
+|---|---|---|---|---|
+| Heavy slice | `/stenswf:plan N` | `plan` (interview + local tree) | `/stenswf:ship N` | multi-subsystem, HITL, schema migration |
+| Lite slice, plan-ahead | `/stenswf:plan-light N` | `plan-light` (single advisory md) | `/stenswf:ship-light N` | borderline-lite, plan helps |
+| Lite slice, one-shot | `/stenswf:slice-e2e N` | chains both above | — | lite-eligible, walk away |
+| Slice corrective loop | `/stenswf:review N` | — | `/stenswf:apply N` | per-slice suggestions on staged diff |
+| PRD capstone | `/stenswf:review P` (PRD) | — | `/stenswf:apply P` (PRD) | post-delivery cleanup PR |
+
+---
+
 ## Workflows
 
 ### Feature inception (idea → PRD → issues)
@@ -138,6 +172,22 @@ STEN-AGENT-SKILLS/                       ← Repo root
 │   └── stenswf/                         ← This plugin
 │       ├── plugin.json                  ← Manifest (both platforms)
 │       ├── hooks.json                   ← Hooks placeholder (empty)
+│       ├── references/                  ← Lazy-loaded reference bodies
+│       │   ├── front-matter-schema.md
+│       │   ├── extractors.md
+│       │   ├── drift-check.md
+│       │   ├── brevity-load.md
+│       │   ├── decision-anchor-link.md
+│       │   ├── pr-ci-merge.md
+│       │   ├── feedback-log.md
+│       │   ├── prd-template.md
+│       │   ├── issue-template.md
+│       │   ├── plan-task-template.md
+│       │   └── plan-artifact-schemas.md
+│       ├── scripts/                     ← Shared executables
+│       │   └── log-issue.sh
+│       ├── tests/                       ← Fixtures for manual verification
+│       │   └── fixtures/
 │       ├── skills/                      ← All plugin skills
 │       │   ├── plan/
 │       │   ├── ship/
@@ -149,8 +199,9 @@ STEN-AGENT-SKILLS/                       ← Repo root
 │       │   ├── grill-me/
 │       │   ├── prd-from-grill-me/
 │       │   ├── prd-to-issues/
+│       │   ├── bootstrap/
 │       │   ├── clean-code/
-│       │   ├── tdd/                     (+ adjacent reference .md files)
+│       │   ├── tdd/
 │       │   ├── lint-escape/
 │       │   ├── architecture/
 │       │   └── brevity/
@@ -325,6 +376,34 @@ recomputes a sha256 over the issue body's `What to build` ∥
 to `plan-light.json:source_signature`. On mismatch the plan is
 silently ignored and `ship-light` proceeds from the issue body — no
 prompt, no deletion.
+
+## Migration notes (v0.6 → v0.7)
+
+**Breaking change: issue-body section-heading parsing is replaced by a
+front-matter marker.**
+
+- Issues and PRDs now carry a `<!-- stenswf:v1 ... -->` HTML-comment
+  block near the top of the body. Fields: `type`, `lite_eligible`,
+  `conventions_source`, `prd_ref`, optional `disqualifier`,
+  `prd_base_sha`, `blocked_by`. See
+  [references/front-matter-schema.md](references/front-matter-schema.md).
+- Skills that previously scraped `## Type`, `## Lite-eligible`, etc.
+  (via `awk '/^## X/,/^## /'`) now read the front-matter via the shared
+  `get_fm` / `extract_section` helpers in
+  [references/extractors.md](references/extractors.md). The old awk
+  range had a self-terminating bug (same regex both ends) — front-matter
+  eliminates the whole class.
+- Issues created under v0.6 without the front-matter will abort cleanly
+  in all lite-path skills (`contract_violation` logged) and require
+  `/stenswf:plan` for manual routing. **No back-compat parser is
+  provided.** Re-file or add the marker manually.
+- New feedback log at `.stenswf/_feedback/<YYYY-MM-DD>.jsonl`. Every
+  lifecycle skill records notable problems via
+  `scripts/log-issue.sh`; boundary pings on exit summarize issues.
+  See [references/feedback-log.md](references/feedback-log.md).
+- PR+CI+merge is now a single shared procedure parameterized by
+  `CI_MAX_CYCLES` and `WAIT_FOR_MERGE`. See
+  [references/pr-ci-merge.md](references/pr-ci-merge.md).
 
 ## Migration notes (v0.3 → v0.4)
 

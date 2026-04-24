@@ -1,0 +1,66 @@
+# stenswf front-matter schema (v1)
+
+Every PRD and slice issue body opens with a machine-readable HTML-comment
+block. Invisible in the GitHub UI, parsed by every lifecycle skill.
+
+## Syntax
+
+```
+<!-- stenswf:v1
+type: slice — AFK
+lite_eligible: true
+conventions_source: prd#123
+prd_ref: 123
+-->
+```
+
+Rules:
+
+- First line: literal `<!-- stenswf:v1` (space-sensitive; used for
+  version detection).
+- Last line: literal `-->` on its own line.
+- Body: one `key: value` per line, YAML-compatible single-line values.
+- Block MUST appear as the first non-blank content of the issue body.
+
+## Required keys (all issues)
+
+| Key | Values | Notes |
+|---|---|---|
+| `type` | `PRD` \| `slice — HITL` \| `slice — AFK` \| `slice — spike` | Mode + slice-type marker. Replaces the old `## Type` section. |
+
+## Required keys (slice issues only)
+
+| Key | Values | Notes |
+|---|---|---|
+| `lite_eligible` | `true` \| `false` | Gate for `ship-light` / `plan-light`. |
+| `conventions_source` | `prd#<N>` \| `none` | Where slice conventions come from. `none` = slice-local only. |
+| `prd_ref` | issue number (int) | Parent PRD. Used by `review/slice` to synthesize lite-path conventions. |
+
+## Optional keys
+
+| Key | Values | Notes |
+|---|---|---|
+| `disqualifier` | `files>15` \| `cross-module` \| `schema-migration` \| `arch-unknown` \| `hitl-cat3` | Required when `lite_eligible: false`. |
+| `prd_base_sha` | 7-40 hex chars | PRD-mode only. Set by `prd-from-grill-me`. |
+| `blocked_by` | space-separated issue numbers | E.g. `123 456`. Absence = no blockers. |
+
+## Extraction (canonical)
+
+See [extractors.md](extractors.md) for the parser snippet. One-liner for
+a single key:
+
+```bash
+sed -n '/^<!-- stenswf:v1/,/^-->/p' "$BODY" \
+  | sed -n 's/^'"$KEY"':[[:space:]]*\(.*\)$/\1/p' \
+  | head -1
+```
+
+## Version compatibility
+
+Only `<!-- stenswf:v1` is recognised. Bodies with a different opening
+tag (`<!-- stenswf:v2`, etc.) are rejected by parsers — they must be
+upgraded or the reader must use the matching stenswf plugin version.
+
+Bodies with no stenswf front-matter block at all are rejected with a
+helpful message directing the user to re-run `prd-from-grill-me` or
+`prd-to-issues`.

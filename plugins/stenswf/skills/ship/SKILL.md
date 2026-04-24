@@ -6,88 +6,51 @@ description: Implement a slice issue by dispatching one subagent per local task
 disable-model-invocation: true
 ---
 
-## Token Efficiency
-
-**Load and apply the `brevity` skill now, before the first response.**
-It governs the orchestrator parent session: internal reasoning, tool-use
-narration, status updates between phases.
-
-The `brevity` skill excludes commit messages, PR bodies, `CI_BLOCKER`
-reports, subagent delegation messages, and the Phase 5 wrap-up comment —
-write those in full prose.
-
-Subagents do NOT load `brevity`. A one-line terse-reasoning rule is
-inlined into `stable-prefix.md` instead.
+**Load and apply `brevity` now.** See [../../references/brevity-load.md](../../references/brevity-load.md).
+Subagents do NOT load `brevity`. A terse-reasoning rule is inlined in
+`stable-prefix.md` instead.
 
 ---
 
-Implement issue number $ARGUMENTS by dispatching subagents that follow
-the local plan tree at `.stenswf/$ARGUMENTS/`. The local plan is the
-**definitive specification** for implementation; the issue body states
-the goal. Where they conflict, the local plan wins — unless the issue
-body has drifted since plan time (see Prerequisites drift check).
+Implement issue number $ARGUMENTS by dispatching subagents against the
+local plan tree at `.stenswf/$ARGUMENTS/`. The local plan is the
+**definitive specification**; issue body states the goal. On conflict,
+local plan wins unless the issue body has drifted (see drift check).
 
-If `.stenswf/$ARGUMENTS/` does not exist, stop and ask the user to run
-`/stenswf:plan $ARGUMENTS` first.
+If `.stenswf/$ARGUMENTS/` missing, stop and ask the user to run
+`/stenswf:plan $ARGUMENTS` first. Log `missing_artifact`.
 
 ---
 
-## Prerequisites (complete before dispatching any subagent)
+## Prerequisites
 
-- [ ] Detect the issue-tracker CLI (`gh`, `glab`, `tea`, …) and use it
-  for every issue/PR command below. Translate `gh` syntax accordingly.
+- [ ] Capture feedback-log baseline for the session boundary ping
+  (see [../../references/feedback-log.md](../../references/feedback-log.md)):
 
-- [ ] Confirm the local plan tree exists and looks healthy:
+  ```bash
+  FB_LOG=".stenswf/_feedback/$(date -u +%F).jsonl"
+  mkdir -p "$(dirname "$FB_LOG")"
+  SESSION_START_N=$(wc -l < "$FB_LOG" 2>/dev/null || echo 0)
+  export SESSION_START_N
+  ```
+
+- [ ] Detect the issue-tracker CLI (`gh`, `glab`, `tea`) and use it
+  for every issue/PR command below.
+
+- [ ] Confirm the local plan tree exists:
 
   ```bash
   D=.stenswf/$ARGUMENTS
-  [ -s "$D/manifest.json" ] || { echo "run /stenswf:plan $ARGUMENTS first"; exit 1; }
-  [ -s "$D/stable-prefix.md" ] || { echo "stable-prefix missing; re-run /stenswf:plan"; exit 1; }
+  [ -s "$D/manifest.json" ]     || { echo "run /stenswf:plan $ARGUMENTS first"; exit 1; }
+  [ -s "$D/stable-prefix.md" ]  || { echo "stable-prefix missing; re-run /stenswf:plan"; exit 1; }
   ```
 
-- [ ] **Drift check** — re-fetch the current issue body and compare
-  hashes. Issue bodies can be edited by teammates between `plan` and
-  `ship`; silent divergence is the #1 cause of pipeline breakage.
+- [ ] **Drift check** — full procedure at
+  [../../references/drift-check.md](../../references/drift-check.md).
+  On `(c)ontinue`, append a drift-accepted meta-entry to
+  `decisions.md` and log `user_override`.
 
-  ```bash
-  gh issue view $ARGUMENTS --json body -q .body > /tmp/slice-$ARGUMENTS-now.md
-  NOW_SHA=$(sha256sum /tmp/slice-$ARGUMENTS-now.md | cut -d' ' -f1)
-  PLAN_SHA=$(jq -r .concept_sha256 "$D/manifest.json")
-
-  # Also check CLAUDE.md drift
-  CLAUDE_NOW=$(git log -1 --format=%H -- CLAUDE.md AGENTS.md 2>/dev/null | head -1)
-  CLAUDE_PLAN=$(jq -r .claude_md_sha "$D/manifest.json")
-  ```
-
-  If `NOW_SHA != PLAN_SHA` OR `CLAUDE_NOW != CLAUDE_PLAN`:
-
-  1. Identify which sections changed by recomputing per-section hashes
-     on `/tmp/slice-$ARGUMENTS-now.md` (`acceptance_criteria`,
-     `conventions`, `what_to_build`) and comparing against
-     `manifest.json:section_hashes`.
-  2. Show the user:
-
-     ```
-     ⚠  Issue #$ARGUMENTS body has changed since plan was written.
-        Changed sections: <comma-separated list>
-        [diff of changed sections shown inline via `diff` of concept.md vs /tmp/slice-$ARGUMENTS-now.md,
-         capped at ~30 lines]
-
-        (r) re-plan       — run /stenswf:plan $ARGUMENTS --resume
-                             (keeps done tasks, regenerates the rest)
-        (c) continue      — proceed with stale plan
-        (a) abort
-     ```
-
-  3. Wait for user input. `r` → stop and tell user to run `plan --resume`;
-     `c` → proceed (log `"event":"drift-accepted"` to `log.jsonl`, and
-     append one `decision` meta-entry to
-     `.stenswf/$ARGUMENTS/decisions.md` — source `ship`, title `Drift
-     accepted — no replan`, rationale names the changed sections;
-     [contract](../../README.md#decision-anchor-contract));
-     `a` → stop.
-
-- [ ] Record `BASE_SHA` and persist to manifest:
+- [ ] Record `BASE_SHA`:
 
   ```bash
   BASE_SHA=$(git rev-parse HEAD)
@@ -97,31 +60,19 @@ If `.stenswf/$ARGUMENTS/` does not exist, stop and ask the user to run
     > "$D/manifest.json.tmp" && mv "$D/manifest.json.tmp" "$D/manifest.json"
   ```
 
-- [ ] **Resume detection** — read `manifest.tasks[]` and find the first
-  task with `status != "done"`. Skip completed tasks. If all tasks are
-  `done`, proceed to Phase 2 (Refactor).
-
-- [ ] Append a dispatch-start event to the audit log:
-
-  ```bash
-  printf '{"ts":"%s","event":"ship-start","base_sha":"%s"}\n' \
-    "$(date -u +%FT%TZ)" "$BASE_SHA" >> "$D/log.jsonl"
-  ```
+- [ ] **Resume detection** — find first `manifest.tasks[].status != "done"`.
+  All done → Phase 2.
 
 ---
 
 ## Phase 1 — Task Execution (Orchestrator Loop)
 
-Walk pending tasks in order (T10, T20, T30 …) as listed in
-`manifest.tasks[]`.
+Walk pending tasks in order (`T10`, `T20`, …).
 
 ### 1a. Delegate to a subagent
 
-Each dispatch pastes `stable-prefix.md` **verbatim** as the prompt head,
-then a short task-specific tail. The prefix is identical across all
-dispatches in this run — prompt caching hits on dispatches 2..N.
-
-Dispatch message structure:
+Each dispatch pastes `stable-prefix.md` **verbatim** as the prompt head
+(prompt caching hits on dispatches 2..N), then task-specific tail:
 
 ```
 $(cat .stenswf/$ARGUMENTS/stable-prefix.md)
@@ -130,17 +81,16 @@ ISSUE: #$ARGUMENTS
 TASK_ID: T<id>
 TASK_FILE: .stenswf/$ARGUMENTS/tasks/T<id>.md
 
-FETCH YOUR TASK FRAGMENT (do this first, before any other action):
+FETCH YOUR TASK FRAGMENT (do this first):
 
   cat .stenswf/$ARGUMENTS/tasks/T<id>.md
 
 Execute the extracted task block exactly as written. It is fully
-self-contained: test code, file paths, commands, Done-when criterion,
-and the commit message (from the task's `commit="…"` attribute).
+self-contained: test code, paths, commands, Done-when, commit message.
 
 At the end, commit with a `Refs: #$ARGUMENTS T<id>` trailer:
 
-  git add <paths from the task's Files section>
+  git add <paths from Files>
   git commit -m "<commit attribute verbatim>" -m "Refs: #$ARGUMENTS T<id>"
 
 REPORT FORMAT — silent on success, loud on failure.
@@ -166,51 +116,36 @@ On failure (BLOCKED) use the verbose form:
 ```
 
 Never tell the subagent to "read the plan" in prose. The explicit `cat`
-command above is the only way it should touch the plan.
+above is the only way it should touch the plan.
 
 ### 1b. Verify the subagent report
 
-- [ ] Parse the first line. Must match `TASK_REPORT T<id> DONE <sha>`.
-      Anything else (including `BLOCKED`) → stop.
-- [ ] Verify a commit was made:
+- [ ] First line matches `TASK_REPORT T<id> DONE <sha>`.
+- [ ] Commit was made:
 
   ```bash
   HEAD_SHA=$(git rev-parse HEAD)
-  [ "$HEAD_SHA" != "$BASE_SHA" ] && echo "OK — committed" || echo "FAIL — no commit"
+  [ "$HEAD_SHA" != "$BASE_SHA" ] || { echo "FAIL — no commit"; }
   ```
 
-- [ ] Verify the reported SHA matches `HEAD_SHA`.
-- [ ] If `BLOCKED` or no new commit: do NOT proceed. Post a
-      `TASK_BLOCKER` comment on the issue (template below) and stop.
-- [ ] Update `BASE_SHA = HEAD_SHA` for the next task.
+- [ ] Reported SHA matches `HEAD_SHA`.
+- [ ] On `BLOCKED` or no new commit: post `TASK_BLOCKER` and stop.
+  Log `tool_failure`.
+- [ ] `BASE_SHA = HEAD_SHA`.
 
-### 1c. Update manifest + audit log
-
-Update the materialised state in `manifest.json` (O(1) read for resume)
-and append to the audit trail (never read in hot path):
+### 1c. Update manifest
 
 ```bash
-D=.stenswf/$ARGUMENTS
-
-# Update manifest: set task status/sha
 jq --arg id "T<id>" --arg sha "$HEAD_SHA" \
   '(.tasks[] | select(.id==$id)) |= (.status="done" | .sha=$sha)' \
   "$D/manifest.json" > "$D/manifest.json.tmp" \
   && mv "$D/manifest.json.tmp" "$D/manifest.json"
-
-# Append to audit log
-printf '{"ts":"%s","event":"report","task":"T<id>","status":"done","head_sha":"%s"}\n' \
-  "$(date -u +%FT%TZ)" "$HEAD_SHA" >> "$D/log.jsonl"
 ```
-
-The manifest is the single source of truth for resume; the log is
-append-only forensic data.
 
 ### Task Blocker Template
 
-If a subagent reports `BLOCKED`, post this as an issue comment, append a
-blocked-event to `log.jsonl`, set the task's `status` in manifest to
-`"blocked"`, and stop:
+On `BLOCKED`: post as issue comment, set task status to `"blocked"` in
+manifest, log `tool_failure`, stop:
 
 ```
 TASK_BLOCKER
@@ -221,66 +156,53 @@ HEAD_SHA:  <SHA after subagent returned>
 Committed: YES | NO
 Error:     <paste from subagent's verbose TASK_REPORT>
 Options:
-  A) <concrete resolution — specific file, line, change>
-  B) <alternative approach>
+  A) <concrete resolution — file, line, change>
+  B) <alternative>
 ─────────────────────────────────────────────
 ```
 
-Do not proceed to Phase 2 until the blocker is resolved.
-
 If the user's `BLOCKED` override materially differs from the task's
-`Done when`, append one `decision` entry (source `ship`, refs include
-the task id + paths) to `.stenswf/$ARGUMENTS/decisions.md` —
-[contract](../../README.md#decision-anchor-contract). Routine
-BLOCKED-then-fix sequences require no entry.
+`Done when`, append one `decision` entry to `decisions.md` (source `ship`,
+refs include task id + paths). Routine BLOCKED-then-fix → no entry.
 
 ---
 
 ## Phase 2 — Refactor Pass (fresh session)
 
-This phase runs in a **fresh session**, not the orchestrator parent.
+Runs in a **fresh session**, not the orchestrator parent. If your
+harness cannot spawn one, `/clear` (or equivalent) and reload manually.
 
-**Fresh-session escape hatch.** If your harness cannot spawn a fresh
-session, run `/clear` (or the harness equivalent), then reload the
-inputs below manually.
-
-**Inputs for the fresh session:**
+**Inputs:**
 
 ```bash
 git diff $BASE_SHA..HEAD > /tmp/ship-$ARGUMENTS-refactor-diff.patch
+wc -l /tmp/ship-$ARGUMENTS-refactor-diff.patch   # if huge, read ranged slices
 cat .stenswf/$ARGUMENTS/file-structure.md
 cat .stenswf/$ARGUMENTS/acceptance-criteria.md
 ```
 
 Read those plus `CLAUDE.md` hard lines. Nothing else.
 
-**Commit sequencing note.** Slice commits from Phase 1 stay atomic. The
-refactor pass produces one additional commit on top. Do not squash or
-amend the slice commits.
+**Commit sequencing.** Slice commits stay atomic. Refactor pass is one
+additional commit on top. Do not squash or amend.
 
-Review every file touched across all tasks (from the diff) against:
+Review every touched file against:
 
-- Hard constraints from `CLAUDE.md`.
-- Coding guidelines inferred from the repo.
+- `CLAUDE.md` hard constraints.
+- Repo coding guidelines.
 - `clean-code`, SOLID, DRY, KISS.
 
-Focused refactor:
+Focused refactor: eliminate TDD-introduced duplication, clarify naming
+where beneficial. No new scope.
 
-- Eliminate TDD-introduced duplication.
-- Clarify naming where obviously beneficial.
-- Do NOT introduce new scope beyond the issue.
-
-Run lint + tests after the refactor. Apply `lint-escape` if needed.
-This is the last coding step.
-
-Commit:
+Run lint + tests. Apply `lint-escape` if needed.
 
 ```bash
 git add <changed paths>
 git commit -m "refactor(<scope>): post-implementation refactor for #$ARGUMENTS"
 ```
 
-Update `BASE_SHA`. Mark manifest:
+Update `BASE_SHA`, mark manifest:
 
 ```bash
 jq --arg sha "$(git rev-parse HEAD)" \
@@ -289,20 +211,48 @@ jq --arg sha "$(git rev-parse HEAD)" \
   && mv /tmp/m.json .stenswf/$ARGUMENTS/manifest.json
 ```
 
-Return to the orchestrator.
-
 ---
 
 ## Phase 3 — Review Step
 
-Work through `.stenswf/$ARGUMENTS/review-step.md` in the orchestrator:
+If `.stenswf/$ARGUMENTS/review-step.md` is missing (entry path was
+`plan-light → ship` rather than heavy `plan`), synthesise a minimal
+one from the issue body's `Acceptance criteria` section and any
+`plan-light.json` hints on disk:
+
+```bash
+RS=".stenswf/$ARGUMENTS/review-step.md"
+if [ ! -s "$RS" ]; then
+  gh issue view $ARGUMENTS --json body -q .body > /tmp/slice-$ARGUMENTS.md
+  {
+    echo "<!-- synthesized by ship (plan-light pivot) -->"
+    echo "# Review Step (synthesized)"
+    echo
+    echo "## Architectural Invariants"
+    echo "_None declared (lite path). Rely on existing test suite._"
+    echo
+    echo "## Recommended Regression Tests"
+    get_section "Acceptance criteria" /tmp/slice-$ARGUMENTS.md \
+      | sed -n 's/^- \[.\] /- /p'
+    echo
+    echo "## Self-report Checklist"
+    echo "- [ ] All AC boxes mapped to a test or manual check."
+    echo "- [ ] No new invariants introduced without a test."
+  } > "$RS"
+  bash plugins/stenswf/scripts/log-issue.sh missing_artifact \
+    "review-step.md synthesised on plan-light pivot" "$RS"
+fi
+```
+
+(See `get_section` in
+[../../references/extractors.md](../../references/extractors.md).)
+
+Then work through `$RS`:
 
 - **Architectural Invariants:** run the invariant test file. All pass.
-- **Recommended Regression Tests:** confirm each listed test exists, or
-  note the justified absence in the PR body.
-- **Self-report Checklist:** execute each item. Fix any failure.
-
-Mark manifest:
+- **Recommended Regression Tests:** confirm each exists, or note
+  justified absence in PR body.
+- **Self-report Checklist:** execute each item.
 
 ```bash
 jq --arg sha "$(git rev-parse HEAD)" \
@@ -313,94 +263,17 @@ jq --arg sha "$(git rev-parse HEAD)" \
 
 ---
 
-## Phase 4 — PR, CI Loop, and Merge Wait
+## Phase 4 — PR, CI Loop, Merge Wait
 
-This phase is a **reusable sub-procedure**. `apply` (PRD-mode) invokes
-it with a different branch and PR body.
+Run the shared PR+CI+merge procedure with `CI_MAX_CYCLES=3` and
+`WAIT_FOR_MERGE=yes`. Full recipe:
+[../../references/pr-ci-merge.md](../../references/pr-ci-merge.md).
 
-### File the PR
-
-- Stage and commit any remaining changes (hooks must pass).
-- Push the branch.
-- Open a PR against the default branch. PR body must include:
-  - One-sentence summary.
-  - `Closes #$ARGUMENTS`.
-  - Summary of any `lint-escape` actions taken, with rationale.
-  - Any justified absences from the Review Step checklist.
-
-Update manifest with PR URL:
-
-```bash
-PR_URL=$(gh pr view --json url -q .url)
-jq --arg u "$PR_URL" '.pr.status="open" | .pr.url=$u' \
-  .stenswf/$ARGUMENTS/manifest.json > /tmp/m.json \
-  && mv /tmp/m.json .stenswf/$ARGUMENTS/manifest.json
-```
-
-### CI Loop (max 3 fix cycles, each in a fresh session)
-
-Monitor CI. Each fix cycle runs in a **fresh session** reading only:
-
-- `/tmp/ci-fail-$ARGUMENTS-cycle$N.log` (never `cat` CI logs — always
-  `tail`/`grep` extract)
-- `git diff $BASE_SHA..HEAD`
-- `CLAUDE.md` hard lines
-
-Per cycle:
-
-1. Orchestrator fetches failing job log:
-   ```bash
-   gh run view --log-failed > /tmp/ci-fail-$ARGUMENTS-cycle$N.log
-   wc -l /tmp/ci-fail-$ARGUMENTS-cycle$N.log   # confirm; do NOT cat
-   ```
-2. Spawn fresh session; diagnose via `tail`/`grep` extracts only:
-   ```bash
-   tail -200 /tmp/ci-fail-$ARGUMENTS-cycle$N.log
-   grep -nE 'FAIL|Error|^E |Traceback|##\[error\]|panic:' \
-     /tmp/ci-fail-$ARGUMENTS-cycle$N.log | tail -60
-   ```
-3. Fix, commit (hooks run), push, return commit SHA.
-4. Orchestrator waits for CI, updates `BASE_SHA`.
-
-**Cap: 3 fix cycles.** If still failing, post on PR + issue:
-
-```
-CI_BLOCKER
-─────────────────────────────────────────────
-Cycle:     3 of 3 exhausted
-Failing:   <job name and step>
-Error:     <exact error output>
-Cycles tried:
-  Cycle 1: <approach and outcome>
-  Cycle 2: <approach and outcome>
-  Cycle 3: <approach and outcome>
-Options:
-  A) <concrete fix>
-  B) <config or environment change>
-─────────────────────────────────────────────
-```
-
-Stop.
-
-### Merge Wait
-
-```bash
-while true; do
-  state=$(gh pr view --json state -q .state)
-  [ "$state" = "MERGED" ] && break
-  [ "$state" = "CLOSED" ] && { echo "PR closed without merge"; exit 1; }
-  sleep 30
-done
-```
-
-Update manifest:
-
-```bash
-jq '.pr.status="merged"' .stenswf/$ARGUMENTS/manifest.json \
-  > /tmp/m.json && mv /tmp/m.json .stenswf/$ARGUMENTS/manifest.json
-```
-
-No labels. The PR merge closes the issue via `Closes #$ARGUMENTS`.
+PR body must include:
+- One-sentence summary.
+- `Closes #$ARGUMENTS`.
+- Summary of any `lint-escape` actions, with rationale.
+- Any justified Review-Step absences.
 
 ---
 
@@ -408,13 +281,12 @@ No labels. The PR merge closes the issue via `Closes #$ARGUMENTS`.
 
 Post a single wrap-up comment on the issue:
 
-- Brief summary of the approach.
+- Brief summary of approach.
 - Task list by T-ID and commit SHA (from manifest).
 - Any `lint-escape` actions taken.
 - Any justified review-step absences.
 
-**Archive the local plan tree** (cold storage — keeps forensic `log.jsonl`
-+ manifest without polluting the active workspace):
+Archive the local plan tree:
 
 ```bash
 DATE=$(date +%Y-%m-%d)
@@ -433,4 +305,25 @@ if [ "$OPEN" = "0" ]; then
 fi
 ```
 
+Emit the feedback-log boundary ping
+([../../references/feedback-log.md](../../references/feedback-log.md)):
+
+```bash
+FB_LOG=".stenswf/_feedback/$(date -u +%F).jsonl"
+N=$(wc -l < "$FB_LOG" 2>/dev/null || echo 0)
+SESSION_N=$((N - ${SESSION_START_N:-0}))
+if [ "$SESSION_N" -gt 0 ]; then
+  echo "stenswf: $SESSION_N workflow issues reported this session — see .stenswf/_feedback/"
+fi
+```
+
 Tell the user the issue shipped and where the archive lives.
+
+---
+
+## Feedback
+
+Log friction throughout via
+[../../references/feedback-log.md](../../references/feedback-log.md).
+Set `STENSWF_SKILL=ship` and `STENSWF_ISSUE=$ARGUMENTS` before calling
+`scripts/log-issue.sh`.

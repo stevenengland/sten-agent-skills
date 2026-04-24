@@ -4,130 +4,98 @@ description: Create a PRD through user interview, codebase exploration, and modu
   design, then submit as an issue.
 ---
 
-## Token Efficiency
-
-**Load and apply the `brevity` skill now, before the first response.**
-It governs the interview, codebase exploration narration, and module-design
-dialogue. The PRD document itself is a full-prose artifact (already excluded
-by `brevity`'s Scope section) — write it normally.
+**Load and apply `brevity` now.** See [../../references/brevity-load.md](../../references/brevity-load.md).
+The PRD document itself is a full-prose artifact (already excluded by
+`brevity`'s Scope section).
 
 ---
 
-This skill will be invoked when the user wants to create a PRD. You may skip
-steps if you don't consider them necessary.
+Invoked when the user wants to create a PRD. Skip steps if unnecessary.
 
-1. Ask the user for a long, detailed description of the problem they want to
-   solve and any potential ideas for solutions.
+1. Ask the user for a long, detailed description of the problem and any
+   solution ideas.
 
-2. Explore the repo to verify their assertions and understand the current
-   state of the codebase. **Delegate this to an Explore subagent** rather
-   than reading files directly — the subagent returns a compact report
-   (≤300 words) so the orchestrator trajectory stays light. Dispatch
-   message:
+2. Explore the repo via an Explore subagent (≤300 words, thoroughness: medium).
+   Do NOT read files directly.
 
-   > Explore the codebase to verify these claims and map the current state
-   > for a PRD on <topic>. Focus on: <the user's specific assertions> and
-   > <the modules likely affected>. Return a report of ≤300 words covering
-   > what exists, what's missing, and any risks. Thoroughness: medium.
+   > Explore the codebase to verify these claims and map the current
+   > state for a PRD on <topic>. Focus on: <user's assertions> and
+   > <affected modules>. Return a report ≤300 words: what exists,
+   > what's missing, risks. Thoroughness: medium.
 
-   Escape hatch: if the returned report is insufficient, ask a targeted
-   follow-up subagent rather than reading files in the parent session.
+3. Interview relentlessly about every aspect of the plan. Walk each
+   branch of the design tree. Resolve dependencies one-by-one.
 
-3. Interview me relentlessly about every aspect of the plan until we reach a
-   shared understanding. Walk down each branch of the design tree and resolve
-   dependencies between decisions one-by-one.
-
-   - For each question, provide your recommended answer and reasoning.
-   - If a question can be answered by exploring the codebase, dispatch a
-     targeted Explore subagent (as in Step 2) instead of reading files
-     directly.
-   - Propose 2–3 different approaches with trade-offs.
-   - Lead with your recommended option and explain why.
+   - Provide a recommended answer and reasoning for each question.
+   - Delegate codebase questions to targeted Explore subagents.
+   - Propose 2–3 approaches with trade-offs. Lead with recommendation.
    - Go back and clarify when something doesn't make sense.
+   - Cite industry practice (Stripe, Spotify, GitHub, AWS, Shopify)
+     only when genuinely relevant to a decision currently in play.
 
-   When a recommendation touches a problem that well-known companies
-   (e.g. Stripe, Spotify, GitHub, AWS, Shopify) have solved publicly, research
-   how those industry leaders approach it and briefly weave the relevant
-   patterns or practices into your recommendation. Cite the company and the
-   specific practice so I can evaluate the reasoning. Do not force-fit
-   references — only include them when genuinely relevant.
+   No code in this phase.
 
-   Do not write any code in this phase.
+4. Sketch modules to build/modify. Look for deep modules extractable in
+   isolation. Consult the `architecture` skill.
 
-4. Sketch out the major modules you will need to build or modify to complete
-   the implementation. Actively look for opportunities to extract deep modules
-   that can be tested in isolation.
+   Check with the user that modules match their expectations. Check
+   which modules they want tests written for.
 
-   **Consult the `architecture` skill** for the deep-vs-shallow
-   heuristic and for the criteria on when to extract an abstraction.
+4a. **Lock bikeshed decisions now.** Surface every decision that would
+    otherwise be re-litigated inside slice issues (naming, shape,
+    layout, test layout, error surfacing, vocabularies). Resolve them
+    upfront so slices stay AFK and Lite.
 
-   A deep module (as opposed to a shallow module) is one which encapsulates a
-   lot of functionality in a simple, testable interface which rarely changes.
+    For each, ask the user their preference (with your recommendation).
+    Record the resolved decision in the PRD's `## Conventions` section.
+    That section is copied verbatim into every slice by `prd-to-issues`.
 
-   Check with the user that these modules match their expectations. Check with
-   the user which modules they want tests written for.
+    Typical prompts (use whichever apply): module/file naming, exported
+    function naming, descriptor shape, test-file split, error surfacing,
+    domain vocabulary.
 
-4a. **Lock bikeshed decisions now.** Before writing the PRD, surface every
-    decision that would otherwise be re-litigated inside individual slice
-    issues (naming, shape, layout, test layout, error surfacing, action
-    vocabularies for state machines). These are one-time calls; resolve
-    them in the PRD so slices stay AFK and Lite.
+5. Write the PRD using the template at
+   [../../references/prd-template.md](../../references/prd-template.md).
+   Create as an issue (CLI when available; otherwise present formatted
+   body for manual creation).
 
-    For each, ask the user their preference (with your recommendation),
-    then record the resolved decision in the `## Conventions` section of
-    the PRD (see template). This section is copied verbatim into every
-    slice by `prd-to-issues`, so write it crisply and concretely.
-
-    Typical prompts — use whichever apply to the PRD topic:
-    - Module / file naming pattern for new helpers.
-    - Exported function naming (`build_<op>_request` vs `<op>_request`).
-    - Descriptor shape (frozen dataclass vs NamedTuple vs TypedDict; field set).
-    - Test-file split (sibling vs nested; paired sync+async collapse).
-    - Error surfacing (raise vs Result-style vs terminal-action).
-    - Any domain-specific vocabulary (enum members, action types).
-
-5. Once you have a complete understanding of the problem and solution, use the
-   template below to write the PRD. The PRD should be submitted as an issue in
-   the project's issue tracker. If a CLI tool is available (e.g. `gh`,
-   `glab`), use it to create the issue; otherwise present the formatted issue
-   body for manual creation.
-
-   **Before creating the issue, record the PRD base SHA.** This is the
-   commit the delivered PRD will be reviewed against by `review` in
-   PRD-mode. Use the current `HEAD` of the default integration branch
-   (typically `main`):
+   **Record the PRD base SHA.** This is the commit the delivered PRD
+   will be reviewed against. Use the current HEAD of the upstream
+   integration branch — portable across branch names:
 
    ```bash
-   git fetch origin
-   PRD_BASE=$(git rev-parse origin/main)
+   git fetch --quiet
+   # Resolve the upstream of the current HEAD if tracked; else repo default.
+   PRD_BASE=$(git rev-parse --verify '@{upstream}' 2>/dev/null || {
+     D=$(gh repo view --json defaultBranchRef -q .defaultBranchRef.name 2>/dev/null)
+     [ -n "$D" ] && git rev-parse "origin/$D"
+   })
+   [ -n "$PRD_BASE" ] || { echo "cannot resolve PRD base — set upstream or pass explicitly" >&2; exit 1; }
    echo "PRD base SHA: $PRD_BASE"
    ```
 
-   Embed `**PRD base SHA:** <PRD_BASE>` as a line in the PRD body (see
-   template). After the issue is created and its number `<N>` is known,
-   tag that commit so `review` can resolve it later:
+   Embed `prd_base_sha: $PRD_BASE` in the front-matter block (see
+   template). After the issue is created and its number `<N>` is known:
 
    ```bash
    git tag "prd-<N>-base" "$PRD_BASE"
    git push origin "prd-<N>-base"
    ```
 
-   After creating the issue, do NOT apply any lifecycle label. Mode is detected from the issue body's
-   `## Type` marker (written verbatim as `PRD` in the template below).
+   Do NOT apply any label. Mode is detected from the front-matter
+   `type: PRD` marker.
 
-   **Seed the PRD local tree.** `review` and `apply` in PRD-mode rely on
-   `.stenswf/<N>/manifest.json` for drift detection and state tracking,
-   matching the slice-side contract. Seed it now so PRD-mode drift
-   detection is anchored to the PRD body at inception rather than a
-   later snapshot:
+   **Seed the PRD local tree.** Required for drift detection by
+   `review` and `apply`:
 
    ```bash
-   mkdir -p ".stenswf/<N>"
-   gh issue view <N> --json body -q .body > ".stenswf/<N>/concept.md"
-   CONCEPT_SHA=$(sha256sum ".stenswf/<N>/concept.md" | awk '{print $1}')
-   cat > ".stenswf/<N>/manifest.json" <<EOF
+   N=<issue-number>
+   mkdir -p ".stenswf/$N"
+   gh issue view "$N" --json body -q .body > ".stenswf/$N/concept.md"
+   CONCEPT_SHA=$(sha256sum ".stenswf/$N/concept.md" | awk '{print $1}')
+   cat > ".stenswf/$N/manifest.json" <<EOF
    {
-     "issue": <N>,
+     "issue": $N,
      "kind": "prd",
      "base_sha": "$PRD_BASE",
      "concept_sha256": "$CONCEPT_SHA",
@@ -136,59 +104,32 @@ steps if you don't consider them necessary.
      "review_step": {"status": "pending", "sha": null}
    }
    EOF
-   printf '{"ts":"%s","event":"prd-created","issue":<N>}\n' \
-     "$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> ".stenswf/<N>/log.jsonl"
 
    # Bootstrap the decision anchor.
-   # See: plugins/stenswf/README.md#decision-anchor-contract
-   cat > ".stenswf/<N>/decisions.md" <<EOF
-   # Decisions — #<N>
+   cat > ".stenswf/$N/decisions.md" <<EOF
+   # Decisions — #$N
 
-   <!-- Seeded by prd-from-grill-me. Schema/recipes: plugins/stenswf/README.md#decision-anchor-contract -->
+   <!-- Seeded by prd-from-grill-me. Schema: plugins/stenswf/README.md#decision-anchor-contract -->
    EOF
    ```
 
-   Substitute `<N>` with the actual issue number before running. The
-   tree is gitignored (see `bootstrap`); no team-visible side effects.
+   The tree is gitignored (see `bootstrap`).
 
-   **Seed anchor entries (LLM task).** After the bootstrap above, walk
-   the PRD body and append one entry for each qualifying item:
+   **Seed anchor entries (LLM task).** Walk the PRD body and append one
+   entry per qualifying item:
 
-   - `## Conventions` item → category `decision` (non-arch choice that
-     a `git blame` reader could not reconstruct).
+   - `## Conventions` item → category `decision`.
    - `## Implementation Decisions` item → category `arch`.
 
-   Apply the grep-blame + surfaces test per the [Decision Anchor
-   Contract](../../README.md#decision-anchor-contract): skip routine
-   defaults the PRD body already documents crisply, or anything
-   `CLAUDE.md`/`AGENTS.md` already answers. Use the canonical **append
-   snippet** from the contract. Typical count: 5–15.
+   Apply the grep-blame + surfaces test per
+   [../../references/decision-anchor-link.md](../../references/decision-anchor-link.md).
+   Skip routine defaults already documented. Typical count: 5–15.
 
-   Sketch per entry (adapt title/rationale/refs from the PRD item):
-
-   ```bash
-   D=".stenswf/<N>"
-   NEXT=$(awk 'match($0, /^### (~~)?D[0-9]+/) {
-     match($0, /D[0-9]+/); n=substr($0, RSTART+1, RLENGTH-1)+0
-     if (n>max) max=n
-   } END { print max+1 }' "$D/decisions.md")
-   cat >> "$D/decisions.md" <<EOF
-
-   ### D${NEXT} — <title ≤60 chars, imperative>
-
-   - **Category:** decision            # or: arch
-   - **Source:** prd-from-grill-me
-   - **Rationale:** <≤180 chars, why this not the obvious alternative>
-   - **Refs:** <AC#N, path/to/file — comma-sep, ≤8 tokens>
-   EOF
-   ```
-
-   If nothing in the PRD body passes both tests, leave the anchor with
-   only the header — later slice-level skills will append as they go.
+   Use the canonical append snippet from the Decision Anchor Contract
+   (see that file for the auto-incremented-ID awk). Adapt
+   title/rationale/refs from each PRD item.
 
    **After creating the issue, offer the chained handover:**
-
-   Display this prompt verbatim:
 
    > PRD created as issue #N.
    >
@@ -199,96 +140,15 @@ steps if you don't consider them necessary.
    >
    > Default: N
 
-   If the user's response is `y`, `yes`, `proceed`, or `go` (case-insensitive),
-   immediately invoke the `prd-to-issues` procedure starting at its **Step 3
-   (HITL triage)**, treating Steps 1–2 as already done (the PRD body and
-   module exploration are still in your context). Any other response —
-   including empty, ambiguous, or `N` — stop. Do not invoke `prd-to-issues`.
+   If the user's response is `y`/`yes`/`proceed`/`go` (case-insensitive),
+   immediately invoke `prd-to-issues` at **Step 3 (HITL triage)**,
+   treating Steps 1–2 as done. Any other response → stop.
 
-<prd-template>
+---
 
-## Type
+## Feedback
 
-PRD
-
-**PRD base SHA:** <PRD_BASE>
-
-## Problem Statement
-
-The problem that the user is facing, from the user's perspective.
-
-## Solution
-
-The solution to the problem, from the user's perspective.
-
-## User Stories
-
-A LONG, numbered list of user stories. Each user story should be in the
-format of:
-
-1. As an <actor>, I want a <feature>, so that <benefit>
-
-<user-story-example>
-1. As a mobile bank customer, I want to see balance on my accounts, so that I
-   can make better informed decisions about my spending
-</user-story-example>
-
-This list of user stories should be extremely extensive and cover all aspects
-of the feature.
-
-## Implementation Decisions
-
-A list of implementation decisions that were made. This can include:
-
-- The modules that will be built/modified
-- The interfaces of those modules that will be modified
-- Technical clarifications from the developer
-- Architectural decisions
-- Schema changes
-- API contracts
-- Specific interactions
-
-Do NOT include specific file paths or code snippets. They may end up being
-outdated very quickly.
-
-## Conventions
-
-Bikeshed decisions resolved upfront so individual slices do not re-litigate
-them. `prd-to-issues` copies this section verbatim into every slice's body
-as `## Conventions (from PRD)`. Plans and ship dispatches read it as hard
-spec. Keep it concrete and terse — one bullet per decision.
-
-Typical contents (include only what applies):
-
-- **Naming.** Helper module `_<x>_helpers.py`; exported function
-  `build_<op>`; descriptor class `<Op>Descriptor`.
-- **Shape.** Frozen dataclass with fields `{method, path, json_body,
-  query_params, headers}`.
-- **Test layout.** Pure helpers in `tests/<module>/test_<x>_helpers.py`;
-  dispatch tests (one sync + one async per method) stay in existing file.
-- **Error surfacing.** Raise `<ExistingError>` from the helper; drivers do
-  not translate.
-- **Action vocabulary** (state machines only): `Poll`, `Sleep(delay)`,
-  `Return(value)`, `Raise(error)`.
-
-Omit subsections that do not apply. If no bikeshed decisions are needed,
-write `None — slice-local decisions only.` and move on.
-
-## Testing Decisions
-
-A list of testing decisions that were made. Include:
-
-- A description of what makes a good test (only test external behavior, not
-  implementation details)
-- Which modules will be tested
-- Prior art for the tests (i.e. similar types of tests in the codebase)
-
-## Out of Scope
-
-A description of the things that are out of scope for this PRD.
-
-## Further Notes
-
-Any further notes about the feature.
-
-</prd-template>
+Log friction via
+[../../references/feedback-log.md](../../references/feedback-log.md).
+Set `STENSWF_SKILL=prd-from-grill-me` before calling
+`scripts/log-issue.sh`.

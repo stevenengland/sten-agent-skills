@@ -15,85 +15,82 @@ subagents, no plan comment, no XML extraction. The issue body IS the spec.
 
 ## Phase 0 — Preflight gate
 
-`gh issue view $ARGUMENTS` (or `glab`/`tea`). Abort to `/stenswf:plan` +
-`/stenswf:ship` (one-line reason to user, nothing posted to issue) if any:
+Capture feedback-log baseline for the session boundary ping
+(see [../../references/feedback-log.md](../../references/feedback-log.md)):
 
-- Body lacks an `Acceptance criteria` section with ≥1 checkbox.
-- Open `Blocked by #N` exists.
-- Body declares `Lite-eligible: false`. If a structured disqualifier
-  block is present (`Disqualifier: <tag>`), echo the tag in the one-line
-  abort reason (e.g. `aborting — files>15`). Exception: if the body's
-  `## Type` marker says `slice — spike`, ignore a
-  `Disqualifier: arch-unknown` — spike slices exist to resolve unknowns.
-- Scope plausibly exceeds the Lite envelope and the issue body did not
-  already declare it non-Lite:
-  - **> 15 files** changed (no distinction between src/test).
-  - Crosses **more than one top-level module directory** (intra-directory
-    helpers are fine).
-  - Includes a schema migration.
-  - Introduces an architectural decision not already resolved in
-    `## Conventions (from PRD)`.
-  Read `What to build`, `Files (hint)`, and `## Conventions (from PRD)`
-  before judging. When in doubt, proceed — the `apply` skill's
-  per-suggestion loop and `ship-light` Phase 3 rubberduck will catch
-  drift.
+```bash
+FB_LOG=".stenswf/_feedback/$(date -u +%F).jsonl"
+mkdir -p "$(dirname "$FB_LOG")"
+SESSION_START_N=$(wc -l < "$FB_LOG" 2>/dev/null || echo 0)
+export SESSION_START_N
+```
+
+Fetch and read front-matter via
+[../../references/extractors.md](../../references/extractors.md):
+
+```bash
+gh issue view $ARGUMENTS --json body -q .body > /tmp/slice-$ARGUMENTS.md
+TYPE=$(get_fm type /tmp/slice-$ARGUMENTS.md)
+LITE=$(get_fm lite_eligible /tmp/slice-$ARGUMENTS.md)
+DISQ=$(get_fm disqualifier /tmp/slice-$ARGUMENTS.md)
+BLOCKED=$(get_fm blocked_by /tmp/slice-$ARGUMENTS.md)
+```
+
+Abort to `/stenswf:plan` + `/stenswf:ship` (one-line reason to user,
+nothing posted to issue) if any:
+
+- Body lacks an `Acceptance criteria` section with ≥1 checkbox. Log `contract_violation`.
+- `BLOCKED` non-empty.
+- `LITE == "false"`. Echo the disqualifier: `aborting — $DISQ`.
+  Exception: `TYPE == "slice — spike"` ignores `arch-unknown`.
+- Scope plausibly exceeds the Lite envelope (> 15 files, multi-module,
+  schema migration, unresolved arch decision).
+
+When in doubt, proceed — the Phase 3 rubberduck will catch drift.
 
 ## Phase 0.5 — Plan-light detection (optional)
 
-If `plan-light` has been run for this issue, a pair of artifacts is on
-disk. Detect and (if current) consume as advisory guidance:
+If `plan-light` has been run, its pair of artifacts is on disk. Detect
+and (if current) consume as advisory:
 
 ```bash
 PLAN_MD=".stenswf/$ARGUMENTS/plan-light.md"
 PLAN_JSON=".stenswf/$ARGUMENTS/plan-light.json"
 
 if [ -s "$PLAN_MD" ] && [ -s "$PLAN_JSON" ]; then
-  gh issue view $ARGUMENTS --json body -q .body > /tmp/slice-$ARGUMENTS.md
   CUR_SIG=$( { \
-    awk '/^## What to build/,/^## /'            /tmp/slice-$ARGUMENTS.md | sed '$d'; \
-    awk '/^## Conventions \(from PRD\)/,/^## /' /tmp/slice-$ARGUMENTS.md | sed '$d'; \
-    awk '/^## Acceptance criteria/,/^## /'      /tmp/slice-$ARGUMENTS.md | sed '$d'; \
+    extract_section 'What to build'            /tmp/slice-$ARGUMENTS.md; \
+    extract_section 'Conventions \(from PRD\)' /tmp/slice-$ARGUMENTS.md; \
+    extract_section 'Acceptance criteria'      /tmp/slice-$ARGUMENTS.md; \
   } | sha256sum | cut -d' ' -f1)
   PLAN_SIG=$(jq -r .source_signature "$PLAN_JSON")
 
   if [ "$CUR_SIG" = "$PLAN_SIG" ]; then
     echo "plan-light current; using as advisory guidance"
-    # Read plan-light.md ONCE. Use its ## Tasks for implementation
-    # ordering and file mapping. Use its ## Assumptions as context.
-    # Issue body ACs remain authoritative for Done-when.
   else
-    echo "plan-light stale (issue body drifted); ignoring, proceeding from issue body"
-    # Do NOT delete the file. Proceed as if no plan existed.
+    echo "plan-light stale; ignoring, proceeding from issue body"
   fi
 fi
 ```
 
 **Precedence.** Issue body ACs are authoritative for "done."
-`plan-light.md` is advisory only — task ordering, file mapping,
-approach hints, recorded assumptions. If the plan and the issue body
-disagree on what an AC means, the issue body wins.
-
-If no plan-light artifact exists, skip this phase silently and
-proceed as if running standalone.
+`plan-light.md` is advisory only. If they disagree, issue body wins.
 
 ## Phase 1 — Setup
 
-- Read `CLAUDE.md` (or `AGENTS.md`) once. **Honour CLAUDE.md throughout.**
-- Extract the slice's `## Conventions (from PRD)` section and read once.
-  Treat as hard spec alongside Acceptance criteria — do not invent
-  alternative names, shapes, or layouts:
+- Read `CLAUDE.md` (or `AGENTS.md`) once. **Honour throughout.**
+- Extract the slice's `## Conventions (from PRD)`:
 
   ```bash
-  gh issue view $ARGUMENTS --json body -q .body > /tmp/slice-$ARGUMENTS.md
-  awk '/^## Conventions \(from PRD\)/,/^## /' /tmp/slice-$ARGUMENTS.md \
-    | sed '$d' > /tmp/slice-$ARGUMENTS-conventions.md
+  extract_section 'Conventions \(from PRD\)' /tmp/slice-$ARGUMENTS.md \
+    > /tmp/slice-$ARGUMENTS-conventions.md
   wc -l /tmp/slice-$ARGUMENTS-conventions.md
   ```
 
-  If the extracted content is `None — slice-local decisions only.`, there
-  are no cross-cutting conventions — proceed normally.
-- Load exactly: `tdd`, `clean-code`, `lint-escape`. No others.
-- Branch off default:
+  If content is `None — slice-local decisions only.`, no cross-cutting
+  conventions — proceed normally.
+- Load exactly: `tdd`, `clean-code`, `lint-escape`.
+- Branch off default (portable across branch names):
 
   ```bash
   BASE_SHA=$(git rev-parse HEAD)
@@ -106,72 +103,63 @@ proceed as if running standalone.
 
 ## Phase 2 — TDD per acceptance criterion
 
-For each AC in order, follow the `tdd` skill: failing test → minimal
-code → green → refactor (apply `clean-code`) → commit. One commit per
-behavioural change. Names, shapes, and layouts used here must match
-`## Conventions (from PRD)` verbatim — if a convention conflicts with
-the codebase, stop and hand off to `/stenswf:plan`+`/stenswf:ship` rather
-than improvising. Conventional Commits, `Refs #$ARGUMENTS` footer:
+For each AC in order: failing test → minimal code → green → refactor
+(`clean-code`) → commit. One commit per behavioral change. Names,
+shapes, layouts match `## Conventions (from PRD)` verbatim — on conflict,
+stop and hand off to `/stenswf:plan` + `/stenswf:ship`. Log
+`contract_violation` if the conflict was discovered late.
+
+Conventional Commits:
 
 ```bash
 git commit -m "<type>(<scope>): <imperative subject>" -m "Refs #$ARGUMENTS"
 ```
 
 `type`: `feat|fix|refactor|perf|docs|test|chore|build|ci`. Subject
-lower-case, no period, ≤72 chars. Apply `lint-escape` if a lint/type
-error blocks progress. Do not squash.
+lower-case, no period, ≤72 chars. Apply `lint-escape` if blocked. No squash.
 
-**Ambiguity handling (silent-or-escalate).** When an AC or convention
-allows two materially different implementations and the codebase
-offers no tiebreaker: stop and emit `ROUTE_HEAVY: <one-sentence
-reason>` as your FINAL line of output. One-line reason to the user,
-nothing posted to the issue. Do not improvise between equally
-plausible behaviors. Minor implementation choices (naming within
-established conventions, local helper extraction, test shape within
-the prevailing pattern) are educated guesses — record them in the PR
-body's `## Notable assumptions` section (Phase 4) and proceed.
+**Ambiguity handling (silent-or-escalate).** Two materially different
+implementations, no codebase tiebreaker → stop, emit
+`ROUTE_HEAVY: <reason>` as FINAL line. Log `ambiguous_instruction`.
+Minor implementation choices (naming within conventions, local
+helpers, test shape) are educated guesses — record in PR body's
+`## Notable assumptions` and proceed.
 
-`## Notable assumptions` is **not** the decision anchor — the anchor
-captures rejected alternatives, not analog-mirroring. See the
-[Decision Anchor Contract](../../README.md#decision-anchor-contract).
+`## Notable assumptions` is NOT the decision anchor — the anchor
+captures rejected alternatives.
 
 ## Phase 3 — Pre-push rubberduck
 
-Same session, no subagent. Orthogonal to `clean-code` — only catches
-what that skill does not:
+Same session, no subagent. Orthogonal to `clean-code`:
 
-- **AC → test mapping.** For each AC in the body, name the test proving
-  it. Missing → add one.
-- **Convention drift.** Grep the diff for symbols introduced by this
-  slice; confirm every new module path, function name, class name, and
-  field set matches `## Conventions (from PRD)` verbatim. Any drift →
-  fix or hand off.
-- **Scope drift.** Read `git diff $BASE_SHA..HEAD`. Anything not required
+- **AC → test mapping.** Each AC has a test proving it. Missing → add.
+- **Convention drift.** Grep diff for new symbols; confirm every new
+  module path, function name, class name, and field set matches
+  `## Conventions (from PRD)` verbatim. Drift → fix or hand off.
+- **Scope drift.** `git diff $BASE_SHA..HEAD` — anything not required
   by an AC → delete or justify in one sentence.
 - **Untested error path.** Grep diff for new/changed
-  `raise|throw|return Err|return nil|panic(`. Untested path → add a test.
+  `raise|throw|return Err|return nil|panic(`. Untested → add a test.
 - **Leftover smell.** Grep diff for
   `TODO|FIXME|print(|console\.log|debugger` and commented-out blocks.
-  Clean up.
 
-If anything was fixed: re-run full tests + lint, then
+If anything was fixed, re-run tests+lint, then:
 `git commit -am "refactor(<scope>): self-critique pass" -m "Refs #$ARGUMENTS"`.
 
 If the rubberduck rejected a concrete alternative, append one
 `decision` entry (source `ship-light`) to
-`.stenswf/$ARGUMENTS/decisions.md` — [Decision Anchor
-Contract](../../README.md#decision-anchor-contract). Skip for routine
-refactors.
+`.stenswf/$ARGUMENTS/decisions.md` per
+[../../references/decision-anchor-link.md](../../references/decision-anchor-link.md).
 
 ## Phase 4 — Push and PR
 
-Final test + lint must pass (or `lint-escape`-justified). Then:
+Final test + lint must pass (or `lint-escape`-justified). Then run the
+shared PR+CI procedure with `CI_MAX_CYCLES=2` and `WAIT_FOR_MERGE=no`:
+[../../references/pr-ci-merge.md](../../references/pr-ci-merge.md).
 
-```bash
-git push -u origin "$(git branch --show-current)"
-gh pr create --base "$DEFAULT" \
-  --title "<type>(<scope>): <subject> (#$ARGUMENTS)" \
-  --body-file <(cat <<EOF
+PR body:
+
+```
 Closes #$ARGUMENTS
 
 ## Summary
@@ -180,91 +168,37 @@ Closes #$ARGUMENTS
 - <bullet 3: notable trade-off, or "none">
 
 ## Tests added (red → green)
-- \`<test name 1>\`
-- \`<test name 2>\`
+- `<test name 1>`
+- `<test name 2>`
 
 ## Notable assumptions
-- <only include this section if any silent assumptions were recorded;
-  otherwise omit the section entirely>
-EOF
-)
+- <only include if silent assumptions were recorded; else omit>
 ```
 
 PR body is verbatim — no brevity compression.
 
-## Phase 5 — CI loop (hard cap: 2 cycles)
+## Phase 5 — CI (via shared procedure)
 
-`gh pr checks --watch`. Green → done, exit silently, no label changes.
+`gh pr checks --watch`. Green → done. Red → up to 2 fix cycles per
+[pr-ci-merge.md](../../references/pr-ci-merge.md). On cap reached,
+post `CI_BLOCKER (ship-light cap reached)` and log `tool_failure`.
 
-Red → fix loop. **Never `cat` a CI log.** Full job logs (5–50K tokens
-typical) must not enter context — always redirect to a scratch file,
-then extract only the slice you need with `tail`/`grep`.
-
-**Cycle 1 (same session):**
-
-```bash
-gh run view --log-failed > /tmp/ci-fail-$ARGUMENTS-1.log
-wc -l /tmp/ci-fail-$ARGUMENTS-1.log   # confirm wrote; do NOT cat
-
-# Diagnosis extracts only — pick the one(s) that fit the failure:
-tail -200                                              /tmp/ci-fail-$ARGUMENTS-1.log
-grep -nE 'FAIL|Error|^E |Traceback|##\[error\]|panic:' /tmp/ci-fail-$ARGUMENTS-1.log | tail -60
-grep -nB2 -A8 '<failing test name>'                    /tmp/ci-fail-$ARGUMENTS-1.log
-```
-
-Diagnose from the extracted slice. Fix (`clean-code` for logic,
-`lint-escape` for unresolvable lint/type), re-run locally, commit, push,
-re-watch.
-
-**Cycle 2 (fresh context):** spawn fresh session if possible, else
-`/clear`. Reload only:
-
-- `/tmp/ci-fail-$ARGUMENTS-2.log` — fetched the same way; read via
-  `tail`/`grep` extracts, never `cat`.
-- `git diff $BASE_SHA..HEAD`.
-- CLAUDE.md hard lines (extracted, not full file).
-
-One more attempt. Push.
-
-Still red → STOP. No third cycle. Build the `Error excerpt` block from
-the same `grep`/`tail` extract (≤10 lines). Post PR comment verbatim
-and exit:
-
-```
-CI_BLOCKER (ship-light cap reached)
-─────────────────────────────────────────────
-Cycles: 2 of 2 exhausted.
-Failing job: <name and step>
-Error excerpt:
-  <last ~10 lines from the grep/tail extract — never the full log>
-Cycle 1 attempt: <one sentence>
-Cycle 2 attempt: <one sentence>
-Suggested next steps:
-  A) <concrete fix — file, line, change>
-  B) Re-open with `/stenswf:plan` then `/stenswf:ship`.
-─────────────────────────────────────────────
-```
+`ship-light` does NOT wait for merge — user handles async.
 
 ## Out of scope (deliberate)
 
 No plan comment, `<task>` blocks, XML/awk extraction. No subagent
 dispatch (except optional Cycle-2 `/clear`). No review-step, invariant
 gate, or multi-axis review — use `/stenswf:review $ARGUMENTS`
-separately. No `shipping`/`shipped` labels. No implementation-log
-table. No worktrees.
+separately. No labels. No implementation-log table. No worktrees.
 
-If the slice grows past the preflight envelope mid-flight (exceeds 15
-files, crosses into a second top-level module directory, surfaces a
-schema migration, or reveals an architectural unknown not covered by
-`## Conventions (from PRD)`): stop, hand off to `/stenswf:plan` +
-`/stenswf:ship`. Do not silently re-plan.
+If the slice grows past the preflight envelope mid-flight: stop, hand
+off to `/stenswf:plan` + `/stenswf:ship`. Do not silently re-plan.
+Log `ambiguous_instruction`.
 
 ## Envelope form (when dispatched by `slice-e2e`)
 
-When `ship-light` is invoked directly by the user, abort paths use the
-prose handoff messages above. When `ship-light` runs as a subagent
-dispatched by `/stenswf:slice-e2e`, its FINAL line of output must be
-exactly one of:
+Final line must be exactly one of:
 
 ```
 MERGED <pr-url>
@@ -272,6 +206,22 @@ CI_BLOCKER <pr-url>
 ROUTE_HEAVY: <one-sentence reason>
 ```
 
-Both forms are equivalent; the envelope is just a machine-parseable
-terminal state. When in doubt, emit the envelope — humans can read it
-too.
+---
+
+## Feedback
+
+Log friction throughout via
+[../../references/feedback-log.md](../../references/feedback-log.md).
+Set `STENSWF_SKILL=ship-light` and `STENSWF_ISSUE=$ARGUMENTS` before
+calling `scripts/log-issue.sh`.
+
+On exit, emit the boundary ping:
+
+```bash
+FB_LOG=".stenswf/_feedback/$(date -u +%F).jsonl"
+N=$(wc -l < "$FB_LOG" 2>/dev/null || echo 0)
+SESSION_N=$((N - ${SESSION_START_N:-0}))
+if [ "$SESSION_N" -gt 0 ]; then
+  echo "stenswf: $SESSION_N workflow issues reported this session — see .stenswf/_feedback/"
+fi
+```

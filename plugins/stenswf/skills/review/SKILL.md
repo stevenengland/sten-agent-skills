@@ -4,63 +4,61 @@ description: Review changes against an issue, slice, or PRD.
 disable-model-invocation: true
 ---
 
-## Token Efficiency
-
-**Load and apply the `brevity` skill now, before the first response.**
-It governs reasoning, axis-by-axis narration, and orchestration chatter.
-The review artifacts (slice suggestions, PRD capstone XML) are full-prose
-artifacts (already excluded by `brevity`'s Scope section).
+**Load and apply `brevity` now.** See [../../references/brevity-load.md](../../references/brevity-load.md).
+Review artifacts (slice suggestions, PRD capstone XML) are full-prose
+artifacts.
 
 ---
 
 You are in **plan-only mode**. Do not apply edits, create files outside
-`.stenswf/<issue>/` or `/tmp/`, or run state-modifying git commands. Your
-output is a structured review artifact on disk.
+`.stenswf/<issue>/` or `/tmp/`, or run state-modifying git commands.
+Output is a structured review artifact on disk.
 
 ## Mode Detection
 
-Mode is detected from the issue body's `## Type` marker. Fetch and parse:
+Mode is detected from front-matter `type:` per
+[../../references/extractors.md](../../references/extractors.md):
 
 ```bash
 gh issue view $ARGUMENTS --json body -q .body > /tmp/slice-$ARGUMENTS.md
-TYPE=$(awk '/^## Type/,/^## /' /tmp/slice-$ARGUMENTS.md \
-  | sed '$d' | tail -n +3 | head -1 | tr -d '[:space:]')
+TYPE=$(get_fm type /tmp/slice-$ARGUMENTS.md)
 ```
 
-- `$TYPE == "PRD"` → **PRD-mode** (capstone review).
-- `$TYPE` starts with `slice` → **Slice-mode**.
-- Unrecognised or missing → check local `.stenswf/$ARGUMENTS/manifest.json`
-  (`.kind` field) as cache. Otherwise ask the user.
+- `TYPE == "PRD"` → PRD-mode (capstone review).
+- `TYPE` starts with `slice` → Slice-mode.
+- Unrecognised → check `.stenswf/$ARGUMENTS/manifest.json:.kind`.
+  Otherwise ask the user and log `contract_violation`.
 
 **Announce the detected mode** as your first line of output. Then load
-**only** the matching reference body below and follow it end to end.
-Ignore the other reference entirely.
+only the matching reference body:
 
 - Slice-mode → read [`slice.md`](slice.md) and execute it.
 - PRD-mode → read [`prd.md`](prd.md) and execute it.
 
 ## Drift check (both modes)
 
-Before reviewing, re-hash the current issue body and compare against
-`.stenswf/$ARGUMENTS/manifest.json:concept_sha256` if it exists. On
-mismatch, present the `(r)e-plan / (c)ontinue / (a)bort` menu (same
-contract as `ship`). On the `r`e-plan branch, after the user accepts,
-overwrite `concept.md` with the current body, recompute
-`concept_sha256`, and append a `drift-replan` entry to `log.jsonl`.
+Before reviewing: shared procedure at
+[../../references/drift-check.md](../../references/drift-check.md).
+On `(c)ontinue`, append `drift-accepted` to `log.jsonl`? No — log.jsonl
+was removed. Instead, log `user_override` via
+[../../references/feedback-log.md](../../references/feedback-log.md).
+On `r`e-plan after user acceptance: overwrite `concept.md`, recompute
+`concept_sha256`.
 
 ## PRD-mode local-state backfill
 
-PRD-mode assumes `.stenswf/$ARGUMENTS/{manifest.json,concept.md}` exist
-(seeded by `prd-from-grill-me` at inception). For PRDs created before
-the seeding step was added, backfill on first run if missing:
+For PRDs created before the seeding step existed:
 
 ```bash
 if [ "$TYPE" = "PRD" ] && [ ! -f ".stenswf/$ARGUMENTS/manifest.json" ]; then
   mkdir -p ".stenswf/$ARGUMENTS"
   cp "/tmp/slice-$ARGUMENTS.md" ".stenswf/$ARGUMENTS/concept.md"
   CONCEPT_SHA=$(sha256sum ".stenswf/$ARGUMENTS/concept.md" | awk '{print $1}')
-  PRD_BASE=$(git rev-parse "prd-$ARGUMENTS-base" 2>/dev/null \
-    || grep -oP 'PRD base SHA:\s*\K[0-9a-f]{7,40}' ".stenswf/$ARGUMENTS/concept.md")
+  # Portable PRD-base resolution (no grep -oP / \K).
+  PRD_BASE=$(git rev-parse "prd-$ARGUMENTS-base" 2>/dev/null)
+  [ -z "$PRD_BASE" ] && PRD_BASE=$(get_fm prd_base_sha "/tmp/slice-$ARGUMENTS.md")
+  [ -z "$PRD_BASE" ] && PRD_BASE=$(grep -oE 'prd_base_sha:[[:space:]]*[0-9a-f]{7,40}' \
+    "/tmp/slice-$ARGUMENTS.md" | awk '{print $NF}' | head -1)
   cat > ".stenswf/$ARGUMENTS/manifest.json" <<EOF
 {
   "issue": $ARGUMENTS,
@@ -72,10 +70,16 @@ if [ "$TYPE" = "PRD" ] && [ ! -f ".stenswf/$ARGUMENTS/manifest.json" ]; then
   "review_step": {"status": "pending", "sha": null}
 }
 EOF
-  printf '{"ts":"%s","event":"prd-manifest-backfilled"}\n' \
-    "$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> ".stenswf/$ARGUMENTS/log.jsonl"
 fi
 ```
 
-Announce when a backfill happened so the user knows drift detection is
-seeded against the current body (not a prior snapshot).
+Announce the backfill so the user knows drift is seeded to current body.
+
+---
+
+## Feedback
+
+Log friction via
+[../../references/feedback-log.md](../../references/feedback-log.md).
+Set `STENSWF_SKILL=review` and `STENSWF_ISSUE=$ARGUMENTS` before
+calling `scripts/log-issue.sh`.

@@ -1,9 +1,9 @@
 # Decisions excerpt (PRD-mode curation)
 
 Curate the team-visible library of durable decisions from this PRD and
-stage it into the cleanup PR. Silent; no user prompt. See [Decision
-Anchor Contract](../../README.md#decision-anchor-contract) for the
-curation filter (active ∩ {arch, decision} ∩ has file-path Refs).
+stage it into the cleanup PR. Silent; no user prompt. See
+[Decision Anchor Contract](../../README.md#decision-anchor-contract)
+for the curation filter (active ∩ {arch, decision} ∩ has file-path Refs).
 
 ```bash
 mkdir -p docs/stenswf/decisions
@@ -11,19 +11,19 @@ EXCERPT="docs/stenswf/decisions/prd-$ARGUMENTS.md"
 TITLE=$(gh issue view $ARGUMENTS --json title -q .title)
 DATE=$(date -u +%Y-%m-%d)
 
-# Gather closed slices of this PRD
+# Closed slices of this PRD
 SLICES=$(gh issue list --state closed \
   --search "in:body \"Parent PRD\" \"#$ARGUMENTS\"" \
   --json number -q '.[].number')
 
 # Extract ACTIVE arch/decision entries with at least one file-path Ref
-# from one anchor. Active = header `### D<n> ` (strikethrough `~~`
-# won't match). Entries are bounded by the next `### ` header or EOF.
+# from one anchor. Active = header `### D<n> ` (strikethrough won't match).
+# Entries bounded by next `### ` or EOF.
 curate_anchor() {
   awk '
     function flush() {
-      if (have && (cat=="arch" || cat=="decision") && hasref) print block
-      block=""; cat=""; hasref=0; have=0
+      if (have && (category=="arch" || category=="decision") && hasref) print block
+      block=""; category=""; hasref=0; have=0
     }
     /^### / {
       flush()
@@ -33,7 +33,7 @@ curate_anchor() {
     have {
       block = block $0 "\n"
       if ($0 ~ /^- \*\*Category:\*\* (arch|decision)/) {
-        cat=$0; sub(/.*Category:\*\* */,"",cat)
+        category=$0; sub(/.*Category:\*\* */,"",category)
       }
       if ($0 ~ /^- \*\*Refs:\*\*.*\//) hasref=1
     }
@@ -62,19 +62,14 @@ curate_anchor() {
 } > "$EXCERPT"
 ```
 
-Commit the excerpt as its own commit on top of the cleanup branch:
+Commit as its own commit on the cleanup branch:
 
 ```bash
 if [ -s "$EXCERPT" ]; then
   git add "$EXCERPT"
   git commit -m "docs(stenswf): curated decisions for PRD #$ARGUMENTS"
+else
+  # No qualifying entries (unusual) — remove empty file.
+  rm -f "$EXCERPT"
 fi
-```
-
-If `$EXCERPT` ends up empty (no qualifying entries — unusual for a
-PRD), skip the commit; remove the file so no zero-content artifact
-leaks into the PR:
-
-```bash
-[ -s "$EXCERPT" ] || rm -f "$EXCERPT"
 ```

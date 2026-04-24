@@ -1,12 +1,11 @@
 # PRD-mode — 5-axis capstone review
 
-PRD-mode reviews an entire delivered PRD: the union of all merged slices
-since the PRD was recorded. Strategic review, not per-file code review.
+PRD-mode reviews an entire delivered PRD: the union of all merged
+slices since the PRD was recorded. Strategic review, not per-file.
 
 ## Step 0 — Strict gating
 
-Refuse to run while any slice of this PRD is still open. Query via body
-reference (not via labels):
+Refuse to run while any slice of this PRD is still open:
 
 ```bash
 gh issue list --state open \
@@ -16,31 +15,27 @@ gh issue list --state open \
 
 If any rows return, stop:
 
-> PRD-review blocked: slices still open (#A, #B, #C…). Ship them first.
+> PRD-review blocked: slices still open (#A, #B, …). Ship them first.
 
-A slice that was abandoned without shipping should be closed manually
-(`gh issue close <N> --reason "not planned"`) before re-running. There
-is no `abandoned` label in the current stenswf.
+Abandoned slices should be manually closed
+(`gh issue close <N> --reason "not planned"`).
 
 ## Step 1 — Resolve the PRD base
 
-The PRD body contains:
-
-```
-**PRD base SHA:** <sha>
-```
-
-And a matching git tag `prd-<issue>-base`.
+Portable (no PCRE, no `\K`) — prefer tag, fall back to front-matter:
 
 ```bash
 PRD_BASE=$(git rev-parse "prd-$ARGUMENTS-base" 2>/dev/null)
 if [ -z "$PRD_BASE" ]; then
-  PRD_BASE=$(gh issue view $ARGUMENTS --json body -q .body \
-    | grep -oP 'PRD base SHA:\s*\K[0-9a-f]{7,40}')
+  PRD_BASE=$(get_fm prd_base_sha "/tmp/slice-$ARGUMENTS.md")
 fi
+if [ -z "$PRD_BASE" ]; then
+  # Legacy fallback (pre-front-matter PRDs): line-form `**PRD base SHA:** <sha>`.
+  PRD_BASE=$(grep -oE 'PRD base SHA:[[:space:]]*[0-9a-f]{7,40}' \
+    /tmp/slice-$ARGUMENTS.md | awk '{print $NF}' | head -1)
+fi
+[ -n "$PRD_BASE" ] || { echo "cannot resolve PRD base"; exit 1; }
 ```
-
-If neither source resolves, ask for the base SHA.
 
 ## Step 2 — Compute the delivered diff
 
@@ -51,36 +46,31 @@ git diff "$PRD_BASE..HEAD"       > "/tmp/prd-$ARGUMENTS-diff.patch"
 wc -l "/tmp/prd-$ARGUMENTS-diff.patch"
 ```
 
-**Soft warning.** If the diff touches > 50 files OR > 5000 added lines,
-emit a warning but continue.
+**Soft warning** if diff > 50 files OR > 5000 added lines.
 
 ## Step 3 — Check for prior review (idempotent delta)
 
 ```bash
-[ -s ".stenswf/$ARGUMENTS/review/prd-review.xml" ] && \
-  PRIOR_SHA=$(grep -oP 'reviewed-at="\K[0-9a-f]+' \
-    ".stenswf/$ARGUMENTS/review/prd-review.xml" | head -1)
+if [ -s ".stenswf/$ARGUMENTS/review/prd-review.xml" ]; then
+  PRIOR_SHA=$(grep -oE 'reviewed-at="[0-9a-f]+' \
+    ".stenswf/$ARGUMENTS/review/prd-review.xml" \
+    | awk -F'"' '{print $2}' | head -1)
+fi
 ```
 
-If prior review at current `HEAD`: tell user *"PRD already reviewed at
-this SHA. Nothing new to review."* and stop. Otherwise compute the delta
-diff `<prior-sha>..HEAD` and review only the delta. Carry forward
+If prior review at current HEAD: tell user and stop. Otherwise compute
+delta diff `<prior-sha>..HEAD` and review only the delta. Carry forward
 unresolved prior findings.
 
 ## Step 4 — Five-axis review (axis-by-axis)
 
-Do NOT read slice-level plans, implementation logs, or slice-level review
-comments. The capstone reviews delivered code against the PRD's original
-intent, not intermediate artifacts.
+Do NOT read slice-level plans, logs, or slice review comments. Capstone
+reviews delivered code against PRD intent.
 
-**Guard (applies to every axis):** If an axis has no findings, say so
-clearly — do not invent issues to appear thorough. An explicit "no
-findings" line is a valid result.
+**Guard:** No findings on an axis → say so. Do not invent.
 
-**Exception — decision anchors.** Axis 1 (Alignment) aggregates active
-entries from all slice anchors (live or archived) and applies the same
-contradiction → severity rule as Slice-mode Perspective 2
-([contract](../../README.md#decision-anchor-contract)):
+**Exception — decision anchors.** Axis 1 aggregates active entries
+from all slice anchors (live or archived):
 
 ```bash
 for S in $(gh issue list --state closed \
@@ -92,39 +82,31 @@ for S in $(gh issue list --state closed \
 done
 ```
 
-Inputs: PRD body, `/tmp/prd-$ARGUMENTS-stat.txt`, the diff patch file
-(read hunks via `awk` or ranged reads — never `cat` the full patch).
-
-Work one axis at a time. Append findings to
-`/tmp/review-$ARGUMENTS-findings.md`:
+Inputs: PRD body, `/tmp/prd-$ARGUMENTS-stat.txt`, diff patch (read
+ranged). Never `cat` the full patch.
 
 ### Axis 1 — Alignment
 
-Does the delivered code match what the PRD said? User stories / ACs not
-reflected? Code that doesn't correspond to anything the PRD described?
+Delivered code matches PRD intent? User stories / ACs not reflected?
+Code with no PRD basis?
 
-**User-story / AC coverage matrix.** If the PRD body enumerates user
-stories or acceptance criteria, produce one row per item tagged
-`covered | partially covered | not covered`, each with at least one
-`file:line` citation for `covered` / `partially covered`. `not covered`
-and `partially covered` auto-promote to findings (High / Medium
-respectively). If the PRD has no enumerated stories or ACs, skip the
-matrix and note its absence.
+**User-story / AC coverage matrix.** Row per PRD user story / AC:
+`covered | partially covered | not covered` with `file:line`.
+`not covered` → **High**. `partially covered` → **Medium**. Skip matrix
+if PRD has no enumerated stories/ACs.
 
 ### Axis 2 — Scope
 
-Obvious scope-creep? Obvious scope-cuts?
+Scope-creep or scope-cuts?
 
 ### Axis 3 — Architectural coherence
 
-Do the slices together form a coherent architecture? Duplicated
-abstractions across slices, inconsistent boundaries, mixed paradigms,
-dead code paths?
+Slices form a coherent architecture? Duplicated abstractions, mixed
+paradigms, dead code?
 
 ### Axis 4 — Test strategy
 
-Does coverage match the PRD's risk surface? Critical user stories
-without E2E coverage, integration gaps, drifted patterns?
+Coverage matches PRD risk surface? Critical stories without E2E? Gaps?
 
 ### Axis 5 — Ops readiness
 
@@ -137,23 +119,17 @@ awk '/^diff --git .*<path>/{p=1} p{print} /^diff --git/ && !/<path>/ && p{exit}'
   /tmp/prd-$ARGUMENTS-diff.patch
 ```
 
-Or ranged reads of files at HEAD. Never full files, never full patches.
+Or ranged reads at HEAD. Never full files/patches.
 
 ## Step 5 — Output
 
-Write the capstone to `.stenswf/$ARGUMENTS/review/prd-review.xml` using
-the XML-anchored structure below. Finding IDs are globally unique (F1,
-F2, F3…). Severity: `critical`, `high`, `medium`, `low`.
+Write `.stenswf/$ARGUMENTS/review/prd-review.xml`:
 
 ```xml
 <prd-review for="#$ARGUMENTS" reviewed-at="<HEAD SHA>" base="<PRD_BASE>">
-
-<summary>
-One paragraph: what was delivered, overall judgment, top concern.
-</summary>
+<summary>One paragraph: what was delivered, judgment, top concern.</summary>
 
 <coverage-matrix>
-  <!-- one row per PRD user story / AC; omit entire element if PRD had none -->
   <row id="US1" status="covered" evidence="src/foo.ts:42"/>
   <row id="US2" status="partially covered" evidence="src/bar.ts:10" gap="error path missing"/>
   <row id="US3" status="not covered"/>
@@ -172,41 +148,42 @@ One paragraph: what was delivered, overall judgment, top concern.
 <axis name="test-strategy">...</axis>
 <axis name="ops-readiness">...</axis>
 
-<counts>
-critical: 0 | high: 2 | medium: 3 | low: 4
-</counts>
-
+<counts>critical: 0 | high: 2 | medium: 3 | low: 4</counts>
 </prd-review>
 ```
 
 ### Schema validation (self-check)
 
-Before announcing completion, validate the artifact:
+Portable (no `xmllint` dependency):
 
 ```bash
 OUT=".stenswf/$ARGUMENTS/review/prd-review.xml"
-xmllint --noout "$OUT" 2>/dev/null || { echo "schema: malformed XML"; exit 1; }
 grep -q '<summary>' "$OUT" || { echo "schema: missing <summary>"; exit 1; }
 grep -q '<counts>'  "$OUT" || { echo "schema: missing <counts>"; exit 1; }
-# Finding IDs must be unique
+# Balanced root tags (cheap structural check).
+grep -c '<prd-review'  "$OUT" | grep -q '^1$' || { echo "schema: <prd-review> count != 1"; exit 1; }
+grep -c '</prd-review>' "$OUT" | grep -q '^1$' || { echo "schema: </prd-review> count != 1"; exit 1; }
+# Unique finding IDs.
 DUPES=$(grep -oE 'id="F[0-9]+"' "$OUT" | sort | uniq -d)
 [ -z "$DUPES" ] || { echo "schema: duplicate finding IDs: $DUPES"; exit 1; }
-# All findings carry a severity
-grep -oE '<finding[^>]*>' "$OUT" | grep -vE 'severity="(critical|high|medium|low)"' \
-  && { echo "schema: finding without valid severity"; exit 1; } || true
+# Every finding has a valid severity.
+BAD=$(grep -oE '<finding[^>]*>' "$OUT" | grep -vE 'severity="(critical|high|medium|low)"' || true)
+[ -z "$BAD" ] || { echo "schema: finding without valid severity"; exit 1; }
+# Optional XML well-formedness (if xmllint available).
+command -v xmllint >/dev/null 2>&1 && xmllint --noout "$OUT" 2>/dev/null \
+  || true   # do not fail when xmllint is not installed
 ```
 
-### Mirror a human-readable summary to a PR comment (if any findings)
+### Zero findings path
 
-When `apply` opens the cleanup PR, it will post the `<prd-review>` content
-as a PR comment (local authoritative + PR mirror for team visibility).
-`review` itself does not touch the PR — but this contract is why the
-file is written in stable XML.
-
-If **zero findings**, emit a minimal `<prd-review>` with just `<summary>`
-and `<counts>` (all zeros), write it to disk, and tell the user:
+Minimal `<prd-review>` with `<summary>` and `<counts>` (zeros only):
 
 > PRD #$ARGUMENTS reviewed. No findings. Run `/stenswf:apply $ARGUMENTS`
 > to finalize (no cleanup PR will be opened).
 
-No labels are applied anywhere.
+When `apply` opens the cleanup PR, it mirrors `<prd-review>` onto the
+PR. `review` itself does not touch the PR.
+
+No labels applied anywhere.
+
+Emit the feedback-log boundary ping.

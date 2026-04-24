@@ -8,11 +8,11 @@ Parse `<counts>` from the XML:
 awk '/<counts>/,/<\/counts>/' .stenswf/$ARGUMENTS/review/prd-review.xml
 ```
 
-If all counts are zero, finalize without a branch or PR:
+If all zero, finalize without a branch or PR:
 
-1. Post a short comment on the PRD: `No cleanup needed — capstone review returned zero findings.`
+1. Post: `No cleanup needed — capstone review returned zero findings.`
 2. Close the PRD issue (`gh issue close $ARGUMENTS`).
-3. Archive the local tree:
+3. Archive:
    ```bash
    DATE=$(date +%Y-%m-%d)
    mkdir -p .stenswf/.archive
@@ -22,7 +22,7 @@ If all counts are zero, finalize without a branch or PR:
 
 ## Phase 1 — Extract and group findings
 
-Extract findings per axis:
+Per axis:
 
 ```bash
 for axis in alignment scope architectural-coherence test-strategy ops-readiness; do
@@ -33,20 +33,17 @@ done
 
 Parse each `<finding>`: id, severity, axis, what, why, evidence.
 
-**Coverage matrix (if present).** If `<prd-review>` contains
-`<coverage-matrix>`, every row with `status="not covered"` or
-`status="partially covered"` is a first-class finding to address,
-even if no matching `<finding>` was emitted by review. Treat these
-rows as implicit findings with ID `USn` (from `row id="..."`) and
-group them under the `alignment` axis in the plan below. After
-implementation (Phase 2), re-read the PRD body's user stories / ACs
-and confirm each previously-uncovered row now has code addressing it;
-if any remain `not covered`, stop and report.
+**Coverage matrix.** `<coverage-matrix>` rows with
+`status="not covered"` or `status="partially covered"` are first-class
+findings even without matching `<finding>` elements. Treat as implicit
+findings with ID `USn`, group under `alignment`. After implementation,
+re-read PRD user stories/ACs and confirm coverage; if any remain
+`not covered`, stop and report. Log `contract_violation`.
 
-**Group by axis.** Each axis with ≥1 finding → one commit. Within an
-axis, sub-commits OK for disjoint areas; keep theming obvious.
+**Group by axis.** Each axis with ≥1 finding → one commit. Sub-commits
+OK for disjoint areas within an axis.
 
-Present the grouping (YOLO skips the question):
+Present the grouping (skipped in YOLO):
 
 > I'll produce <N> themed commits:
 > - alignment: F1, F2 (2 findings)
@@ -56,22 +53,21 @@ Present the grouping (YOLO skips the question):
 > Skipping: F3 (low severity, out of scope), F8 (already addressed).
 > Proceed? (y/N)
 
-Wait unless YOLO.
-
 ## Phase 2 — Branch and implement
 
 ```bash
-git fetch origin
-git checkout -b "prd/$ARGUMENTS-cleanup" origin/main
+DEFAULT=$(gh repo view --json defaultBranchRef -q .defaultBranchRef.name)
+git fetch origin "$DEFAULT"
+git checkout -b "prd/$ARGUMENTS-cleanup" "origin/$DEFAULT"
 BASE_SHA=$(git rev-parse HEAD)
 ```
 
 For each approved axis group (severity order: critical → low):
 
-1. Implement all findings in the group. TDD where it fits. `clean-code`,
+1. Implement all findings. TDD where it fits. `clean-code`,
    `lint-escape` as required.
 2. Run tests. All must pass.
-3. Commit with a themed conventional message:
+3. Commit:
 
    ```
    refactor(<axis-or-scope>): address <axis> findings from PRD #$ARGUMENTS
@@ -82,11 +78,10 @@ For each approved axis group (severity order: critical → low):
    Refs: #$ARGUMENTS
    ```
 
-   Types by axis: `test(...)` for test-strategy, `refactor(...)` for
-   architectural-coherence, `fix(...)` for alignment bugs, `chore(ops):`
-   or `feat(ops):` for ops-readiness.
+   Types by axis: `test(...)`, `refactor(...)`, `fix(...)`,
+   `chore(ops):`, `feat(ops):`.
 
-4. Update `apply-state.json` for each finding (`entries.F<n>`):
+4. Update `apply-state.json`:
 
    ```bash
    jq --arg id "F1" --arg sha "$(git rev-parse HEAD)" \
@@ -97,21 +92,21 @@ For each approved axis group (severity order: critical → low):
 
 5. Update `BASE_SHA = HEAD_SHA`.
 
-If any group cannot complete, post a `FINDING_BLOCKER` comment on the
-PRD and stop.
+If any group cannot complete, post `FINDING_BLOCKER` on the PRD and
+stop. Log `tool_failure`.
 
 ## Phase 3 — Ship the cleanup PR
 
-**Before opening the PR, stage the committed decisions excerpt.**
-Execute the full curation procedure in
-[`decisions-excerpt.md`](decisions-excerpt.md) now. It produces and
-stages (or removes, if empty) `docs/stenswf/decisions/prd-$ARGUMENTS.md`
-on the current `prd/$ARGUMENTS-cleanup` branch.
+Stage the committed decisions excerpt first per
+[decisions-excerpt.md](decisions-excerpt.md).
 
-Now reuse the `ship` skill's Phase 4 sub-procedure (PR, CI loop, merge
-wait) and Phase 5 (wrap-up + archive) with these substitutions:
+Then run the shared PR+CI+merge procedure with `CI_MAX_CYCLES=3` and
+`WAIT_FOR_MERGE=yes`:
+[../../references/pr-ci-merge.md](../../references/pr-ci-merge.md).
 
-- **Issue number:** `$ARGUMENTS` (the PRD).
+With these substitutions:
+
+- **Issue number:** `$ARGUMENTS` (PRD).
 - **Branch:** `prd/$ARGUMENTS-cleanup`.
 - **PR title:** `PRD #$ARGUMENTS cleanup — capstone findings`.
 - **PR body:**
@@ -128,31 +123,21 @@ wait) and Phase 5 (wrap-up + archive) with these substitutions:
 
   Closes #$ARGUMENTS (capstone cleanup).
   ```
-- **After PR is opened, mirror the `<prd-review>` XML onto the PR** as a
-  comment (local authoritative + PR mirror for team visibility):
+- **After PR opened, mirror `<prd-review>` XML onto the PR:**
 
   ```bash
   gh pr comment <pr-num> --body-file .stenswf/$ARGUMENTS/review/prd-review.xml
   ```
 
-- **On merge**: archive the PRD tree, same as `ship` Phase 5:
-
-  ```bash
-  DATE=$(date +%Y-%m-%d)
-  mv ".stenswf/$ARGUMENTS" ".stenswf/.archive/$ARGUMENTS-$DATE"
-  ```
-
-  Post wrap-up comment on the PRD issue listing themed commits and
-  finding IDs addressed. No labels applied.
+- **On merge:** archive the PRD tree, same as `ship` Phase 5. Post
+  wrap-up comment listing themed commits and findings addressed. No
+  labels.
 
 ## Idempotence
 
 Re-running `apply` after a partial cleanup:
 
-- `review` refreshes the `<prd-review>` (delta review) — re-extract
-  findings.
-- `apply-state.json` already records which findings are `applied` /
-  `skipped` — skip those.
-- The `prd/$ARGUMENTS-cleanup` branch may already exist; rebase on
-  current main and add commits for new findings. Do not amend prior
-  cleanup commits.
+- `review` refreshes the `<prd-review>` — re-extract findings.
+- `apply-state.json` already records `applied` / `skipped` — skip those.
+- Branch may exist; rebase on current default and add commits for new
+  findings. Do not amend prior cleanup commits.
