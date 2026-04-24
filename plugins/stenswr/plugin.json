@@ -1,0 +1,11 @@
+{
+  "name": "stenswr",
+  "description": "StEn Software Refactor bundle. Orthogonal refactor skills across four phases: understand (comprehension-to-taste), discover (improve-codebase-architecture, functional-bug-hunting, security-bug-hunting), critique (plan-reviewer), test hygiene (test-file-compaction lossless, test-file-refactor lossy).",
+  "version": "0.1.0",
+  "author": {
+    "name": "StEn",
+    "url": "https://github.com/stevenengland/sten-agent-skills/plugins/stenswr"
+  },
+  "license": "MIT",
+  "keywords": ["refactor", "architecture", "testing", "plan-review", "bug-hunting"]
+}

@@ -121,8 +121,8 @@ parent session invokes them — no separate routing.
 | `/stenswf:lint-escape` | Tiered protocol for unresolvable lint/type errors |
 | `/stenswf:architecture` | Architectural decision guidance |
 | `/stenswf:brevity` | Plain-English brevity for internal reasoning (full prose for artifacts) |
-| `/stenswf:test-file-compaction` | Lossless test-file compaction |
-| `/stenswf:plan-reviewer` | Multi-perspective plan critique (standalone; not invoked by `review` — that skill inlines its own plan-only critique) |
+
+> Refactor-focused skills (`plan-reviewer`, `test-file-compaction`, etc.) moved to the sibling [`stenswr`](../stenswr/) plugin. Invoke them explicitly as `/stenswr:<skill>` when needed — `stenswf` no longer invokes them implicitly.
 
 Conventional Commits formatting is inlined in `plan`, `ship`, and `apply`
 — no separate skill load needed.
@@ -153,9 +153,7 @@ STEN-AGENT-SKILLS/                       ← Repo root
 │       │   ├── tdd/                     (+ adjacent reference .md files)
 │       │   ├── lint-escape/
 │       │   ├── architecture/
-│       │   ├── brevity/
-│       │   ├── plan-reviewer/
-│       │   └── test-file-compaction/
+│       │   └── brevity/
 │       └── README.md                    ← This file
 │
 ├── skills/                              ← Standalone skills (not bundled)
@@ -352,10 +350,11 @@ or re-plan under v0.4 (`/stenswf:plan <issue>` writes fresh local
 artifacts; the old plan comment is ignored).
 
 The craft skills (`tdd`, `clean-code`, `lint-escape`, `brevity`,
-`test-file-compaction`, `architecture`) are invoked by the workflow
-skills automatically. `plan-reviewer` is standalone-only — the workflow
-skills (notably `review`) do not invoke it, since its contract rewrites
-plan files in place. You can invoke any craft skill directly.
+`architecture`) are invoked by the workflow skills automatically.
+Refactor-focused skills (`plan-reviewer`, `test-file-compaction`, etc.)
+moved to the sibling [`stenswr`](../stenswr/) plugin and are no longer
+invoked implicitly by any `stenswf` skill — invoke them explicitly
+as `/stenswr:<skill>`.
 
 ---
 

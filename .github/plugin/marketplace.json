@@ -13,9 +13,15 @@
     },
     {
       "name": "stenswf",
-      "description": "StEn Software Workflow bundle. Issue lifecycle (plan → ship → review → apply, with PRD-mode capstone, plus ship-light single-session lite path), PRD inception (grill-me → prd-from-grill-me → prd-to-issues), and always-on craft skills (clean-code, tdd, lint-escape, architecture, brevity, plan-reviewer, test-file-compaction).",
+      "description": "StEn Software Workflow bundle. Issue lifecycle (plan → ship → review → apply, with PRD-mode capstone, plus ship-light single-session lite path), PRD inception (grill-me → prd-from-grill-me → prd-to-issues). Refactor-focused skills (plan-reviewer, test-file-compaction, etc.) now live in the sibling stenswr plugin.",
       "version": "0.2.0",
       "source": "plugins/stenswf"
+    },
+    {
+      "name": "stenswr",
+      "description": "StEn Software Refactor bundle. Orthogonal, language-agnostic refactor skills across four phases: understand (comprehension-to-taste), discover (improve-codebase-architecture, functional-bug-hunting, security-bug-hunting), critique (plan-reviewer), test hygiene (test-file-compaction lossless, test-file-refactor lossy).",
+      "version": "0.1.0",
+      "source": "plugins/stenswr"
     }
   ]
 }

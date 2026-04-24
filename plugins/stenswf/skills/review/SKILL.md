@@ -164,15 +164,10 @@ arrives.
 - **Medium** — maintainability, clarity, or coverage gap with real cost.
 - **Low** — nit, style, minor readability.
 
-## Step 2 — Test Compaction
-
-Invoke the `test-file-compaction` skill (read-only diagnostic). Express
-opportunities as additional suggestions in the Step 1 list structure.
-
 ## Slice-mode Output
 
-Produce a single, numbered list of suggestions combining Step 1 and Step
-2. For each item:
+Produce a single, numbered list of suggestions from the four perspectives
+above. For each item:
 
 1. **What** — what should change.
 2. **Why** — why it improves the code.

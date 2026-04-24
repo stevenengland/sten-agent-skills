@@ -23,12 +23,54 @@
   status: tracked
   notes: ""
 
-- skill: skills/improve-codebase-architecture
+- skill: plugins/stenswr/skills/improve-codebase-architecture
   upstream: https://github.com/mattpocock/skills
   ref: ""
   last_reviewed: ""
   status: tracked
   notes: ""
+
+- skill: plugins/stenswr/skills/comprehension-to-taste
+  upstream: ""
+  ref: ""
+  last_reviewed: ""
+  status: own-invention
+  notes: ""
+
+- skill: plugins/stenswr/skills/plan-reviewer
+  upstream: ""
+  ref: ""
+  last_reviewed: ""
+  status: own-invention
+  notes: ""
+
+- skill: plugins/stenswr/skills/test-file-compaction
+  upstream: ""
+  ref: ""
+  last_reviewed: ""
+  status: own-invention
+  notes: ""
+
+- skill: plugins/stenswr/skills/functional-bug-hunting
+  upstream: ""
+  ref: ""
+  last_reviewed: ""
+  status: own-invention
+  notes: "Placeholder stub; no implementation yet."
+
+- skill: plugins/stenswr/skills/security-bug-hunting
+  upstream: ""
+  ref: ""
+  last_reviewed: ""
+  status: own-invention
+  notes: "Placeholder stub; no implementation yet."
+
+- skill: plugins/stenswr/skills/test-file-refactor
+  upstream: ""
+  ref: ""
+  last_reviewed: ""
+  status: own-invention
+  notes: "Placeholder stub; no implementation yet."
 
 - skill: plugins/stenswf/skills/grill-me
   upstream: https://github.com/mattpocock/skills

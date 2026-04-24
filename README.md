@@ -8,6 +8,7 @@ installable plugins for **Claude Code** and **GitHub Copilot CLI**.
 | Plugin | Description |
 |---|---|
 | [`stenswf`](plugins/stenswf/README.md) | Opinionated SDLC bundle: PRD → slice issues → plan → ship → review → apply, plus always-on craft skills (tdd, clean-code, lint-escape, architecture, brevity, …). Maintains a cross-skill [decision anchor](plugins/stenswf/README.md#decision-anchor-contract) with committed excerpts under `docs/stenswf/decisions/`. |
+| [`stenswr`](plugins/stenswr/README.md) | Language-agnostic refactor bundle: orthogonal skills across four phases — understand, discover (architecture / functional bugs / security bugs), critique (plan-reviewer), test hygiene (lossless + lossy). One distinct refactor purpose per skill. |
 | [`python-refactor`](plugins/python-refactor/README.md) | Agentic Python codebase analysis suite (complexity, PBT bug hunting, architecture RFCs, refactor plan). |
 
 ## Install
@@ -24,6 +25,7 @@ copilot plugin marketplace add stevenengland/sten-agent-skills
 # Browse and install
 copilot plugin marketplace browse sten-agent-skills-marketplace
 copilot plugin install stenswf@sten-agent-skills-marketplace
+copilot plugin install stenswr@sten-agent-skills-marketplace
 copilot plugin install python-refactor@sten-agent-skills-marketplace
 ```
 
@@ -35,6 +37,7 @@ Claude Code discovers plugins via the repo-level
 ```
 /plugin marketplace add stevenengland/sten-agent-skills
 /plugin install stenswf@sten-agent-skills
+/plugin install stenswr@sten-agent-skills
 /plugin install python-refactor@sten-agent-skills
 ```
 
@@ -45,7 +48,7 @@ project-scoped install options.
 
 ```
 sten-agent-skills/
-  plugins/          # Installable plugins (stenswf, python-refactor)
+  plugins/          # Installable plugins (stenswf, stenswr, python-refactor)
   skills/           # Standalone skills (not bundled)
   frameworks/       # Reference frameworks studied during design
   research/         # Design notes and token-efficiency research

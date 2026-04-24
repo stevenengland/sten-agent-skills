@@ -1,6 +1,6 @@
 {
   "name": "stenswf",
-  "description": "Sten Software Workflow bundle. Issue lifecycle (plan → ship → review → apply, with PRD-mode capstone; plus a lite path: ship-light, plan-light, and slice-e2e one-shot orchestrator), PRD inception (grill-me → prd-from-grill-me → prd-to-issues)",
+  "description": "Sten Software Workflow bundle. Issue lifecycle (plan → ship → review → apply, with PRD-mode capstone; plus a lite path: ship-light, plan-light, and slice-e2e one-shot orchestrator), PRD inception (grill-me → prd-from-grill-me → prd-to-issues). Refactor-focused skills (plan-reviewer, test-file-compaction, etc.) now live in the sibling `stenswr` plugin.",
   "version": "0.6.0",
   "author": {
     "name": "StEn",
