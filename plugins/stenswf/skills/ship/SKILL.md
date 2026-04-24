@@ -80,7 +80,11 @@ If `.stenswf/$ARGUMENTS/` does not exist, stop and ask the user to run
      ```
 
   3. Wait for user input. `r` → stop and tell user to run `plan --resume`;
-     `c` → proceed (log `"event":"drift-accepted"` to `log.jsonl`);
+     `c` → proceed (log `"event":"drift-accepted"` to `log.jsonl`, and
+     append one `decision` meta-entry to
+     `.stenswf/$ARGUMENTS/decisions.md` — source `ship`, title `Drift
+     accepted — no replan`, rationale names the changed sections;
+     [contract](../../README.md#decision-anchor-contract));
      `a` → stop.
 
 - [ ] Record `BASE_SHA` and persist to manifest:
@@ -223,6 +227,12 @@ Options:
 ```
 
 Do not proceed to Phase 2 until the blocker is resolved.
+
+If the user's `BLOCKED` override materially differs from the task's
+`Done when`, append one `decision` entry (source `ship`, refs include
+the task id + paths) to `.stenswf/$ARGUMENTS/decisions.md` —
+[contract](../../README.md#decision-anchor-contract). Routine
+BLOCKED-then-fix sequences require no entry.
 
 ---
 

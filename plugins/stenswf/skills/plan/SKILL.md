@@ -155,6 +155,13 @@ Maintain a running log of resolved decisions at the top of your response:
 If the log exceeds ~10 entries before the interview is complete, the
 issue likely spans independent subsystems — stop and suggest splitting.
 
+For each Design Decision that passes the grep-blame + surfaces test,
+append one entry (category `decision` or `arch`, source `plan`) to
+`.stenswf/$ARGUMENTS/decisions.md` \u2014
+[contract](../../README.md#decision-anchor-contract). Skip routine
+choices already answered by `conventions.md` / `CLAUDE.md`. The
+in-session log above stays complete; the anchor is its durable subset.
+
 ---
 
 ## Phase 2 — Write the local plan tree
@@ -167,11 +174,11 @@ Materialise the following files under `.stenswf/$ARGUMENTS/`:
 ├── concept.md              # verbatim issue body at plan time (for drift)
 ├── stable-prefix.md        # assembled dispatch prefix (verbatim for cache)
 ├── conventions.md          # verbatim from slice body's Conventions section
+├── decisions.md            # cross-skill decision anchor (see README)
 ├── house-rules.md
 ├── design-summary.md
 ├── acceptance-criteria.md
 ├── file-structure.md
-├── assumptions.md
 ├── review-step.md
 └── tasks/
     ├── T10.md
@@ -180,9 +187,11 @@ Materialise the following files under `.stenswf/$ARGUMENTS/`:
 ```
 
 Each file's content rules follow. Brevity Rules apply to
-`house-rules.md`, `design-summary.md`, `assumptions.md`. They do NOT
-apply to `conventions.md` (verbatim copy), task bodies, commands, file
-paths, or `review-step.md`.
+`house-rules.md`, `design-summary.md`. They do NOT apply to
+`conventions.md` (verbatim copy), `decisions.md` (cross-skill anchor
+with its own caps; see [Decision Anchor
+Contract](../../README.md#decision-anchor-contract)), task bodies,
+commands, file paths, or `review-step.md`.
 
 ### manifest.json
 
@@ -294,14 +303,20 @@ exactly one task's `Done when` line.
 - Test:   `tests/path/to/test_file.py` — <what it covers>
 ```
 
-### assumptions.md
+### decisions.md
 
-3–5 load-bearing assumptions. Brevity Rules apply.
+Cross-skill decision anchor. Bootstrap with the canonical snippet if
+it does not already exist (see [Decision Anchor
+Contract](../../README.md#decision-anchor-contract)). Then append one
+entry per Design Decision from Phase 1 that passes the grep-blame +
+surfaces test, category `decision` or `arch`, source `plan`. Inherited
+PRD stubs (if `prd-to-issues` seeded them) stay untouched — do not
+rewrite them during planning.
 
-```
-- <assumption 1>
-- <assumption 2>
-```
+Assumption-style notes (silent analogs, default picks with no
+alternative considered) are **not** anchor entries. If the heavy path
+needs them for implementer context, keep them inline in
+`design-summary.md`.
 
 ### review-step.md
 
@@ -439,7 +454,12 @@ detecting drift):
    the plan based on the current issue body.
 4. Re-write `concept.md`, `stable-prefix.md`, `conventions.md`,
    `house-rules.md`, `acceptance-criteria.md`, `file-structure.md`,
-   `assumptions.md`, `review-step.md`, `design-summary.md`.
+   `review-step.md`, `design-summary.md`. **Do not touch
+   `decisions.md`** — it is append-only cross-skill state. If the
+   re-plan changes an earlier recorded decision, append a superseding
+   entry per the [Decision Anchor
+   Contract](../../README.md#decision-anchor-contract) (strikethrough
+   the old `### D<n>` header, add new entry with `Supersedes:`).
 5. Re-write `tasks/T<id>.md` files for every pending / blocked task
    (delete stale fragments that no longer map to an AC).
 6. Update manifest hashes (`concept_sha256`, `section_hashes.*`,
@@ -456,9 +476,9 @@ After writing all files, validate mechanically:
 D=.stenswf/$ARGUMENTS
 
 # 1. Required files exist.
-for f in manifest.json concept.md stable-prefix.md conventions.md house-rules.md \
-         design-summary.md acceptance-criteria.md file-structure.md assumptions.md \
-         review-step.md; do
+for f in manifest.json concept.md stable-prefix.md conventions.md decisions.md \
+         house-rules.md design-summary.md acceptance-criteria.md \
+         file-structure.md review-step.md; do
   [ -s "$D/$f" ] || echo "FAIL: $f missing or empty"
 done
 [ -d "$D/tasks" ] || echo "FAIL: tasks/ dir missing"

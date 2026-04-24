@@ -307,6 +307,64 @@ fi
 If the PRD tree does not exist (PRD created before the seeding step was
 added), skip silently — `review` will backfill on first PRD-mode run.
 
+### 7b. Inherit decision stubs into each slice
+
+For each created slice, seed `.stenswf/<SLICE>/decisions.md` with
+reference stubs for the PRD's active anchor entries. Stubs are frozen
+at slice-creation time and carry title + category + refs only — no
+rationale. Rationale lives in the PRD source entry.
+
+See the [Decision Anchor
+Contract](../../README.md#decision-anchor-contract) for schema. The loop:
+
+```bash
+PRD=<prd-number>
+PRD_ANCHOR=".stenswf/$PRD/decisions.md"
+if [ -s "$PRD_ANCHOR" ]; then
+  for SLICE in <list of created slice numbers>; do
+    mkdir -p ".stenswf/$SLICE"
+    DEST=".stenswf/$SLICE/decisions.md"
+    [ -f "$DEST" ] && continue    # respect existing slice anchor
+    {
+      printf '# Decisions — #%s\n\n' "$SLICE"
+      printf '<!-- Inherited stubs from PRD #%s. Schema: plugins/stenswf/README.md#decision-anchor-contract -->\n\n' "$PRD"
+      # Emit one stub per ACTIVE PRD entry (header `### D<n> `, not
+      # strikethrough `### ~~D<n>~~`). Bounded by the next `### ` or EOF.
+      awk -v prd="$PRD" '
+        function flush() {
+          if (have && cat != "") {
+            printf "### %s — %s (inherited from #%s)\n", bid, btitle, prd
+            printf "- **Category:** %s\n", cat
+            printf "- **Source:** #%s/%s\n", prd, bid
+            if (refs != "") printf "- **Refs:** %s\n", refs
+            printf "\n"
+          }
+          have=0; cat=""; refs=""; bid=""; btitle=""
+        }
+        /^### / {
+          flush()
+          if ($0 ~ /^### D[0-9]+ /) {
+            match($0, /D[0-9]+/); bid=substr($0, RSTART, RLENGTH)
+            btitle=$0; sub(/^### D[0-9]+ [—-] /, "", btitle)
+            have=1
+          }
+          next
+        }
+        have {
+          if ($0 ~ /^- \*\*Category:\*\*/) { cat=$0;  sub(/^- \*\*Category:\*\* */,"",cat) }
+          if ($0 ~ /^- \*\*Refs:\*\*/)    { refs=$0; sub(/^- \*\*Refs:\*\* */,"",refs) }
+        }
+        END { flush() }
+      ' "$PRD_ANCHOR"
+    } > "$DEST"
+  done
+fi
+```
+
+If the PRD anchor is absent or empty, skip — `plan` will create a
+fresh anchor on first slice work. Pre-existing slice anchors are
+preserved (later runs of `prd-to-issues` are idempotent).
+
 **After creating all issues, tell the user:**
 
 > All slice issues created. For each issue, choose one path:

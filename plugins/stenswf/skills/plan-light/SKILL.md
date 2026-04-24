@@ -123,6 +123,11 @@ Walk each AC. For every ambiguity encountered, apply this hierarchy:
 
 No interview. No question-asking. Either resolve silently or escalate.
 
+Tier-1/tier-2 resolutions are **non-decisions** — they belong in
+`plan-light.md`'s `## Assumptions`, never the anchor. Anchor writes
+happen rarely, in Phase 3. See the [Decision Anchor
+Contract](../../README.md#decision-anchor-contract).
+
 ---
 
 ## Phase 3 — Write the artifact
@@ -214,6 +219,11 @@ Three checks on `plan-light.md` before returning:
       that weren't replaced. Fix inline.
 - [ ] **Task count ≤ 6.** If >6, emit
       `ROUTE_HEAVY: scope >6 tasks — needs heavy plan`.
+
+If Phase 2 rejected a concrete alternative, append one `decision`
+entry (source `plan-light`) to `.stenswf/$ARGUMENTS/decisions.md` —
+[Decision Anchor Contract](../../README.md#decision-anchor-contract).
+Otherwise skip.
 
 Then tell the user in one paragraph:
 

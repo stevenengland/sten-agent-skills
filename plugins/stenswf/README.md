@@ -284,8 +284,9 @@ Claude Code discovers and loads it automatically. Reload if already running:
 │   ├── concept.md             (heavy-plan: issue body snapshot for drift detection)
 │   ├── stable-prefix.md       (heavy-plan: verbatim dispatch prefix for prompt caching)
 │   ├── conventions.md         (heavy-plan: verbatim from slice body)
+│   ├── decisions.md           (cross-skill decision anchor; see section below)
 │   ├── house-rules.md, design-summary.md, acceptance-criteria.md,
-│   │   file-structure.md, assumptions.md, review-step.md
+│   │   file-structure.md, review-step.md
 │   ├── tasks/T10.md, T20.md …  (heavy-plan: self-contained task fragments)
 │   ├── plan-light.md          (plan-light: single advisory plan, if used)
 │   ├── plan-light.json        (plan-light: 4-field identity stub + source_signature)
@@ -300,6 +301,12 @@ touches the other's files. A slice is heavy-planned iff `manifest.json`
 exists; light-planned iff `plan-light.json` exists. If both happen to
 exist (e.g. you re-planned), they remain independent: `ship` reads the
 heavy tree, `ship-light` reads only the plan-light artifacts.
+
+**`decisions.md` lives alongside both** — the cross-skill decision
+anchor. Every lifecycle skill either reads or appends to it; see the
+[Decision Anchor Contract](#decision-anchor-contract) section below.
+Unlike the heavy/light split, the anchor is path-agnostic: any skill
+that touches an issue may contribute.
 
 Subagents dispatched by `ship` read `stable-prefix.md` + exactly one
 `tasks/T<id>.md` — no `awk` extraction on the hot path, no plan-comment
@@ -349,6 +356,237 @@ The craft skills (`tdd`, `clean-code`, `lint-escape`, `brevity`,
 skills automatically. `plan-reviewer` is standalone-only — the workflow
 skills (notably `review`) do not invoke it, since its contract rewrites
 plan files in place. You can invoke any craft skill directly.
+
+---
+
+## Decision Anchor Contract
+
+Every lifecycle skill contributes to a single persistent, reviewer-facing
+memory of **decisions that would otherwise be lost**:
+`.stenswf/<N>/decisions.md`. Any reviewer — the `review` skill, a future
+reviewing skill, or an external tool looking at diffs — can consult one
+artifact to answer *"why this, not the obvious alternative?"* beyond what
+the issue body, diff, and PR body disclose.
+
+### What qualifies as an entry
+
+Record only if **both** tests pass:
+
+1. **Grep-blame test.** Someone doing `git blame` on the resulting code
+   would ask *"why this and not an obvious alternative?"*.
+2. **Surfaces test.** The answer is **not** already findable in
+   `conventions.md`, `CLAUDE.md`/`AGENTS.md`, the commit message, or the
+   PR body.
+
+### What is NOT an entry
+
+- Following `conventions.md` or `CLAUDE.md` verbatim (convention IS the
+  answer).
+- Local helper extraction inside established naming rules.
+- Codebase-analog mirroring when no alternative was considered.
+- Silent Phase-2 resolutions in `ship-light` / `plan-light` whose answer
+  is "mirror the analog" — those stay in PR body `## Notable assumptions`
+  (transient review surface) or in `plan-light.md`'s `## Assumptions`
+  section (phase artifact). They are non-decisions and do not belong in
+  the durable anchor.
+- Anything you could redirect a reader to by one-line comment in the
+  commit message.
+
+### Categories (only two)
+
+- **`arch`** — architectural calls: deep module extractions, dependency
+  shape, boundary choices, protocol selection, state-machine vocabulary.
+  Contradictions by later diffs are auto-**High** severity.
+- **`decision`** — non-arch calls that pass both tests: AC
+  interpretations, non-obvious dependency picks, rubberduck-rejected
+  alternatives, drift-accept meta-entries. Contradictions are
+  **Medium**, upgraded to **High** if the entry's `Refs:` contains
+  `AC#`.
+
+`assumption`, `bikeshed`, and `override` are **not** categories.
+`override` is a relationship expressed via the `Supersedes:` field; an
+override of an `arch` entry is itself category `arch`.
+
+### Schema
+
+```markdown
+### D<n> — <title ≤60 chars, imperative, no period>
+
+- **Category:** decision | arch
+- **Source:** <skill-name>
+- **Rationale:** <≤180 chars, "why this, not the obvious alternative">
+- **Refs:** <AC#N, T<id>, path/to/file, sha7 — comma-sep, ≤8 tokens>
+- **Supersedes:** D<n> — <≤100-char reason>   <!-- omit if none -->
+```
+
+- IDs are **local** to the file (`D1`, `D2`, …). Cross-file refs use
+  path + anchor: `.stenswf/42/decisions.md#D3`.
+- Supersession = append a new entry **and** strikethrough the ID in the
+  old entry's header: `### ~~D<n>~~ — <title>`. Never rewrite an old
+  entry's body.
+- `Refs:` **must** list every file path the decision implicates. This
+  is what makes external file-driven grep discovery work.
+
+Superseded header stays readable top-to-bottom; `grep -E '^### D[0-9]+ '`
+returns **active** entries only (strikethrough won't match the pattern).
+
+### Inherited PRD stubs
+
+When `prd-to-issues` creates a slice, it copies every active PRD entry
+into the slice's anchor as a **reference stub** — no rationale inline:
+
+```markdown
+### D<n> — <title> (inherited from #<PRD>)
+
+- **Category:** <inherited>
+- **Source:** #<PRD>/D<n>
+- **Refs:** <inherited refs>
+```
+
+Reader who needs the "why" does one hop:
+`awk '/^### D<n> /,/^### /' .stenswf/<PRD>/decisions.md`.
+
+In-flight slice stubs are **frozen at slice-creation time** — if the
+PRD later supersedes, the slice's stub stays as-is. This matches how
+`base_sha` locks plan-time state.
+
+### Conciseness caps (hard)
+
+| Field | Cap | On overflow |
+|---|---|---|
+| Title | 60 chars | Truncate with ellipsis + one-line warning |
+| Rationale | 180 chars | Truncate + warning; if frequent, the entry is two entries |
+| Refs | 8 tokens | Truncate + warning |
+| Supersedes reason | 100 chars | Truncate + warning |
+
+If a slice accumulates **>10 entries**, the writer emits a soft
+warning: *"decisions.md has N entries — consider whether this slice
+needs splitting."* No hard cap.
+
+### Write contract (per skill)
+
+| Skill | Writes? | When | Category | Typical count |
+|---|---|---|---|---|
+| `prd-from-grill-me` | yes | Step 5 seeding | arch, decision | 5–15 |
+| `prd-to-issues` | yes | Step 6 (stubs) | inherited | N PRD actives |
+| `plan` | yes | Phase 1 interview + Phase 2 write | decision, arch | 2–6 |
+| `plan-light` | rare | Phase 3 batch (genuine decisions only) | decision | 0–1 |
+| `ship` | yes | drift `(c)ontinue`, rare BLOCKED override | decision | 0–2 |
+| `ship-light` | rare | Phase 3 rubberduck-rejected alternatives | decision | 0–2 |
+| `review` | **no** | — (findings go to `review/slice.md`) | — | 0 |
+| `apply` | yes | Phase 2 override implementation | matches superseded | 0–N |
+
+Writers never ask the user for confirmation of routine anchor
+operations. Truncation warnings are informational. Supersession is
+silent.
+
+### Read contract (reviewers)
+
+`review` (and any future reviewer) reads `decisions.md` as a **third
+input** alongside the issue body and the diff. Slice-mode Perspective 2
+and PRD-mode Axis 1 (Alignment) check the diff against the anchor's
+active entries; contradictions surface as findings per the severity
+table above.
+
+Absence of `decisions.md` is a context note, not a finding. A seed
+comment like `<!-- Seeded by ship-light (upstream phases skipped) -->`
+tells the reviewer that some upstream phases didn't run.
+
+### Bootstrap snippet (canonical)
+
+Every writer runs this before its first append in a session:
+
+```bash
+D=".stenswf/$ARGUMENTS"
+mkdir -p "$D"
+if [ ! -f "$D/decisions.md" ]; then
+  cat > "$D/decisions.md" <<EOF
+# Decisions — #$ARGUMENTS
+
+<!-- Seeded by <skill-name>. Schema/recipes: plugins/stenswf/README.md#decision-anchor-contract -->
+
+EOF
+fi
+```
+
+### Append snippet (canonical)
+
+```bash
+D=".stenswf/$ARGUMENTS"
+# max id across active + superseded (strikethrough) headers, + 1
+NEXT=$(awk 'match($0, /^### (~~)?D[0-9]+/) {
+  match($0, /D[0-9]+/); n=substr($0, RSTART+1, RLENGTH-1)+0
+  if (n>max) max=n
+} END { print max+1 }' "$D/decisions.md")
+cat >> "$D/decisions.md" <<EOF
+
+### D${NEXT} — <title>
+
+- **Category:** <decision|arch>
+- **Source:** <skill-name>
+- **Rationale:** <≤180 chars>
+- **Refs:** <AC#, T-id, paths, sha7>
+EOF
+```
+
+### Supersede snippet (canonical)
+
+Strikethrough the superseded entry's ID in its header, then append a
+new entry whose body includes `- **Supersedes:** D<old> — <reason>`:
+
+```bash
+D=".stenswf/$ARGUMENTS"
+OLD=3          # id being superseded
+# Portable across GNU and BSD sed; the .bak file is removed.
+sed -i.bak "s/^### D${OLD} /### ~~D${OLD}~~ /" "$D/decisions.md" \
+  && rm -f "$D/decisions.md.bak"
+# …then append a new entry as usual, including the Supersedes line.
+```
+
+### Drift interaction
+
+On `concept_sha256` drift (existing mechanism):
+
+- `(r)e-plan` → append one `decision` meta-entry (fork marker).
+  Existing entries stay.
+- `(c)ontinue` → append one `decision` meta-entry (stale-plan accepted).
+- `(a)bort` → no anchor writes.
+
+The anchor has no checksum of its own; append-only + strikethrough
+semantics make it inherently stable under concurrent writes.
+
+### Two-tier model (local vs committed excerpt)
+
+- **Local:** `.stenswf/<N>/decisions.md` (full, gitignored, per-developer).
+- **Committed excerpt:** `docs/stenswf/decisions/prd-<N>.md`, written
+  silently by `apply` PRD-mode at PRD close. Curation filter:
+  `Category ∈ {arch, decision}` ∧ not-superseded ∧ `Refs:` contains a
+  concrete file path. Staged with message
+  `docs(stenswf): curated decisions for PRD #<N>`.
+
+Solo-slice flows (no PRD) skip the excerpt by default. Manual recipe
+in [docs/stenswf/decisions/README.md](../../docs/stenswf/decisions/README.md).
+
+### Consuming decisions from outside stenswf
+
+Any reviewer or tool can discover decision entries relevant to a file
+path without an index:
+
+```bash
+# All anchors (live + archived) that reference the path
+grep -l 'path/to/file' \
+  .stenswf/*/decisions.md \
+  .stenswf/.archive/*/decisions.md 2>/dev/null
+
+# Extract one entry by id
+awk '/^### D3 /,/^### /' .stenswf/<N>/decisions.md
+
+# All active entries across live anchors
+grep -hE '^### D[0-9]+ ' .stenswf/*/decisions.md
+```
+
+This works because every file-implicating decision lists the file paths
+in its `Refs:` field — a hard schema rule.
 
 ---
 

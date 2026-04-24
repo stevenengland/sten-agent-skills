@@ -1,0 +1,5 @@
+# stenswf local planning + execution state
+# (ignore contents, not the directory itself, so the README
+# exception can re-include a single file)
+.stenswf/*
+!.stenswf/README.md

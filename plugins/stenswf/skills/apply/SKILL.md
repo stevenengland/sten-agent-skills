@@ -123,6 +123,12 @@ Implement all approved suggestions in a single pass.
 - Apply `clean-code`.
 - Keep changes focused.
 
+If an applied suggestion contradicts an active entry in
+`.stenswf/$ARGUMENTS/decisions.md`, append a superseding entry (same
+category, source `apply`) and strikethrough the old header \u2014
+[contract](../../README.md#decision-anchor-contract). Otherwise no
+anchor write is needed.
+
 ## Phase 3 — Wrap-up (Slice-mode)
 
 - Update the issue description / add a brief comment reflecting what
@@ -240,8 +246,92 @@ PRD and stop.
 
 ## Phase 3 — Ship the cleanup PR
 
-Reuse the `ship` skill's Phase 4 sub-procedure (PR, CI loop, merge wait)
-and Phase 5 (wrap-up + archive) with these substitutions:
+**Before branching, stage the committed decisions excerpt.** PRD-mode
+produces `docs/stenswf/decisions/prd-$ARGUMENTS.md` — the curated,
+team-visible library of durable decisions from this PRD — and stages
+it as part of the cleanup PR. Silent; no user prompt.
+
+```bash
+mkdir -p docs/stenswf/decisions
+EXCERPT="docs/stenswf/decisions/prd-$ARGUMENTS.md"
+TITLE=$(gh issue view $ARGUMENTS --json title -q .title)
+DATE=$(date -u +%Y-%m-%d)
+
+# Gather closed slices of this PRD
+SLICES=$(gh issue list --state closed \
+  --search "in:body \"Parent PRD\" \"#$ARGUMENTS\"" \
+  --json number -q '.[].number')
+
+# Extract ACTIVE arch/decision entries with at least one file-path Ref
+# from one anchor. Active = header `### D<n> ` (strikethrough `~~`
+# won't match). Entries are bounded by the next `### ` header or EOF.
+curate_anchor() {
+  awk '
+    function flush() {
+      if (have && (cat=="arch" || cat=="decision") && hasref) print block
+      block=""; cat=""; hasref=0; have=0
+    }
+    /^### / {
+      flush()
+      if ($0 ~ /^### D[0-9]+ /) { block=$0 "\n"; have=1 }
+      next
+    }
+    have {
+      block = block $0 "\n"
+      if ($0 ~ /^- \*\*Category:\*\* (arch|decision)/) {
+        cat=$0; sub(/.*Category:\*\* */,"",cat)
+      }
+      if ($0 ~ /^- \*\*Refs:\*\*.*\//) hasref=1
+    }
+    END { flush() }
+  ' "$1"
+}
+
+{
+  printf '# Decisions — PRD #%s: %s\n\n' "$ARGUMENTS" "$TITLE"
+  printf '*Curated from slice anchors on %s.*\n\n' "$DATE"
+
+  # PRD's own anchor (live or archived)
+  for SRC in ".stenswf/$ARGUMENTS/decisions.md" \
+             $(ls -1 .stenswf/.archive/$ARGUMENTS-*/decisions.md 2>/dev/null); do
+    [ -s "$SRC" ] && curate_anchor "$SRC"
+  done
+
+  # Per-slice anchors
+  for S in $SLICES; do
+    SRC=".stenswf/$S/decisions.md"
+    [ -s "$SRC" ] || SRC=$(ls -1 .stenswf/.archive/$S-*/decisions.md 2>/dev/null | head -1)
+    [ -n "$SRC" ] && [ -s "$SRC" ] || continue
+    printf '\n<!-- from slice #%s -->\n\n' "$S"
+    curate_anchor "$SRC"
+  done
+} > "$EXCERPT"
+```
+
+Curate-then-stage; the file is included in the cleanup PR so team
+review sees durable decisions alongside the code. See [Decision Anchor
+Contract](../../README.md#decision-anchor-contract) for the curation
+filter (active ∩ {arch, decision} ∩ has file-path Refs).
+
+Commit the excerpt as its own commit on top of the cleanup branch:
+
+```bash
+if [ -s "$EXCERPT" ]; then
+  git add "$EXCERPT"
+  git commit -m "docs(stenswf): curated decisions for PRD #$ARGUMENTS"
+fi
+```
+
+If `$EXCERPT` ends up empty (no qualifying entries — unusual for a
+PRD), skip the commit; remove the file so no zero-content artifact
+leaks into the PR:
+
+```bash
+[ -s "$EXCERPT" ] || rm -f "$EXCERPT"
+```
+
+Now reuse the `ship` skill's Phase 4 sub-procedure (PR, CI loop, merge
+wait) and Phase 5 (wrap-up + archive) with these substitutions:
 
 - **Issue number:** `$ARGUMENTS` (the PRD).
 - **Branch:** `prd/$ARGUMENTS-cleanup`.
@@ -249,6 +339,9 @@ and Phase 5 (wrap-up + archive) with these substitutions:
 - **PR body:**
   ```
   Addresses capstone findings from the local `<prd-review>`.
+  Includes the curated decisions excerpt at
+  `docs/stenswf/decisions/prd-$ARGUMENTS.md` (committed as
+  `docs(stenswf): curated decisions for PRD #$ARGUMENTS`).
 
   Finding IDs addressed: F1, F2, F5, F6, F7, F9
   Finding IDs skipped (with reason):

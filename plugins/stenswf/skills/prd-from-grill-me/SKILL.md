@@ -138,10 +138,53 @@ steps if you don't consider them necessary.
    EOF
    printf '{"ts":"%s","event":"prd-created","issue":<N>}\n' \
      "$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> ".stenswf/<N>/log.jsonl"
+
+   # Bootstrap the decision anchor.
+   # See: plugins/stenswf/README.md#decision-anchor-contract
+   cat > ".stenswf/<N>/decisions.md" <<EOF
+   # Decisions — #<N>
+
+   <!-- Seeded by prd-from-grill-me. Schema/recipes: plugins/stenswf/README.md#decision-anchor-contract -->
+   EOF
    ```
 
    Substitute `<N>` with the actual issue number before running. The
    tree is gitignored (see `bootstrap`); no team-visible side effects.
+
+   **Seed anchor entries (LLM task).** After the bootstrap above, walk
+   the PRD body and append one entry for each qualifying item:
+
+   - `## Conventions` item → category `decision` (non-arch choice that
+     a `git blame` reader could not reconstruct).
+   - `## Implementation Decisions` item → category `arch`.
+
+   Apply the grep-blame + surfaces test per the [Decision Anchor
+   Contract](../../README.md#decision-anchor-contract): skip routine
+   defaults the PRD body already documents crisply, or anything
+   `CLAUDE.md`/`AGENTS.md` already answers. Use the canonical **append
+   snippet** from the contract. Typical count: 5–15.
+
+   Sketch per entry (adapt title/rationale/refs from the PRD item):
+
+   ```bash
+   D=".stenswf/<N>"
+   NEXT=$(awk 'match($0, /^### (~~)?D[0-9]+/) {
+     match($0, /D[0-9]+/); n=substr($0, RSTART+1, RLENGTH-1)+0
+     if (n>max) max=n
+   } END { print max+1 }' "$D/decisions.md")
+   cat >> "$D/decisions.md" <<EOF
+
+   ### D${NEXT} — <title ≤60 chars, imperative>
+
+   - **Category:** decision            # or: arch
+   - **Source:** prd-from-grill-me
+   - **Rationale:** <≤180 chars, why this not the obvious alternative>
+   - **Refs:** <AC#N, path/to/file — comma-sep, ≤8 tokens>
+   EOF
+   ```
+
+   If nothing in the PRD body passes both tests, leave the anchor with
+   only the header — later slice-level skills will append as they go.
 
    **After creating the issue, offer the chained handover:**
 

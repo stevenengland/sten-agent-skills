@@ -93,7 +93,9 @@ plan-only guarantee. The only files this mode may create or modify are
 under `.stenswf/$ARGUMENTS/review/` and `/tmp/`. No `git add`, no
 `git commit`, no `gh issue comment`, no edits to source or test files,
 no edits to plan fragments under `.stenswf/$ARGUMENTS/` outside the
-`review/` subdirectory.
+`review/` subdirectory. `decisions.md` is read-only; undocumented
+decisions surface as findings in `review/slice.md` for `apply` to
+override.
 
 ## Step 1 — Change Review (inline four-perspective critique)
 
@@ -104,6 +106,10 @@ reads):
 - Issue body: `/tmp/slice-$ARGUMENTS.md` (fetched above).
 - `.stenswf/$ARGUMENTS/conventions.md` if present.
 - `.stenswf/$ARGUMENTS/acceptance-criteria.md` if present.
+- `.stenswf/$ARGUMENTS/decisions.md` if present — active entries only
+  (`grep -E '^### D[0-9]+ '`; strikethrough `### ~~D<n>~~` is
+  superseded). Absence is a context note, not a finding.
+  [Contract](../../README.md#decision-anchor-contract).
 - `.stenswf/$ARGUMENTS/file-structure.md` if present (for architectural
   context only).
 
@@ -131,10 +137,14 @@ silent assumptions about external services, simpler operational shape.
 code solves the stated problem or a proxy, E2E coverage of critical
 user-facing paths, unhandled edge cases (empty input, concurrent access,
 failure mid-sequence), materially simpler approach ignored, and — most
-important here — **Plan / AC deviation**: does the staged diff match
-what the issue body + `conventions.md` + `acceptance-criteria.md`
-describe? Tag plan deviations as **High** severity by default unless
-trivial.
+important here — **Plan / AC / decision deviation**: does the staged
+diff match the issue body + `conventions.md` + `acceptance-criteria.md`
++ active `decisions.md` entries? Tag plan deviations **High** by
+default. Decision-anchor contradictions: `arch` → **High**,
+`decision` → **Medium** (→ **High** if `Refs:` contains `AC#`).
+Superseded entries are not findings. A contradiction is concrete: the
+entry rejects Y, and the diff implements Y on a file listed in its
+`Refs:`.
 
 **Perspective 3 — Security Engineer.** Realistic threat surface for this
 project, new trust boundaries or exposed interfaces, secrets and
@@ -264,6 +274,21 @@ unresolved prior findings.
 Do NOT read slice-level plans, implementation logs, or slice-level review
 comments. The capstone reviews delivered code against the PRD's original
 intent, not intermediate artifacts.
+
+**Exception — decision anchors.** Axis 1 (Alignment) aggregates active
+entries from all slice anchors (live or archived) and applies the same
+contradiction → severity rule as Slice-mode Perspective 2
+([contract](../../README.md#decision-anchor-contract)):
+
+```bash
+for S in $(gh issue list --state closed \
+            --search "in:body \"Parent PRD\" \"#$ARGUMENTS\"" \
+            --json number -q '.[].number'); do
+  ANCHOR=".stenswf/$S/decisions.md"
+  [ ! -s "$ANCHOR" ] && ANCHOR=$(ls -1 .stenswf/.archive/$S-*/decisions.md 2>/dev/null | head -1)
+  [ -n "$ANCHOR" ] && [ -s "$ANCHOR" ] && grep -hE '^### D[0-9]+ ' "$ANCHOR"
+done
+```
 
 Inputs: PRD body, `/tmp/prd-$ARGUMENTS-stat.txt`, the diff patch file
 (read hunks via `awk` or ranged reads — never `cat` the full patch).

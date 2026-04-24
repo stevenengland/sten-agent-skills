@@ -131,6 +131,10 @@ established conventions, local helper extraction, test shape within
 the prevailing pattern) are educated guesses — record them in the PR
 body's `## Notable assumptions` section (Phase 4) and proceed.
 
+`## Notable assumptions` is **not** the decision anchor — the anchor
+captures rejected alternatives, not analog-mirroring. See the
+[Decision Anchor Contract](../../README.md#decision-anchor-contract).
+
 ## Phase 3 — Pre-push rubberduck
 
 Same session, no subagent. Orthogonal to `clean-code` — only catches
@@ -152,6 +156,12 @@ what that skill does not:
 
 If anything was fixed: re-run full tests + lint, then
 `git commit -am "refactor(<scope>): self-critique pass" -m "Refs #$ARGUMENTS"`.
+
+If the rubberduck rejected a concrete alternative, append one
+`decision` entry (source `ship-light`) to
+`.stenswf/$ARGUMENTS/decisions.md` — [Decision Anchor
+Contract](../../README.md#decision-anchor-contract). Skip for routine
+refactors.
 
 ## Phase 4 — Push and PR
 
