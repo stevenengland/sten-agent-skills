@@ -9,5 +9,5 @@ Dev-only. Not packaged for end users.
   re-run instructions.
 
 No automated runner is wired yet — fixtures are piped through the
-canonical extractor helpers (`get_fm`, `get_section`) manually during
+canonical extractor helpers (`get_fm`, `extract_section`) manually during
 development.

@@ -77,6 +77,9 @@ terminates at the next `## ` — no `| sed '$d'` or `tail -n +3` hacks.
 
 ```bash
 # TYPE is the literal front-matter value, e.g. "slice — AFK" or "PRD".
+# Normalize dash variants to U+2014 em-dash before matching (Postel's law):
+# accepts "slice -- AFK" (double-hyphen) or "slice – AFK" (en-dash).
+TYPE=$(printf '%s' "$TYPE" | sed 's/–/—/g; s/--/—/g; s/ *— */ — /g')
 case "$TYPE" in
   PRD) MODE=prd ;;
   "slice — HITL"|"slice — AFK"|"slice — spike")

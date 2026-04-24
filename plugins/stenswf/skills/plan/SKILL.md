@@ -6,6 +6,8 @@ disable-model-invocation: true
 
 **Load and apply `brevity` now.** See [../../references/brevity-load.md](../../references/brevity-load.md).
 Task fragments are full prose — `brevity` does NOT apply to artifact bodies.
+Apply context-hygiene per
+[../../references/context-hygiene.md](../../references/context-hygiene.md).
 
 Plan the implementation of issue number $ARGUMENTS.
 
@@ -189,7 +191,6 @@ validator cannot run (missing `jq`, etc.).
 
 ## Feedback
 
-Log friction via
-[../../references/feedback-log.md](../../references/feedback-log.md).
-Set `STENSWF_SKILL=plan` and `STENSWF_ISSUE=$ARGUMENTS` before calling
-`scripts/log-issue.sh`.
+Log friction per
+[../../references/feedback-session.md](../../references/feedback-session.md)
+with `STENSWF_SKILL=plan` and `STENSWF_ISSUE=$ARGUMENTS`.

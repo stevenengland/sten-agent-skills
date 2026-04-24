@@ -147,7 +147,6 @@ Invoked when the user wants to create a PRD. Skip steps if unnecessary.
 
 ## Feedback
 
-Log friction via
-[../../references/feedback-log.md](../../references/feedback-log.md).
-Set `STENSWF_SKILL=prd-from-grill-me` before calling
-`scripts/log-issue.sh`.
+Log friction per
+[../../references/feedback-session.md](../../references/feedback-session.md)
+with `STENSWF_SKILL=prd-from-grill-me`.

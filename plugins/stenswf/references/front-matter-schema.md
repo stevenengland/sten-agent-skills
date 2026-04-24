@@ -26,7 +26,7 @@ Rules:
 
 | Key | Values | Notes |
 |---|---|---|
-| `type` | `PRD` \| `slice — HITL` \| `slice — AFK` \| `slice — spike` | Mode + slice-type marker. Replaces the old `## Type` section. |
+| `type` | `PRD` \| `slice — HITL` \| `slice — AFK` \| `slice — spike` | Mode + slice-type marker. |
 
 ## Required keys (slice issues only)
 

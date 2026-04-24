@@ -13,15 +13,10 @@ subagents, no plan comment, no XML extraction. The issue body IS the spec.
 
 ## Phase 0 — Preflight gate
 
-Capture feedback-log baseline for the session boundary ping
-(see [../../references/feedback-log.md](../../references/feedback-log.md)):
-
-```bash
-FB_LOG=".stenswf/_feedback/$(date -u +%F).jsonl"
-mkdir -p "$(dirname "$FB_LOG")"
-SESSION_START_N=$(wc -l < "$FB_LOG" 2>/dev/null || echo 0)
-export SESSION_START_N
-```
+Capture feedback-session baseline per
+[../../references/feedback-session.md](../../references/feedback-session.md).
+Apply context-hygiene per
+[../../references/context-hygiene.md](../../references/context-hygiene.md).
 
 Fetch and read front-matter via
 [../../references/extractors.md](../../references/extractors.md):
@@ -149,31 +144,28 @@ If the rubberduck rejected a concrete alternative, append one
 `.stenswf/$ARGUMENTS/decisions.md` per
 [../../references/decision-anchor-link.md](../../references/decision-anchor-link.md).
 
+Non-decision "minor guesses" go in both the PR body's
+`## Notable assumptions` AND `lite-notes.md`'s
+`## Assumptions (ship-light)` section (create the file with an empty
+`## Assumptions (plan-light)` heading if plan-light was not run):
+
+```bash
+LN=".stenswf/$ARGUMENTS/lite-notes.md"
+if [ ! -f "$LN" ]; then
+  mkdir -p "$(dirname "$LN")"
+  printf '# Lite Notes — #%s\n\n## Assumptions (plan-light)\n\n## Assumptions (ship-light)\n' \
+    "$ARGUMENTS" > "$LN"
+fi
+# append each guess as "- <one-sentence assumption>" under the ship-light section
+```
+
 ## Phase 4 — Push and PR
 
 Final test + lint must pass (or `lint-escape`-justified). Then run the
 shared PR+CI procedure with `CI_MAX_CYCLES=2` and `WAIT_FOR_MERGE=no`:
 [../../references/pr-ci-merge.md](../../references/pr-ci-merge.md).
 
-PR body:
-
-```
-Closes #$ARGUMENTS
-
-## Summary
-- <bullet 1: what changed>
-- <bullet 2: how it was tested>
-- <bullet 3: notable trade-off, or "none">
-
-## Tests added (red → green)
-- `<test name 1>`
-- `<test name 2>`
-
-## Notable assumptions
-- <only include if silent assumptions were recorded; else omit>
-```
-
-PR body is verbatim — no brevity compression.
+PR body template: [pr-body.md](pr-body.md). Verbatim, no brevity compression.
 
 ## Phase 5 — CI (via shared procedure)
 
@@ -208,18 +200,6 @@ ROUTE_HEAVY: <one-sentence reason>
 
 ## Feedback
 
-Log friction throughout via
-[../../references/feedback-log.md](../../references/feedback-log.md).
-Set `STENSWF_SKILL=ship-light` and `STENSWF_ISSUE=$ARGUMENTS` before
-calling `scripts/log-issue.sh`.
-
-On exit, emit the boundary ping:
-
-```bash
-FB_LOG=".stenswf/_feedback/$(date -u +%F).jsonl"
-N=$(wc -l < "$FB_LOG" 2>/dev/null || echo 0)
-SESSION_N=$((N - ${SESSION_START_N:-0}))
-if [ "$SESSION_N" -gt 0 ]; then
-  echo "stenswf: $SESSION_N workflow issues reported this session — see .stenswf/_feedback/"
-fi
-```
+Log friction throughout per
+[../../references/feedback-session.md](../../references/feedback-session.md)
+with `STENSWF_SKILL=ship-light` and `STENSWF_ISSUE=$ARGUMENTS`.

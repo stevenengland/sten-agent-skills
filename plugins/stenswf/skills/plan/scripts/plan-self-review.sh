@@ -29,9 +29,11 @@ if [ -s "$D/manifest.json" ]; then
   if ! jq -e . "$D/manifest.json" >/dev/null 2>&1; then
     fail "manifest.json does not parse"
   else
-    jq -r '.tasks[].file' "$D/manifest.json" | while read -r f; do
-      [ -s "$D/$f" ] || echo "FAIL: task file missing: $f" >&2
-    done
+    # Count missing task files via a temp marker (subshell can't mutate FAIL).
+    MISS=$(jq -r '.tasks[].file' "$D/manifest.json" | while read -r f; do
+      [ -s "$D/$f" ] || printf 'x'
+    done)
+    [ -z "$MISS" ] || fail "manifest-listed task file(s) missing: ${#MISS} entries"
   fi
 fi
 

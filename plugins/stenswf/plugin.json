@@ -1,11 +1,1 @@
-{
-  "name": "stenswf",
-  "description": "Sten Software Workflow bundle. Issue lifecycle (plan → ship → review → apply, with PRD-mode capstone; plus a lite path: ship-light, plan-light, and slice-e2e one-shot orchestrator), and PRD inception (grill-me → prd-from-grill-me → prd-to-issues).",
-  "version": "0.7.0",
-  "author": {
-    "name": "StEn",
-    "url": "https://github.com/stevenengland/sten-agent-skills/plugins/stenswf"
-  },
-  "license": "MIT",
-  "keywords": ["sdlc", "tdd", "prd", "issues", "workflow", "clean-code"]
-}
+.claude-plugin/plugin.json

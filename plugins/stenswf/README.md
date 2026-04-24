@@ -81,12 +81,12 @@ Contains three coordinated workflows plus always-on craft skills.
                                  PRD-mode: themed cleanup PR
 ```
 
-`review` and `apply` auto-detect **mode** from the target issue's body
-`## Type` marker (set by `prd-from-grill-me` / `prd-to-issues`). No
-labels are used anywhere.
+`review` and `apply` auto-detect **mode** from the target issue's
+`<!-- stenswf:v1 ... -->` front-matter `type:` field (set by
+`prd-from-grill-me` / `prd-to-issues`). No labels are used anywhere.
 
-- `## Type` = `PRD` → PRD-mode (capstone review / themed cleanup).
-- `## Type` starts with `slice` → Slice-mode.
+- `type: PRD` → PRD-mode (capstone review / themed cleanup).
+- `type: slice — HITL|AFK|spike` → Slice-mode.
 
 PRD-mode `review` is **gated**: refuses to run while any slice is still
 open (queried by body reference `"Parent PRD" "#N"`, not by labels).
@@ -99,7 +99,7 @@ Three ways to take a slice issue from creation to merged PR:
 - **Lite shortest — `/stenswf:ship-light <issue>`.** Issue body IS the
   spec. Single session. Use when ALL:
 
-  - Slice is single-subsystem, plausibly ≤ ~5 files, no schema migration.
+  - Slice is single-subsystem, ≤ 15 files, no schema migration.
   - ACs are crisp checkbox items (no "figure out X" wording).
   - `Lite-eligible: true` in the issue body (set by `prd-to-issues`).
   - No open `Blocked by`.
@@ -171,7 +171,6 @@ STEN-AGENT-SKILLS/                       ← Repo root
 ├── plugins/
 │   └── stenswf/                         ← This plugin
 │       ├── plugin.json                  ← Manifest (both platforms)
-│       ├── hooks.json                   ← Hooks placeholder (empty)
 │       ├── references/                  ← Lazy-loaded reference bodies
 │       │   ├── front-matter-schema.md
 │       │   ├── extractors.md
@@ -291,10 +290,10 @@ Claude Code discovers and loads it automatically. Reload if already running:
 
 1. **Capture the idea.** `/stenswf:grill-me` → shared understanding.
 2. **Write the PRD.** `/stenswf:prd-from-grill-me` → issue filed with
-   `## Type\n\nPRD` marker; PRD base SHA recorded (git tag
+   `type: PRD` front-matter; PRD base SHA recorded (git tag
    `prd-<N>-base`).
 3. **Break it down.** `/stenswf:prd-to-issues` → vertical-slice issues,
-   each with `## Type\n\nslice — HITL|AFK|spike` marker.
+   each with `type: slice — HITL|AFK|spike` front-matter.
 4. **For each slice:**
    - **Lite shortest** (`Lite-eligible: true` in the issue body):
      1. `/stenswf:ship-light <slice-N>` → branch, TDD, PR, CI green in
@@ -339,9 +338,9 @@ Claude Code discovers and loads it automatically. Reload if already running:
 │   ├── tasks/T10.md, T20.md …  (heavy-plan: self-contained task fragments)
 │   ├── plan-light.md          (plan-light: single advisory plan, if used)
 │   ├── plan-light.json        (plan-light: 4-field identity stub + source_signature)
+│   ├── lite-notes.md          (plan-light / ship-light: soft constraints for review)
 │   ├── review/slice.md OR review/prd-review.xml
-│   ├── apply-state.json
-│   └── log.jsonl              (heavy-plan: append-only audit)
+│   └── apply-state.json
 └── .archive/<issue>-<date>/   (cold storage after merge)
 ```
 
@@ -376,66 +375,6 @@ recomputes a sha256 over the issue body's `What to build` ∥
 to `plan-light.json:source_signature`. On mismatch the plan is
 silently ignored and `ship-light` proceeds from the issue body — no
 prompt, no deletion.
-
-## Migration notes (v0.6 → v0.7)
-
-**Breaking change: issue-body section-heading parsing is replaced by a
-front-matter marker.**
-
-- Issues and PRDs now carry a `<!-- stenswf:v1 ... -->` HTML-comment
-  block near the top of the body. Fields: `type`, `lite_eligible`,
-  `conventions_source`, `prd_ref`, optional `disqualifier`,
-  `prd_base_sha`, `blocked_by`. See
-  [references/front-matter-schema.md](references/front-matter-schema.md).
-- Skills that previously scraped `## Type`, `## Lite-eligible`, etc.
-  (via `awk '/^## X/,/^## /'`) now read the front-matter via the shared
-  `get_fm` / `extract_section` helpers in
-  [references/extractors.md](references/extractors.md). The old awk
-  range had a self-terminating bug (same regex both ends) — front-matter
-  eliminates the whole class.
-- Issues created under v0.6 without the front-matter will abort cleanly
-  in all lite-path skills (`contract_violation` logged) and require
-  `/stenswf:plan` for manual routing. **No back-compat parser is
-  provided.** Re-file or add the marker manually.
-- New feedback log at `.stenswf/_feedback/<YYYY-MM-DD>.jsonl`. Every
-  lifecycle skill records notable problems via
-  `scripts/log-issue.sh`; boundary pings on exit summarize issues.
-  See [references/feedback-log.md](references/feedback-log.md).
-- PR+CI+merge is now a single shared procedure parameterized by
-  `CI_MAX_CYCLES` and `WAIT_FOR_MERGE`. See
-  [references/pr-ci-merge.md](references/pr-ci-merge.md).
-
-## Migration notes (v0.3 → v0.4)
-
-Breaking change: the issue-comment plumbing is removed.
-
-- **Issues hold only the conceptual slice** (What to build, ACs,
-  Conventions, Files hint, `## Type` marker). No implementation plan
-  comment, no implementation-log table, no per-task comments.
-- **Fine plans + execution state live locally** under `.stenswf/<issue>/`
-  (gitignored).
-- **Lifecycle labels (`prd`, `slice`, `hitl`, `afk`, `needs-plan`,
-  `planned`, `shipping`, `shipped`, `abandoned`, `applied`) are no longer
-  written or read by any skill.** If they still exist in your repo from
-  v0.3, they do no harm — delete at leisure.
-- **Mode detection** now reads the issue body's `## Type` marker
-  (`PRD` | `slice — HITL|AFK|spike`). PRD-slice gating queries by body
-  reference.
-- **Prompt caching** now uses a pre-materialised `stable-prefix.md`
-  (byte-identical across all `ship` dispatches).
-
-For in-flight issues planned under v0.3: either finish them under v0.3
-or re-plan under v0.4 (`/stenswf:plan <issue>` writes fresh local
-artifacts; the old plan comment is ignored).
-
-The craft skills (`tdd`, `clean-code`, `lint-escape`, `brevity`,
-`architecture`) are invoked by the workflow skills automatically.
-Refactor-focused skills (`plan-reviewer`, `test-file-compaction`, etc.)
-moved to the sibling [`stenswr`](../stenswr/) plugin and are no longer
-invoked implicitly by any `stenswf` skill — invoke them explicitly
-as `/stenswr:<skill>`.
-
----
 
 ## Decision Anchor Contract
 
@@ -665,6 +604,34 @@ grep -hE '^### D[0-9]+ ' .stenswf/*/decisions.md
 
 This works because every file-implicating decision lists the file paths
 in its `Refs:` field — a hard schema rule.
+
+---
+
+## Known limitations
+
+- **`prd-from-grill-me` → `prd-to-issues` chained handover relies on
+  conversational memory.** The `y/N` prompt at the end of
+  `prd-from-grill-me` only shortcuts slicing when answered in the
+  *same* session. If the user replies "No, I'll review first" and
+  later runs `/stenswf:prd-to-issues` in a fresh chat, the interview
+  context is gone — `prd-to-issues` re-reads the PRD issue from GitHub
+  and restarts at Step 1. No automated signal persists to disk.
+
+- **`ship` "fresh-session-per-task" is aspirational.** Phase 1's
+  dispatch loop *assumes* each subagent starts with a clean slate and
+  the stable prefix is the only context. The skill cannot enforce
+  this from inside the host harness; if a harness folds subagent
+  output back into the orchestrator context, prompt caching still
+  works but `brevity` and token accounting degrade. Watch for
+  ballooning orchestrator turns as the canary.
+
+- **Memory-file compression is manual.** `decisions.md`,
+  `house-rules.md`, and `design-summary.md` grow unbounded across an
+  issue's lifetime. `references/context-hygiene.md` §4 documents the
+  pruning rules (archive superseded `~~D<n>~~` entries, rewrite rules
+  in terser prose at slice archive time), but nothing automates the
+  rewrite. Apply manually during `review` or `apply` when the file is
+  already open.
 
 ---
 

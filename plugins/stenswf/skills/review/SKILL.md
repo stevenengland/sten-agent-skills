@@ -7,6 +7,8 @@ disable-model-invocation: true
 **Load and apply `brevity` now.** See [../../references/brevity-load.md](../../references/brevity-load.md).
 Review artifacts (slice suggestions, PRD capstone XML) are full-prose
 artifacts.
+Apply context-hygiene per
+[../../references/context-hygiene.md](../../references/context-hygiene.md).
 
 ---
 
@@ -16,31 +18,18 @@ Output is a structured review artifact on disk.
 
 ## Mode Detection
 
-Mode is detected from front-matter `type:` per
-[../../references/extractors.md](../../references/extractors.md):
-
-```bash
-gh issue view $ARGUMENTS --json body -q .body > /tmp/slice-$ARGUMENTS.md
-TYPE=$(get_fm type /tmp/slice-$ARGUMENTS.md)
-```
-
-- `TYPE == "PRD"` → PRD-mode (capstone review).
-- `TYPE` starts with `slice` → Slice-mode.
-- Unrecognised → check `.stenswf/$ARGUMENTS/manifest.json:.kind`.
-  Otherwise ask the user and log `contract_violation`.
-
-**Announce the detected mode** as your first line of output. Then load
-only the matching reference body:
-
-- Slice-mode → read [`slice.md`](slice.md) and execute it.
-- PRD-mode → read [`prd.md`](prd.md) and execute it.
+Detect mode (slice vs PRD) per
+[../../references/mode-detection.md](../../references/mode-detection.md),
+then load `slice.md` or `prd.md` accordingly.
 
 ## Drift check (both modes)
 
 Before reviewing: shared procedure at
 [../../references/drift-check.md](../../references/drift-check.md).
-On `(c)ontinue`, append `drift-accepted` to `log.jsonl`? No — log.jsonl
-was removed. Instead, log `user_override` via
+On `(c)ontinue`, append a drift-accepted `decision` meta-entry to
+`.stenswf/$ARGUMENTS/decisions.md` (per
+[../../references/decision-anchor-link.md](../../references/decision-anchor-link.md))
+and log `user_override` via
 [../../references/feedback-log.md](../../references/feedback-log.md).
 On `r`e-plan after user acceptance: overwrite `concept.md`, recompute
 `concept_sha256`.
@@ -79,7 +68,6 @@ Announce the backfill so the user knows drift is seeded to current body.
 
 ## Feedback
 
-Log friction via
-[../../references/feedback-log.md](../../references/feedback-log.md).
-Set `STENSWF_SKILL=review` and `STENSWF_ISSUE=$ARGUMENTS` before
-calling `scripts/log-issue.sh`.
+Log friction per
+[../../references/feedback-session.md](../../references/feedback-session.md)
+with `STENSWF_SKILL=review` and `STENSWF_ISSUE=$ARGUMENTS`.

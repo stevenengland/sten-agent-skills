@@ -5,6 +5,8 @@ disable-model-invocation: true
 ---
 
 **Load and apply `brevity` now.** See [../../references/brevity-load.md](../../references/brevity-load.md).
+Apply context-hygiene per
+[../../references/context-hygiene.md](../../references/context-hygiene.md).
 
 Plan the implementation of slice issue number $ARGUMENTS.
 
@@ -45,7 +47,8 @@ Gate:
 
 - `TYPE == "PRD"` or missing → abort to the user:
   *"Not a slice issue — use `/stenswf:prd-to-issues` to break the PRD
-  down first."* Log `contract_violation`. Exit without `ROUTE_HEAVY`.
+  down first."* Log `contract_violation`. Emit `ROUTE_HEAVY: not a
+  slice — route to prd-to-issues` as FINAL line, then exit.
 - `TYPE` starts with `slice` → continue.
 
 Extract envelope-check inputs (body sections):
@@ -116,57 +119,15 @@ never the anchor. See [../../references/decision-anchor-link.md](../../reference
 mkdir -p ".stenswf/$ARGUMENTS"
 ```
 
-### `.stenswf/$ARGUMENTS/plan-light.md`
+Write the three artifacts per
+[artifacts.md](artifacts.md):
 
-Soft cap: ≤200 lines. Hard cap: ≤6 tasks. If >6 tasks, abort:
+1. `plan-light.md` — the readable plan (soft cap 200 lines, hard cap 6 tasks).
+2. `plan-light.json` — 4-field identity stub with `source_signature`.
+3. `lite-notes.md` — soft-constraint handoff to slice review.
+
+If >6 tasks required, abort with
 `ROUTE_HEAVY: scope >6 tasks — needs heavy plan`.
-
-```markdown
-# Plan-Light — #$ARGUMENTS — <one-line title>
-
-## Context
-3–5 sentences: behavioral goal, modules touched, 1–3 materially-shaping
-conventions. Analogous symbol paths inline where useful.
-
-## Tasks
-- **T1. <short imperative name>**
-  Files: `path/to/impl.py`, `tests/path/to/test_impl.py`
-  Done when: <AC wording verbatim or crisp mapped criterion>
-  Commit: `<type>(<scope>): <imperative subject, ≤72 chars>`
-
-- **T2. …**
-
-(Tasks are vertical slices. Hard cap 6.)
-
-## Assumptions
-- <load-bearing guess 1 — what was silently resolved, why>
-- <load-bearing guess 2>
-
-## Skipped (vs heavy plan)
-- No stable-prefix, no per-task subagent dispatch, no manifest task
-  tracking, no `--resume`.
-- Issue body ACs remain authoritative.
-```
-
-### `.stenswf/$ARGUMENTS/plan-light.json`
-
-```bash
-SIG=$( { cat /tmp/slice-$ARGUMENTS-what.md; \
-         cat /tmp/slice-$ARGUMENTS-conv.md; \
-         cat /tmp/slice-$ARGUMENTS-acs.md; \
-       } | sha256sum | cut -d' ' -f1)
-
-cat > ".stenswf/$ARGUMENTS/plan-light.json" <<EOF
-{
-  "issue": $ARGUMENTS,
-  "kind": "slice-light",
-  "plan_created_at": "$(date -u +%FT%TZ)",
-  "source_signature": "$SIG"
-}
-EOF
-```
-
-No `manifest.json`, no `stable-prefix.md`, no separate per-file tree.
 
 ---
 
@@ -192,10 +153,9 @@ Print exactly one final line: `READY` (or `ROUTE_HEAVY: <reason>`).
 
 ## Feedback
 
-Log workflow issues via
-[../../references/feedback-log.md](../../references/feedback-log.md).
-Set `STENSWF_SKILL=plan-light` and `STENSWF_ISSUE=$ARGUMENTS` before
-calling `scripts/log-issue.sh`. Emit the boundary ping on exit.
+Log workflow issues per
+[../../references/feedback-session.md](../../references/feedback-session.md)
+with `STENSWF_SKILL=plan-light` and `STENSWF_ISSUE=$ARGUMENTS`.
 
 ## Out of scope (deliberate)
 

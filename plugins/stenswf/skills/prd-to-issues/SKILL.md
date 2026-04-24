@@ -131,59 +131,25 @@ fi
 
 ### 7b. Seed inherited PRD decision stubs into each slice
 
-For each created slice, copy active PRD anchor entries as reference
-stubs per the
-[Decision Anchor Contract](../README.md#decision-anchor-contract)
-(inherited stubs carry no rationale; readers hop to
-`.stenswf/<PRD>/decisions.md#D<n>` for the `why`):
+Run the shared script:
 
 ```bash
-PRD_SRC=".stenswf/<prd-number>/decisions.md"
-[ -s "$PRD_SRC" ] || exit 0
-
-for N in <slice-numbers>; do
-  D=".stenswf/$N"
-  mkdir -p "$D"
-  if [ ! -f "$D/decisions.md" ]; then
-    cat > "$D/decisions.md" <<EOF
-# Decisions — #$N
-
-<!-- Seeded by prd-to-issues from #<prd-number>. Schema: ../../plugins/stenswf/README.md#decision-anchor-contract -->
-
-EOF
-  fi
-
-  # Active entries only (strikethrough ~~...~~ excluded by this pattern).
-  awk '
-    /^### D[0-9]+ / { inblock=1; buf=$0 ORS; next }
-    inblock && /^### / { print buf; print "---\n"; inblock=0 }
-    inblock { buf=buf $0 ORS; next }
-    END { if (inblock) { print buf } }
-  ' "$PRD_SRC" | awk -v P="<prd-number>" '
-    /^### D[0-9]+ / {
-      hdr=$0
-      sub(/^### /, "", hdr)
-      id=hdr; sub(/ .*/, "", id)
-      title=hdr; sub(/^[^ ]+ — /, "", title)
-      printf "### %s — %s (inherited from #%s)\n\n", id, title, P
-      printf "- **Category:** inherited\n"
-      printf "- **Source:** #%s/%s\n", P, id
-      next
-    }
-    /^- \*\*Refs:\*\*/ { print; next }
-    /^### / { printf "\n" }
-  ' >> "$D/decisions.md"
-done
+bash plugins/stenswf/scripts/inherit-decisions.sh <prd-number> <slice-numbers...>
 ```
 
-Silent on success. Slice anchors now contain reference stubs for every
-active PRD decision at slice-creation time.
+The script walks `.stenswf/<prd-number>/decisions.md`, copies active
+entries as reference stubs into each slice's `decisions.md` (creating
+the file with a seed header if absent), and preserves `Refs:` verbatim.
+Strikethrough (superseded) entries are skipped. Silent on success.
+
+Inherited stubs are frozen at slice-creation time — later PRD
+supersessions do not retroactively update slice anchors. See
+[../../references/decision-anchor-link.md](../../references/decision-anchor-link.md).
 
 ---
 
 ## Feedback
 
-Log workflow friction via
-[../../references/feedback-log.md](../../references/feedback-log.md).
-Set `STENSWF_SKILL=prd-to-issues` before calling
-`scripts/log-issue.sh`.
+Log workflow friction per
+[../../references/feedback-session.md](../../references/feedback-session.md)
+with `STENSWF_SKILL=prd-to-issues`.

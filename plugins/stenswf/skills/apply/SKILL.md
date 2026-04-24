@@ -10,33 +10,14 @@ disable-model-invocation: true
 
 ## Mode Detection
 
-Capture feedback-log baseline for the session boundary ping
-(see [../../references/feedback-log.md](../../references/feedback-log.md)):
+Capture feedback-session baseline per
+[../../references/feedback-session.md](../../references/feedback-session.md).
+Apply context-hygiene per
+[../../references/context-hygiene.md](../../references/context-hygiene.md).
 
-```bash
-FB_LOG=".stenswf/_feedback/$(date -u +%F).jsonl"
-mkdir -p "$(dirname "$FB_LOG")"
-SESSION_START_N=$(wc -l < "$FB_LOG" 2>/dev/null || echo 0)
-export SESSION_START_N
-```
-
-Mode is detected from front-matter `type:` per
-[../../references/extractors.md](../../references/extractors.md):
-
-```bash
-gh issue view $ARGUMENTS --json body -q .body > /tmp/slice-$ARGUMENTS.md
-TYPE=$(get_fm type /tmp/slice-$ARGUMENTS.md)
-```
-
-- `TYPE == "PRD"` → PRD-mode.
-- `TYPE` starts with `slice` → Slice-mode.
-- Fallback: `.stenswf/$ARGUMENTS/manifest.json:.kind`.
-
-**Announce the detected mode** as the first line of output. Then load
-only the matching reference body:
-
-- Slice-mode → read [`slice.md`](slice.md) and execute it.
-- PRD-mode → read [`prd.md`](prd.md) and execute it.
+Detect mode (slice vs PRD) per
+[../../references/mode-detection.md](../../references/mode-detection.md),
+then load `slice.md` or `prd.md` accordingly.
 
 ## Prerequisites (both modes)
 
@@ -74,18 +55,6 @@ only the matching reference body:
 
 ## Feedback
 
-Log friction via
-[../../references/feedback-log.md](../../references/feedback-log.md).
-Set `STENSWF_SKILL=apply` and `STENSWF_ISSUE=$ARGUMENTS` before
-calling `scripts/log-issue.sh`.
-
-On exit, emit the boundary ping:
-
-```bash
-FB_LOG=".stenswf/_feedback/$(date -u +%F).jsonl"
-N=$(wc -l < "$FB_LOG" 2>/dev/null || echo 0)
-SESSION_N=$((N - ${SESSION_START_N:-0}))
-if [ "$SESSION_N" -gt 0 ]; then
-  echo "stenswf: $SESSION_N workflow issues reported this session — see .stenswf/_feedback/"
-fi
-```
+Log friction throughout per
+[../../references/feedback-session.md](../../references/feedback-session.md)
+with `STENSWF_SKILL=apply` and `STENSWF_ISSUE=$ARGUMENTS`.

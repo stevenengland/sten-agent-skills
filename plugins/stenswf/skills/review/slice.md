@@ -63,6 +63,11 @@ Inputs (read ranged, not full):
 - `.stenswf/$ARGUMENTS/decisions.md` — active entries only
   (`grep -E '^### D[0-9]+ '`). Superseded (`### ~~D<n>~~`) ignored.
   Absence is a context note, not a finding.
+- `.stenswf/$ARGUMENTS/lite-notes.md` if present (lite-path assumptions
+  from `plan-light` / `ship-light`). Treated as **soft constraints**:
+  a staged change that contradicts a listed assumption is Low/Info
+  unless it also contradicts `decisions.md` or an AC (then normal
+  severity rules apply). Absence is a context note.
 - `.stenswf/$ARGUMENTS/file-structure.md` if present (architectural context).
 
 ### Define success
