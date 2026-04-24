@@ -1,6 +1,7 @@
 ---
 name: test-file-refactor
 description: Lossy test-file refactor — cull tests that no longer pull their weight (duplicative, tautological, over-mocked, testing removed behaviour) and surface coverage gaps worth filling. The lossy counterpart to test-file-compaction (which preserves every test). Use when test suites have accumulated noise and you want honest signal, not just shorter files.
+disable-model-invocation: true
 ---
 
 **Status:** placeholder — not yet implemented.

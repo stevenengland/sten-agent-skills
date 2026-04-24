@@ -55,6 +55,13 @@ Placeholder skills declare their `name` and `description` but have no
 process body yet. They are visible to the platform's skill index but
 should not be invoked until implemented.
 
+**Explicit invocation only.** Every skill in this plugin is marked
+`disable-model-invocation: true`. The model will not auto-fire them
+based on description matching — you must invoke them explicitly
+(e.g. `/stenswr:plan-reviewer path/to/plan.md`). This is intentional:
+refactor skills rewrite files in place, and placeholder skills are
+unimplemented stubs that must never run silently.
+
 ---
 
 ## Repository Structure

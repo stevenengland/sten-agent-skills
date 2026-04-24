@@ -1,6 +1,7 @@
 ---
 name: security-bug-hunting
 description: Hunt for security defects worth fixing during a refactor — injection vectors, unsafe deserialisation, broken auth/authz, secret leakage, unsafe dependency surface. Language-agnostic counterpart to the security-scanning portion of python-refactor. Use when scoping a refactor and you want security fixes folded into the plan rather than deferred.
+disable-model-invocation: true
 ---
 
 **Status:** placeholder — not yet implemented.

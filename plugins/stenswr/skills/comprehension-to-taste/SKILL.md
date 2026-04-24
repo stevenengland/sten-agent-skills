@@ -1,6 +1,7 @@
 ---
 name: comprehension-to-taste
 description: Research a codebase, then interview the user through three scoped quizzes (scope, blast radius, architecture) to extract and persist the repository's "taste" — a layered profile of conventions, invariants, and design decisions that downstream skills and agents can load on demand. Use when onboarding to an unfamiliar repo, before a non-trivial refactor, when the user says "get a taste of this repo", "understand this codebase", or "write down what this project is about".
+disable-model-invocation: true
 ---
 
 ## Token Efficiency

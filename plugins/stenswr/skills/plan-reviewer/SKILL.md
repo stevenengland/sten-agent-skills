@@ -1,6 +1,7 @@
 ---
 name: plan-reviewer
 description: Reviews a plan markdown file (and optional implementation markdown file) from multiple expert perspectives, produces an improved plan in-place, then implements it. Use when asked to review a plan, evaluate an implementation spec, critique a design proposal, or run a pre-implementation review.
+disable-model-invocation: true
 ---
 
 
