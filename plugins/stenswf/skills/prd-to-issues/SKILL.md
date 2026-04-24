@@ -167,9 +167,8 @@ Iterate until the user approves the breakdown.
 ### 6. Create the issues
 
 Use whichever issue-tracker CLI is available;
-otherwise present the formatted issue body for manual creation. Lifecycle
-labels (`slice`, `hitl`, `afk`, `needs-plan`, `sliced`) are created once per
-repo via the `bootstrap` skill — assume they exist.
+otherwise present the formatted issue body for manual creation. Mode and slice-type are encoded in the
+issue body's `## Type` marker (see template).
 
 Before creating issues, extract the PRD's `## Conventions` section into a
 scratch file:
@@ -186,29 +185,31 @@ using the body template below, inlining the Conventions file verbatim
 where indicated.
 
 Create issues in dependency order (blockers first) so you can reference real
-issue numbers in the "Blocked by" field.
+issue numbers in the "Blocked by" field. Do NOT apply any labels — the
+`## Type` marker in each body is authoritative for mode detection and
+slice-type (`HITL`, `AFK`, or `spike`).
 
-Immediately after creating each slice issue, apply these labels:
-
-- `slice` — marks it as a child of a parent PRD.
-- `hitl` or `afk` — matches the slice's Type.
-- `needs-plan` — indicates no implementation plan has been posted yet (the
-  `plan` skill removes this label when it posts a plan).
-- `spike` — only for spike slices (see Step 3). `ship-light` preflight
-  skips the `arch-unknown` disqualifier for spike slices since their
-  purpose is to resolve unknowns.
-
-After all slice issues have been created, apply the `sliced` label to the
-parent PRD issue so it is clearly marked as broken down.
+Do NOT modify the parent PRD issue either — there is no `sliced` label
+to apply.
 
 <issue-template>
-## Parent PRD
-
-#<prd-issue-number>
 
 ## Type
 
-<!-- HITL or AFK -->
+<!--
+Write exactly one of:
+  slice — HITL
+  slice — AFK
+  slice — spike
+
+This marker replaces the old `hitl`/`afk`/`spike`/`slice` labels.
+Downstream skills (plan, ship, ship-light, review, apply) parse it via
+`awk '/^## Type/,/^## /' | sed '$d' | tail -n +3 | head -1`.
+-->
+
+## Parent PRD
+
+#<prd-issue-number>
 
 ## What to build
 
@@ -277,16 +278,34 @@ Default is `true` when borderline. Only set `false` with a named
 disqualifier.
 -->
 
-## Implementation log
-
-<!-- Leave blank. The `plan` skill appends the
-       implementation plan here as a comment, and `ship`
-     appends progress entries during execution.
-     `ship-light` does not write here. -->
-
 </issue-template>
 
 Do NOT close or modify the parent PRD issue.
+
+### 7. Update the PRD manifest with slice numbers
+
+If the PRD local tree exists (seeded by `prd-from-grill-me`), append
+each created slice issue number to `manifest.json:slices[]`. This lets
+PRD-mode `review` enumerate the expected slice set without re-querying
+the issue tracker:
+
+```bash
+PRD=<prd-number>
+if [ -f ".stenswf/$PRD/manifest.json" ]; then
+  for SLICE in <list of created slice numbers>; do
+    jq --argjson s "$SLICE" \
+      '.slices = ((.slices // []) + [$s] | unique)' \
+      ".stenswf/$PRD/manifest.json" > /tmp/prd-manifest.json \
+      && mv /tmp/prd-manifest.json ".stenswf/$PRD/manifest.json"
+  done
+  printf '{"ts":"%s","event":"slices-registered","slices":[%s]}\n' \
+    "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "<comma-list>" \
+    >> ".stenswf/$PRD/log.jsonl"
+fi
+```
+
+If the PRD tree does not exist (PRD created before the seeding step was
+added), skip silently — `review` will backfill on first PRD-mode run.
 
 **After creating all issues, tell the user:**
 

@@ -112,11 +112,38 @@ steps if you don't consider them necessary.
    git push origin "prd-<N>-base"
    ```
 
-   After creating the issue, apply the `prd` lifecycle label using whichever
-   issue-tracker CLI is available. Labels are
-   created once per repo via the `bootstrap` skill.
+   After creating the issue, do NOT apply any lifecycle label. Mode is detected from the issue body's
+   `## Type` marker (written verbatim as `PRD` in the template below).
 
-   **After creating and labelling the issue, offer the chained handover:**
+   **Seed the PRD local tree.** `review` and `apply` in PRD-mode rely on
+   `.stenswf/<N>/manifest.json` for drift detection and state tracking,
+   matching the slice-side contract. Seed it now so PRD-mode drift
+   detection is anchored to the PRD body at inception rather than a
+   later snapshot:
+
+   ```bash
+   mkdir -p ".stenswf/<N>"
+   gh issue view <N> --json body -q .body > ".stenswf/<N>/concept.md"
+   CONCEPT_SHA=$(sha256sum ".stenswf/<N>/concept.md" | awk '{print $1}')
+   cat > ".stenswf/<N>/manifest.json" <<EOF
+   {
+     "issue": <N>,
+     "kind": "prd",
+     "base_sha": "$PRD_BASE",
+     "concept_sha256": "$CONCEPT_SHA",
+     "plan_created_at": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+     "slices": [],
+     "review_step": {"status": "pending", "sha": null}
+   }
+   EOF
+   printf '{"ts":"%s","event":"prd-created","issue":<N>}\n' \
+     "$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> ".stenswf/<N>/log.jsonl"
+   ```
+
+   Substitute `<N>` with the actual issue number before running. The
+   tree is gitignored (see `bootstrap`); no team-visible side effects.
+
+   **After creating the issue, offer the chained handover:**
 
    Display this prompt verbatim:
 
@@ -136,6 +163,10 @@ steps if you don't consider them necessary.
    including empty, ambiguous, or `N` — stop. Do not invoke `prd-to-issues`.
 
 <prd-template>
+
+## Type
+
+PRD
 
 **PRD base SHA:** <PRD_BASE>
 

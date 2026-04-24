@@ -1,8 +1,8 @@
 ---
 name: bootstrap
-description: One-shot, human-invoked setup for repo-level artifacts (issue-tracker
-  lifecycle labels, etc.) that the planning and shipping skills rely on. Run once
-  per repo.
+description: One-shot, human-invoked setup for repo-level artifacts the planning
+  and shipping skills rely on. Adds `.stenswf/` to `.gitignore` and creates the
+  local state root. Run once per repo.
 disable-model-invocation: true
 ---
 
@@ -19,94 +19,71 @@ this one-shot flow.
 **Human-invoked only.** Subagents and model-initiated flows must not call
 this skill — it is intended to be run once per repository, by a human, before
 the first use of `prd-from-grill-me`, `prd-to-issues`, `plan`, or `ship`. All
-operations are idempotent and safe to re-run (e.g. after adjusting colors or
-descriptions).
+operations are idempotent and safe to re-run.
 
-If labels already exist, the `ship`/`plan`/etc. skills will still work
-without running this skill — they apply labels but do not create them. Running
-this skill upgrades description/colors to the canonical scheme.
-
----
-
-## Issue-tracker detection
-
-Before running the commands below, detect which issue-tracker CLI is usable
-in this repo. Check, in order:
-
-1. `gh auth status` — GitHub (`gh`)
-2. `glab auth status` — GitLab (`glab`)
-3. `tea login list` — Gitea (`tea`)
-4. Other (Jira `acli`, Bitbucket, Azure DevOps, etc.) — adapt the commands
-   below to the platform's label-creation syntax. Every modern tracker
-   supports a label with a name, color, and description.
-
-If no CLI is available or authenticated, ask the user to create the labels
-listed in the table below manually via the tracker's web UI, then continue.
+The workflow skills (`plan`, `ship`, `review`, `apply`) will still work
+without running this skill — they create `.stenswf/` on demand. Running
+this skill once upfront just avoids a surprised first-run.
 
 ---
 
-## Lifecycle labels
+## What this skill provisions
 
-Canonical label set used by the planning and shipping skills. The agent must
-translate these to whichever CLI was detected above. Idempotency note: every
-command below is shown with the `--force` / upsert variant so it is safe to
-re-run.
+1. **`.stenswf/` in `.gitignore`** — the local state root used by `plan`,
+   `ship`, `review`, and `apply` to store per-issue fragments, manifest,
+   review findings, apply state, and append-only audit logs. Gitignored
+   so per-developer state never leaks into team history.
+2. **`.stenswf/` directory** with an empty `.archive/` subdir — created
+   up front so skills never need to `mkdir -p` at dispatch time.
+   Per-issue subtrees (`.stenswf/<issue>/`) are NOT created here — they
+   are seeded by `prd-from-grill-me` at PRD inception and by `plan` at
+   slice planning time. Bootstrap only owns the top-level root.
+3. **No lifecycle labels.** Earlier versions of stenswf provisioned
+   GitHub issue labels (`prd`, `slice`, `planned`, `shipping`, `shipped`,
+   `applied`, etc.). These have been removed; the workflow no longer
+   reads or writes labels. Mode detection and gating use issue-body
+   markers and local state.
 
-### GitHub (`gh`)
+If your repo still carries the old labels from a previous stenswf
+version, they do no harm — this skill neither creates nor deletes them.
+You may delete them manually at your convenience.
+
+---
+
+## Steps
+
+### 1. Add `.stenswf/` to `.gitignore`
 
 ```bash
-gh label create prd        --color 8e44ad --description "Product Requirements Document"             --force
-gh label create sliced     --color 5dade2 --description "PRD has been broken into slice issues"     --force
-gh label create slice      --color 9b59b6 --description "Vertical slice of a parent PRD"            --force
-gh label create hitl       --color f1c40f --description "Slice requires human-in-the-loop input"    --force
-gh label create afk        --color 2ecc71 --description "Slice can be completed without human input" --force
-gh label create needs-plan --color e67e22 --description "Slice issue awaits an implementation plan" --force
-gh label create planned    --color 3498db --description "Implementation plan posted"                --force
-gh label create shipping   --color 1f77b4 --description "Implementation in progress"                --force
-gh label create shipped    --color 0e8a16 --description "Slice PR merged to main"                    --force
-gh label create abandoned  --color 6a737d --description "Slice abandoned; excluded from PRD review"  --force
-gh label create applied    --color 2ea44f --description "PRD capstone cleanup PR merged"             --force
+if ! grep -qxF '.stenswf/' .gitignore 2>/dev/null; then
+  printf '\n# stenswf local planning + execution state\n.stenswf/\n' >> .gitignore
+  echo "added .stenswf/ to .gitignore"
+else
+  echo ".stenswf/ already in .gitignore"
+fi
 ```
 
-### GitLab (`glab`) — translation reference
+Commit the `.gitignore` change if the repo convention requires it — this
+is the only team-visible artifact this skill touches.
+
+### 2. Create the local state root
 
 ```bash
-for pair in \
-  "prd:#8e44ad:Product Requirements Document" \
-  "sliced:#5dade2:PRD has been broken into slice issues" \
-  "slice:#9b59b6:Vertical slice of a parent PRD" \
-  "hitl:#f1c40f:Slice requires human-in-the-loop input" \
-  "afk:#2ecc71:Slice can be completed without human input" \
-  "needs-plan:#e67e22:Slice issue awaits an implementation plan" \
-  "planned:#3498db:Implementation plan posted" \
-  "shipping:#1f77b4:Implementation in progress" \
-  "shipped:#0e8a16:Slice PR merged to main" \
-  "abandoned:#6a737d:Slice abandoned; excluded from PRD review" \
-  "applied:#2ea44f:PRD capstone cleanup PR merged" ; do
-    name="${pair%%:*}"; rest="${pair#*:}"; color="${rest%%:*}"; desc="${rest#*:}"
-    glab label create --name "$name" --color "$color" --description "$desc" || \
-    glab label update "$name" --color "$color" --description "$desc"
-done
+mkdir -p .stenswf/.archive
+touch .stenswf/.archive/.keep
 ```
 
-### Other trackers
+`.stenswf/` is gitignored, but creating it upfront lets `plan` write
+into `.stenswf/<issue>/` on first use without a `mkdir -p` surprise.
 
-Adapt the name/color/description triples above to the platform's label API.
-Canonical names (must match exactly): `prd`, `sliced`, `slice`, `hitl`,
-`afk`, `needs-plan`, `planned`, `shipping`, `shipped`, `abandoned`,
-`applied`.
+### 3. Confirm
 
-## Lifecycle overview
+```bash
+ls -la .stenswf/
+grep '.stenswf/' .gitignore
+```
 
-| Label         | Applied by                         | Removed by            |
-|---------------|------------------------------------|-----------------------|
-| `prd`         | `prd-from-grill-me` (PRD issue)    | —                     |
-| `sliced`      | `prd-to-issues` (parent PRD)       | —                     |
-| `slice`       | `prd-to-issues` (each child)       | —                     |
-| `hitl`/`afk`  | `prd-to-issues` (each child)       | —                     |
-| `needs-plan`  | `prd-to-issues` (each child)       | `plan`                |
-| `planned`     | `plan`                             | —                     |
-| `shipping`    | `ship` (Phase 1 start)             | `ship` (Phase 4 merge)|
-| `shipped`     | `ship` (Phase 4 after PR merge)    | —                     |
-| `abandoned`   | human (marks a slice as withdrawn) | —                     |
-| `applied`     | `apply` (PRD-mode, after cleanup PR merge) | —             |
+Done. Tell the user:
+
+> stenswf local state initialised. `.stenswf/` is gitignored; per-issue
+> fragments will be created by `/stenswf:plan <issue>` on first use.

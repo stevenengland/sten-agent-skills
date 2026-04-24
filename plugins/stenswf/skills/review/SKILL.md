@@ -1,40 +1,83 @@
 ---
 name: review
-description: Review changes against an issue, slice, or PRD. Slice-mode uses plan-reviewer; PRD-mode runs a 5-axis capstone review on the full delivered diff.
+description: Review changes against an issue, slice, or PRD. Slice-mode runs an
+  inline plan-only four-perspective critique and writes local findings. PRD-mode
+  runs a 5-axis capstone review on the delivered diff and mirrors the capstone
+  to the forthcoming cleanup PR.
 disable-model-invocation: true
 ---
 
 ## Token Efficiency
 
 **Load and apply the `brevity` skill now, before the first response.**
-It governs reasoning, status updates, axis-by-axis narration, and
-orchestration chatter. The review-plan / PRD-review comment posted to the
-issue is a full-prose artifact (already excluded by `brevity`'s Scope
-section) — write it normally.
+It governs reasoning, axis-by-axis narration, and orchestration chatter.
+The review artifacts (slice suggestions, PRD capstone XML) are full-prose
+artifacts (already excluded by `brevity`'s Scope section).
 
 ---
 
 You are in **plan-only mode**. Do not apply edits, create files outside
-`/tmp/`, or run state-modifying git commands. Your only output is a
-structured review plan added to the target issue as a comment.
+`.stenswf/<issue>/` or `/tmp/`, or run state-modifying git commands. Your
+output is a structured review artifact on disk.
 
 ## Mode Detection
 
-Inspect the labels of issue `$ARGUMENTS`:
+Mode is detected from the issue body's `## Type` marker (not from labels
+— labels were removed from stenswf). Fetch and parse:
 
 ```bash
-gh issue view $ARGUMENTS --json labels -q '.labels[].name'
+gh issue view $ARGUMENTS --json body -q .body > /tmp/slice-$ARGUMENTS.md
+TYPE=$(awk '/^## Type/,/^## /' /tmp/slice-$ARGUMENTS.md \
+  | sed '$d' | tail -n +3 | head -1 | tr -d '[:space:]')
 ```
 
-- Label includes `prd` (and not `slice`) → **PRD-mode** (capstone review).
-- Label includes `slice` (or neither label is the `prd` label) →
-  **Slice-mode** (default, per-slice review).
+- `$TYPE == "PRD"` → **PRD-mode** (capstone review).
+- `$TYPE` starts with `slice` → **Slice-mode**.
+- Unrecognised or missing → check local `.stenswf/$ARGUMENTS/manifest.json`
+  (`.kind` field) as cache. Otherwise ask the user.
 
-**Announce the detected mode** as your first line of output, e.g.:
+**Announce the detected mode** as your first line of output.
 
-> Detected PRD-mode for issue #$ARGUMENTS. Running 5-axis capstone review.
+## Drift check (both modes)
 
-The rest of this skill branches on mode.
+Before reviewing, re-hash the current issue body and compare against
+`.stenswf/$ARGUMENTS/manifest.json:concept_sha256` if it exists. On
+mismatch, present the `(r)e-plan / (c)ontinue / (a)bort` menu (same
+contract as `ship`). On the `r`e-plan branch, after the user accepts,
+overwrite `concept.md` with the current body, recompute
+`concept_sha256`, and append a `drift-replan` entry to `log.jsonl`.
+
+## PRD-mode local-state backfill
+
+PRD-mode assumes `.stenswf/$ARGUMENTS/{manifest.json,concept.md}` exist
+(seeded by `prd-from-grill-me` at inception). For PRDs created before
+the seeding step was added, backfill on first run if missing:
+
+```bash
+if [ "$TYPE" = "PRD" ] && [ ! -f ".stenswf/$ARGUMENTS/manifest.json" ]; then
+  mkdir -p ".stenswf/$ARGUMENTS"
+  cp "/tmp/slice-$ARGUMENTS.md" ".stenswf/$ARGUMENTS/concept.md"
+  CONCEPT_SHA=$(sha256sum ".stenswf/$ARGUMENTS/concept.md" | awk '{print $1}')
+  PRD_BASE=$(git rev-parse "prd-$ARGUMENTS-base" 2>/dev/null \
+    || grep -oP 'PRD base SHA:\s*\K[0-9a-f]{7,40}' ".stenswf/$ARGUMENTS/concept.md")
+  cat > ".stenswf/$ARGUMENTS/manifest.json" <<EOF
+{
+  "issue": $ARGUMENTS,
+  "kind": "prd",
+  "base_sha": "$PRD_BASE",
+  "concept_sha256": "$CONCEPT_SHA",
+  "plan_created_at": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+  "slices": [],
+  "review_step": {"status": "pending", "sha": null}
+}
+EOF
+  printf '{"ts":"%s","event":"prd-manifest-backfilled"}\n' \
+    "$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> ".stenswf/$ARGUMENTS/log.jsonl"
+fi
+```
+
+Announce when a backfill happened so the user knows drift detection is
+seeded against the current body (not a prior snapshot).
 
 ---
 
@@ -42,182 +85,230 @@ The rest of this skill branches on mode.
 
 Review staged changes against issue number $ARGUMENTS.
 
-## Step 1 — Change Review
+**Hard constraint — plan-only.** Slice-mode review is read-only against
+the codebase and the plan artifacts. Do NOT invoke the `plan-reviewer`
+skill here: its contract rewrites plan files in-place and then
+implements the revised plan, which is incompatible with this skill's
+plan-only guarantee. The only files this mode may create or modify are
+under `.stenswf/$ARGUMENTS/review/` and `/tmp/`. No `git add`, no
+`git commit`, no `gh issue comment`, no edits to source or test files,
+no edits to plan fragments under `.stenswf/$ARGUMENTS/` outside the
+`review/` subdirectory.
 
-Invoke the `plan-reviewer` skill and follow its process to generate
-a structured improvement plan based on the staged changes and the issue.
+## Step 1 — Change Review (inline four-perspective critique)
+
+Inputs (read, do not cat into context wholesale — use `awk` / ranged
+reads):
+
+- Staged diff: `git diff --staged > /tmp/review-$ARGUMENTS-staged.patch`.
+- Issue body: `/tmp/slice-$ARGUMENTS.md` (fetched above).
+- `.stenswf/$ARGUMENTS/conventions.md` if present.
+- `.stenswf/$ARGUMENTS/acceptance-criteria.md` if present.
+- `.stenswf/$ARGUMENTS/file-structure.md` if present (for architectural
+  context only).
+
+### Define success
+
+Before the four passes, write one sentence to
+`/tmp/review-$ARGUMENTS-findings.md`:
+
+> This slice succeeds if [outcome, derived from ACs].
+
+Use it as the evaluation frame for all four perspectives.
+
+### Four perspectives (one at a time; do not collapse)
+
+Work axis-by-axis. For each pass, append findings to
+`/tmp/review-$ARGUMENTS-findings.md` tagged with the perspective. Stay in
+scope per perspective — if you notice an issue belonging to another
+perspective, jot `→ <Perspective>` and handle it in that pass.
+
+**Perspective 1 — DevOps / SRE.** Deployment complexity, operability
+(logging, observability, rollback, config), what breaks first in prod,
+silent assumptions about external services, simpler operational shape.
+
+**Perspective 2 — Peer Reviewer.** Logical contradictions, whether the
+code solves the stated problem or a proxy, E2E coverage of critical
+user-facing paths, unhandled edge cases (empty input, concurrent access,
+failure mid-sequence), materially simpler approach ignored, and — most
+important here — **Plan / AC deviation**: does the staged diff match
+what the issue body + `conventions.md` + `acceptance-criteria.md`
+describe? Tag plan deviations as **High** severity by default unless
+trivial.
+
+**Perspective 3 — Security Engineer.** Realistic threat surface for this
+project, new trust boundaries or exposed interfaces, secrets and
+credential handling, new dependencies' trust/patch surface. Do not apply
+an enterprise checklist to a small project.
+
+**Perspective 4 — Software Architect.** Structural fit, unnecessary
+coupling, abstraction level, whether the design serves the project's
+stated priorities, documentation updates (README/ADRs/API docs) required
+by these changes, rewrite cost if the most likely next requirement
+arrives.
+
+### Severity guide
+
+- **Critical** — data loss, security breach, or crash on the happy path.
+- **High** — incorrect behaviour, likely runtime bug, or plan deviation.
+- **Medium** — maintainability, clarity, or coverage gap with real cost.
+- **Low** — nit, style, minor readability.
 
 ## Step 2 — Test Compaction
 
-Invoke the `test-file-compaction` skill. Identify opportunities to
-reduce test file size without losing coverage.
-
-Express test-compaction opportunities as additional suggestions in the same
-plan structure used in Step 1.
+Invoke the `test-file-compaction` skill (read-only diagnostic). Express
+opportunities as additional suggestions in the Step 1 list structure.
 
 ## Slice-mode Output
 
-Produce a single, numbered list of suggestions that combines the results of
-Step 1 and Step 2. For each item state:
+Produce a single, numbered list of suggestions combining Step 1 and Step
+2. For each item:
 
 1. **What** — what should change.
 2. **Why** — why it improves the code.
 3. **Priority** — low / medium / high.
 
-Each suggestion should be concise. Refer to symbols and files by name instead
-of quoting long code fragments.
+Close with a one-line summary: counts of high / medium / low priority.
 
-Close with a one-line summary: how many suggestions are high, medium, and
-low priority.
+**Write locally** — not as an issue comment:
 
-Add the completed improvement plan as a comment on the issue, clearly
-labelled as the review plan for issue $ARGUMENTS.
+```bash
+mkdir -p ".stenswf/$ARGUMENTS/review"
+cat > ".stenswf/$ARGUMENTS/review/slice.md" << 'EOF'
+# Review plan for issue $ARGUMENTS
+
+<numbered suggestions with What / Why / Priority>
+
+Summary: N high | M medium | K low
+EOF
+```
+
+Tell the user:
+
+> Slice review written to `.stenswf/$ARGUMENTS/review/slice.md`. Run
+> `/stenswf:apply $ARGUMENTS` to walk suggestions interactively.
 
 ---
 
 # PRD-mode — 5-axis capstone review
 
 PRD-mode reviews an entire delivered PRD: the union of all merged slices
-since the PRD was recorded. It is a **strategic** review, not a per-file
-code review — focus on whether the PRD was delivered coherently.
+since the PRD was recorded. Strategic review, not per-file code review.
 
 ## Step 0 — Strict gating
 
-Refuse to run while any slice of this PRD is still open. Query:
+Refuse to run while any slice of this PRD is still open. Query via body
+reference (not via labels):
 
 ```bash
-gh issue list --label slice --state open \
-  --search "in:body \"Parent PRD\" \"#$ARGUMENTS\""
+gh issue list --state open \
+  --search "in:body \"Parent PRD\" \"#$ARGUMENTS\"" \
+  --json number,title
 ```
 
-If any rows return, stop and tell the user:
+If any rows return, stop:
 
-> PRD-review blocked: slices still open (#A, #B, #C…). Ship or abandon
-> them (apply the `abandoned` label) before re-running.
+> PRD-review blocked: slices still open (#A, #B, #C…). Ship them first.
 
-Also honor the `abandoned` label: abandoned slices are excluded from the
-open check (`--state open` already excludes closed ones; ensure any
-`abandoned`-labelled open issues are either closed or re-opened as slice
-work — if they are open and labelled `abandoned`, treat as closed for this
-gate and warn the user).
+A slice that was abandoned without shipping should be closed manually
+(`gh issue close <N> --reason "not planned"`) before re-running. There
+is no `abandoned` label in the current stenswf.
 
 ## Step 1 — Resolve the PRD base
 
-The PRD body, written by `prd-from-grill-me`, contains a line:
+The PRD body contains:
 
 ```
 **PRD base SHA:** <sha>
 ```
 
-And a matching git tag `prd-<issue>-base` pointing to that SHA.
+And a matching git tag `prd-<issue>-base`.
 
 ```bash
 PRD_BASE=$(git rev-parse "prd-$ARGUMENTS-base" 2>/dev/null)
 if [ -z "$PRD_BASE" ]; then
-  # Fallback: parse from PRD body
   PRD_BASE=$(gh issue view $ARGUMENTS --json body -q .body \
     | grep -oP 'PRD base SHA:\s*\K[0-9a-f]{7,40}')
 fi
-echo "PRD_BASE: $PRD_BASE"
 ```
 
-If neither source resolves, stop and ask the user for the base SHA.
+If neither source resolves, ask for the base SHA.
 
 ## Step 2 — Compute the delivered diff
 
 ```bash
-git diff "$PRD_BASE..HEAD" --stat > /tmp/prd-$ARGUMENTS-stat.txt
-git diff "$PRD_BASE..HEAD"       > /tmp/prd-$ARGUMENTS-diff.patch
-wc -l /tmp/prd-$ARGUMENTS-diff.patch
+mkdir -p ".stenswf/$ARGUMENTS/review"
+git diff "$PRD_BASE..HEAD" --stat > "/tmp/prd-$ARGUMENTS-stat.txt"
+git diff "$PRD_BASE..HEAD"       > "/tmp/prd-$ARGUMENTS-diff.patch"
+wc -l "/tmp/prd-$ARGUMENTS-diff.patch"
 ```
 
 **Soft warning.** If the diff touches > 50 files OR > 5000 added lines,
-emit:
+emit a warning but continue.
 
-> Warning: delivered diff is large (<N> files, <M> added lines). The
-> capstone review will still run, but consider whether some themes could
-> have been split into separate PRDs.
-
-Continue regardless.
-
-## Step 3 — Check for prior review (idempotent delta-review)
+## Step 3 — Check for prior review (idempotent delta)
 
 ```bash
-gh issue view $ARGUMENTS --json comments \
-  -q '.comments[] | select(.body|contains("<prd-review for=")) | .body' \
-  > /tmp/prd-$ARGUMENTS-prior.md
-wc -l /tmp/prd-$ARGUMENTS-prior.md
+[ -s ".stenswf/$ARGUMENTS/review/prd-review.xml" ] && \
+  PRIOR_SHA=$(grep -oP 'reviewed-at="\K[0-9a-f]+' \
+    ".stenswf/$ARGUMENTS/review/prd-review.xml" | head -1)
 ```
 
-If prior review exists and non-empty:
+If prior review at current `HEAD`: tell user *"PRD already reviewed at
+this SHA. Nothing new to review."* and stop. Otherwise compute the delta
+diff `<prior-sha>..HEAD` and review only the delta. Carry forward
+unresolved prior findings.
 
-- Extract the SHA it reviewed against (look for `reviewed-at="<sha>"`
-  attribute in the prior `<prd-review>` tag).
-- If that SHA equals current `HEAD`, tell the user: *"PRD already reviewed
-  at this SHA. Nothing new to review."* and stop.
-- Otherwise compute the **delta diff** (`<prior-sha>..HEAD`) and review
-  only the delta. Carry over prior-review findings that are still
-  unresolved (not yet applied) so the user sees a cumulative view.
+## Step 4 — Five-axis review (axis-by-axis)
 
-## Step 4 — Five-axis review (axis-by-axis, not file-by-file)
+Do NOT read slice-level plans, implementation logs, or slice-level review
+comments. The capstone reviews delivered code against the PRD's original
+intent, not intermediate artifacts.
 
-Do **not** read any slice-level plans, implementation logs, or slice-level
-review comments. The capstone reviews the delivered code against the PRD's
-original intent, not against intermediate artifacts.
+Inputs: PRD body, `/tmp/prd-$ARGUMENTS-stat.txt`, the diff patch file
+(read hunks via `awk` or ranged reads — never `cat` the full patch).
 
-Inputs: PRD body, `/tmp/prd-$ARGUMENTS-stat.txt`, and the diff patch file
-(read hunks with `awk` or ranged reads — never `cat` the full patch).
-
-Work one axis at a time. For each axis, append findings to
+Work one axis at a time. Append findings to
 `/tmp/review-$ARGUMENTS-findings.md`:
 
 ### Axis 1 — Alignment
 
-Does the delivered code match what the PRD said it would deliver? Look for
-user stories or acceptance criteria that are not reflected in the diff,
-and for code that doesn't correspond to anything the PRD described.
+Does the delivered code match what the PRD said? User stories / ACs not
+reflected? Code that doesn't correspond to anything the PRD described?
 
 ### Axis 2 — Scope
 
-Did the implementation stay within scope? Flag obvious scope-creep
-(features, refactors, or infrastructure not mentioned in the PRD). Flag
-obvious scope-cuts (PRD requirements quietly dropped).
+Obvious scope-creep? Obvious scope-cuts?
 
 ### Axis 3 — Architectural coherence
 
-Do the slices together form a coherent architecture, or do they show
-patches-on-patches? Look for: duplicated abstractions across slices,
-inconsistent module boundaries, mixed paradigms, dead or orphaned code
-paths.
+Do the slices together form a coherent architecture? Duplicated
+abstractions across slices, inconsistent boundaries, mixed paradigms,
+dead code paths?
 
 ### Axis 4 — Test strategy
 
-Does the test coverage match the risk surface described in the PRD? Flag
-critical user stories without E2E coverage, integration gaps between
-slice boundaries, and test patterns that drifted across slices.
+Does coverage match the PRD's risk surface? Critical user stories
+without E2E coverage, integration gaps, drifted patterns?
 
 ### Axis 5 — Ops readiness
 
-Does the delivered system acknowledge the operational concerns the PRD
-raised (or should have raised)? Logging, observability, rollback, config,
-failure modes, degraded behavior.
+Logging, observability, rollback, config, failure modes.
 
 ### Hunk-level reads
-
-When a finding needs code context, read only the relevant hunks:
 
 ```bash
 awk '/^diff --git .*<path>/{p=1} p{print} /^diff --git/ && !/<path>/ && p{exit}' \
   /tmp/prd-$ARGUMENTS-diff.patch
 ```
 
-Or read the file at HEAD with a line range around the change. Never load
-full files or full patches.
+Or ranged reads of files at HEAD. Never full files, never full patches.
 
 ## Step 5 — Output
 
-Post a single comment on the PRD issue using this XML-anchored structure.
-The anchors let future `apply` runs extract findings deterministically.
+Write the capstone to `.stenswf/$ARGUMENTS/review/prd-review.xml` using
+the XML-anchored structure below. Finding IDs are globally unique (F1,
+F2, F3…). Severity: `critical`, `high`, `medium`, `low`.
 
 ```xml
 <prd-review for="#$ARGUMENTS" reviewed-at="<HEAD SHA>" base="<PRD_BASE>">
@@ -232,24 +323,12 @@ One paragraph: what was delivered, overall judgment, top concern.
 <why>...</why>
 <evidence>file.ts L42–L55; PRD user story #7</evidence>
 </finding>
-<finding id="F2" severity="medium">...</finding>
 </axis>
 
-<axis name="scope">
-<finding id="F3" severity="low">...</finding>
-</axis>
-
-<axis name="architectural-coherence">
-...
-</axis>
-
-<axis name="test-strategy">
-...
-</axis>
-
-<axis name="ops-readiness">
-...
-</axis>
+<axis name="scope">...</axis>
+<axis name="architectural-coherence">...</axis>
+<axis name="test-strategy">...</axis>
+<axis name="ops-readiness">...</axis>
 
 <counts>
 critical: 0 | high: 2 | medium: 3 | low: 4
@@ -258,13 +337,17 @@ critical: 0 | high: 2 | medium: 3 | low: 4
 </prd-review>
 ```
 
-Finding IDs are globally unique across axes (F1, F2, F3…) so `apply` can
-reference them without axis qualifier. Severity levels: `critical`,
-`high`, `medium`, `low`.
+### Mirror a human-readable summary to a PR comment (if any findings)
 
-If no findings in any axis, emit a minimal `<prd-review>` with just the
-`<summary>` and `<counts>` (all zeros), and tell the user:
+When `apply` opens the cleanup PR, it will post the `<prd-review>` content
+as a PR comment (Q5a — local authoritative + PR mirror for team
+visibility). `review` itself does not touch the PR — but this contract is
+why the file is written in stable XML.
+
+If **zero findings**, emit a minimal `<prd-review>` with just `<summary>`
+and `<counts>` (all zeros), write it to disk, and tell the user:
 
 > PRD #$ARGUMENTS reviewed. No findings. Run `/stenswf:apply $ARGUMENTS`
-> to finalize: it will detect the zero-findings review, apply the
-> `applied` label, and close the PRD (no cleanup PR is opened).
+> to finalize (no cleanup PR will be opened).
+
+No labels are applied anywhere.

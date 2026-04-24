@@ -1,7 +1,8 @@
 ---
 name: plan
-description: Understand and plan an issue end-to-end. Produces an implementation plan
-  posted as a comment on the issue.
+description: Understand and plan a slice issue end-to-end. Produces a local plan
+  tree under `.stenswf/<issue>/` with per-task fragments, a stable-prefix dispatch
+  file, and a manifest. The issue body remains the conceptual contract.
 disable-model-invocation: true
 ---
 
@@ -12,8 +13,8 @@ in this session.** It governs all Phase 0 and Phase 1 dialogue, including
 internal reasoning and tool-use narration. Self-check every message against
 its rules before sending — do not drift into full prose on internal thinking.
 
-Do not apply `brevity` to the Phase 2 plan document itself — the plan is
-written in full prose for a context-naive implementer agent.
+Do not apply `brevity` to the Phase 2 plan artifacts themselves — task
+fragments are written in full prose for a context-naive implementer agent.
 
 ---
 
@@ -22,8 +23,7 @@ Plan the implementation of issue number $ARGUMENTS.
 ## Audience
 
 The planner (you, in this skill) is highly skilled and has full codebase
-context. The implementer (the `ship` skill) is a skilled
-developer but:
+context. The implementer (the `ship` skill) is a skilled developer but:
 
 - Has zero context for this codebase.
 - Knows almost nothing about its toolset or problem domain.
@@ -32,16 +32,28 @@ developer but:
 - Executes **one task at a time** in a fresh subagent session with no memory
   of previous tasks.
 
-Write the plan for that implementer. Each task must be fully self-contained:
-document exactly which files to touch, which existing code to read first,
-which tests to write, which commands to run, and what to commit. Bite-sized
-tasks. DRY. YAGNI. TDD. Frequent commits.
+Write the plan for that implementer. Each task fragment must be fully
+self-contained: document exactly which files to touch, which existing
+code to read first, which tests to write, which commands to run, and
+what to commit. Bite-sized tasks. DRY. YAGNI. TDD. Frequent commits.
+
+## Where artifacts live
+
+All plan artifacts are written under `.stenswf/$ARGUMENTS/` (gitignored,
+repo-root). The issue body holds only the **conceptual plan** from
+`prd-to-issues`: `What to build`, `Acceptance criteria`, `Conventions
+(from PRD)`, `Files (hint)`, `Blocked by`, `## Type` marker. The fine
+implementation plan never touches the issue. Labels are not used.
+
+If `.stenswf/` does not yet exist, create it (or run the `bootstrap`
+skill once). On re-run with `--resume`, preserve completed task entries
+and regenerate the rest (see *Phase 3 — Resume*).
 
 ## Scope Check
 
-If the issue spans multiple independent subsystems, stop and suggest splitting
-it into sub-issues using the `prd-to-issues` skill before planning. Each plan
-should produce working, testable software on its own.
+If the issue spans multiple independent subsystems, stop and suggest
+splitting it into sub-issues using the `prd-to-issues` skill before
+planning. Each plan should produce working, testable software on its own.
 
 ---
 
@@ -49,72 +61,49 @@ should produce working, testable software on its own.
 
 Complete this phase before any codebase exploration or interview questions.
 
-Fetch the issue and read it fully:
+Fetch the issue and extract the conceptual slice into a scratch file —
+never `cat` the issue body into context directly:
 
+```bash
+gh issue view $ARGUMENTS --json body -q .body > /tmp/slice-$ARGUMENTS.md
+wc -l /tmp/slice-$ARGUMENTS.md   # confirm; do not cat
 ```
-gh issue view $ARGUMENTS   # or glab issue view $ARGUMENTS
-```
 
-Extract and record:
+Extract and record (via `awk`, one section at a time):
 
+- [ ] **Kind marker.** `awk '/^## Type/,/^## /' /tmp/slice-$ARGUMENTS.md | sed '$d' | tail -n +3`.
+      Expect `slice — HITL`, `slice — AFK`, or `slice — spike`. If
+      missing or says `PRD`, stop and tell the user this issue is not a
+      slice.
 - [ ] **Parent PRD** issue number (from `## Parent PRD` section).
-- [ ] **Parent PRD body** — fetch via redirect-then-awk so only the
-      sections this slice needs enter context. Never `cat` the PRD body.
+- [ ] **Parent PRD body sections this slice needs** — fetch via
+      redirect-then-awk:
 
       ```bash
       gh issue view <parent-prd> --json body -q .body > /tmp/prd-<parent-prd>.md
-      wc -l /tmp/prd-<parent-prd>.md   # confirm; do not cat
-      # Extract only the sections this plan needs:
       awk '/^## User Stories/,/^## /'            /tmp/prd-<parent-prd>.md | sed '$d'
       awk '/^## Implementation Decisions/,/^## /' /tmp/prd-<parent-prd>.md | sed '$d'
       awk '/^## Out of Scope/,/^## /'             /tmp/prd-<parent-prd>.md | sed '$d'
       ```
-
-      Record which user-story bullets this slice addresses and any
-      `Out of Scope` line items to avoid.
-- [ ] **Type** — HITL or AFK (from `## Type` section). If absent, treat as
-      HITL.
-- [ ] **Conventions (from PRD)** — extract the `## Conventions (from PRD)`
-      section from the slice body. This is hard spec — naming, shape,
-      layout, error surfacing, vocabulary resolved in the parent PRD.
-      Copy verbatim into the Phase 2 `<conventions>` block.
+- [ ] **Slice type.** From the kind marker (`HITL`, `AFK`, or `spike`).
+- [ ] **Conventions (from PRD)** — extract the slice's `## Conventions
+      (from PRD)` section verbatim; it becomes `conventions.md` in Phase 2.
 
       ```bash
-      gh issue view $ARGUMENTS --json body -q .body > /tmp/slice-$ARGUMENTS.md
       awk '/^## Conventions \(from PRD\)/,/^## /' /tmp/slice-$ARGUMENTS.md \
         | sed '$d' > /tmp/slice-$ARGUMENTS-conventions.md
-      wc -l /tmp/slice-$ARGUMENTS-conventions.md
       ```
-
-      If the extracted content is `None — slice-local decisions only.`, the
-      slice has no cross-cutting conventions; still emit the
-      `<conventions>` block with that exact line so `ship` dispatches stay
-      cache-stable.
-- [ ] **Acceptance criteria** — list every criterion verbatim. Each must map
-      to at least one plan task.
-- [ ] **Blocked by** — for each blocking issue, fetch its implementation
-      plan comment using the redirect-then-awk pattern below so only the
-      interfaces you need enter context. These are available to use; do not
-      re-derive or re-implement them.
-
-      ```bash
-      gh issue view <blocker> --json comments \
-        -q '.comments[] | select(.body|contains("Implementation plan for issue")) | .body' \
-        > /tmp/plan-<blocker>.md
-      wc -l /tmp/plan-<blocker>.md   # confirm file wrote; do not cat it
-      awk '/<file-structure>/,/<\/file-structure>/'  /tmp/plan-<blocker>.md
-      awk '/<acceptance-criteria>/,/<\/acceptance-criteria>/'  /tmp/plan-<blocker>.md
-      ```
-
-      Only the extracted tagged sections enter context. Never `cat` the file.
-- [ ] **Interview depth** — set based on Type:
-  - **AFK**: abbreviated interview. Confirm orientation checklist, produce
-    3–5 Design Decision entries, then proceed directly to Phase 2. Skip
-    speculative design branches.
-  - **HITL**: full interview. Resolve all design branches before proceeding.
-
-If the issue body is missing required sections (Type, Acceptance criteria),
-note the gaps and proceed with HITL mode.
+- [ ] **Acceptance criteria** — list every criterion verbatim. Each must
+      map to at least one plan task.
+- [ ] **Blocked by** — for each blocker, read its local plan if available
+      (`.stenswf/<blocker>/file-structure.md`, `.stenswf/<blocker>/acceptance-criteria.md`).
+      If the blocker was shipped via `ship-light`, the issue body's
+      `Files (hint)` is the only spec — fetch that.
+- [ ] **Interview depth** — set based on slice type:
+  - **AFK**: abbreviated interview. Confirm orientation, produce 3–5
+    Design Decision entries, then proceed directly to Phase 2.
+  - **HITL**: full interview. Resolve all design branches before Phase 2.
+  - **spike**: abbreviated; the slice exists to land types / vocabulary.
 
 ---
 
@@ -122,11 +111,7 @@ note the gaps and proceed with HITL mode.
 
 ### Orientation (complete before interview)
 
-Before asking any interview questions, ground your recommendations in the
-codebase. Do **not** read these files directly into this session — delegate
-to a read-only exploration subagent and let it distill the findings.
-
-Dispatch an `Explore` subagent with this prompt:
+Dispatch an `Explore` subagent; do not read files directly in this session.
 
 > For issue #$ARGUMENTS, return a concise orientation summary (≤300 words):
 >
@@ -143,12 +128,6 @@ Dispatch an `Explore` subagent with this prompt:
 >
 > Do NOT paste file contents. Symbol paths and 1-sentence descriptions only.
 
-**Escape hatch:** if during the interview the user asks to see a specific
-file verbatim, read it directly then — not during orientation.
-
-Do not ask the first interview question until the orientation summary is
-in hand.
-
 ### Interview
 
 Interview me relentlessly about every aspect of the plan until we reach a
@@ -156,173 +135,210 @@ shared understanding. Walk down each branch of the design tree and resolve
 dependencies between decisions one-by-one.
 
 - For each question, provide your recommended answer and reasoning.
-- If a question can be answered by exploring the codebase, explore the
-  codebase instead.
+- If a question can be answered by exploring the codebase, dispatch a
+  targeted Explore subagent.
 - Propose 2–3 different approaches with trade-offs.
 - Lead with your recommended option and explain why.
 - Go back and clarify when something doesn't make sense.
-
-When a recommendation touches a problem that an industry leader has solved
-publicly, research how they approach it and briefly weave the relevant pattern
-or practice into your recommendation. Cite the company and the specific
-practice so I can evaluate the reasoning. Only cite a company or industry
-practice when it actively distinguishes between two approaches currently under
-consideration. Do not reference a practice to validate a decision already made.
+- Cite industry practice only when it actively distinguishes between two
+  options currently in play.
 
 Do not write any code in this phase.
 
 ### Design Decisions Log
 
-After each major design branch is resolved, append a one-line entry to a
-running log at the top of your response under the heading
-`## Design Decisions`:
+Maintain a running log of resolved decisions at the top of your response:
 
     ## Design Decisions
     - [topic]: [chosen approach] — [one-sentence rationale]
-    - [topic]: [chosen approach] — [one-sentence rationale]
 
-This log is the primary input to Phase 2. If the log exceeds ~10 entries
-before the interview is complete, the issue likely spans independent
-subsystems — stop and suggest splitting via the `prd-to-issues` skill before
-continuing.
+If the log exceeds ~10 entries before the interview is complete, the
+issue likely spans independent subsystems — stop and suggest splitting.
 
 ---
 
-## Phase 2 — Implementation Plan
+## Phase 2 — Write the local plan tree
 
-Write the plan as a single markdown document. Wrap each major section in
-XML-style anchors so downstream agents (ship, review, apply) can extract
-exact sections via `awk`. The prose inside tags is plain markdown.
-
-**Brevity scope in the plan document:**
-- `brevity` Rules APPLY to: `<house-rules>`, `<design-summary>`,
-  `<assumptions>`. These are read repeatedly across subagents — keep them
-  tight (short sentences, no filler, bullets for 3+ items).
-- `brevity` Rules DO NOT apply to `<conventions>` (copied verbatim from
-  the slice body — do not paraphrase), task bodies, test code, commands,
-  file paths, `<file-structure>` descriptions, or the `<review-step>` —
-  these are prescriptive artifacts for a weak-test-instinct implementer.
-  Full prose, exact details.
-
-Produce the document compactly: reference existing code by symbol path
-(`path/to/file.py::ClassName.method`) rather than pasting it. Write new
-code in the plan only where no analogous code exists in the repo, and only
-as much as the implementer needs.
-
-The `tdd` and `clean-code` skills are invoked by the implementer; do
-not duplicate their content here — reference them by name. Commit messages
-are pre-written verbatim in each task (see `<task>` template below) — the
-implementer copies them; no commit-format skill needed.
-
-**Conventional commit format for `commit="…"` attributes** (inlined for
-the planner — no skill load needed):
+Materialise the following files under `.stenswf/$ARGUMENTS/`:
 
 ```
-<type>(<scope>): <imperative summary, lower case, no period, ≤72 chars>
+.stenswf/$ARGUMENTS/
+├── manifest.json
+├── concept.md              # verbatim issue body at plan time (for drift)
+├── stable-prefix.md        # assembled dispatch prefix (verbatim for cache)
+├── conventions.md          # verbatim from slice body's Conventions section
+├── house-rules.md
+├── design-summary.md
+├── acceptance-criteria.md
+├── file-structure.md
+├── assumptions.md
+├── review-step.md
+└── tasks/
+    ├── T10.md
+    ├── T20.md
+    └── T<last>.md          # documentation task (always last)
 ```
 
-`type` is one of: `feat`, `fix`, `refactor`, `perf`, `docs`, `test`,
-`chore`, `build`, `ci`, `style`, `revert`. `scope` is optional; use the
-top-level module or area touched. Breaking changes: add `!` after the
-type/scope. The `Refs: #$ARGUMENTS T<id>` trailer is added by the
-implementer at commit time, not written into the `commit="…"` attribute.
+Each file's content rules follow. Brevity Rules apply to
+`house-rules.md`, `design-summary.md`, `assumptions.md`. They do NOT
+apply to `conventions.md` (verbatim copy), task bodies, commands, file
+paths, or `review-step.md`.
 
-### Plan header
+### manifest.json
+
+```json
+{
+  "issue": $ARGUMENTS,
+  "prd": <parent-prd-number>,
+  "kind": "slice",
+  "slice_type": "HITL|AFK|spike",
+  "branch": null,
+  "base_sha": null,
+  "plan_created_at": "<ISO-8601>",
+  "claude_md_sha": "<output of: git log -1 --format=%H -- CLAUDE.md AGENTS.md 2>/dev/null | head -1>",
+  "concept_sha256": "<sha256 of /tmp/slice-$ARGUMENTS.md>",
+  "section_hashes": {
+    "acceptance_criteria": "<sha256>",
+    "conventions": "<sha256>",
+    "what_to_build": "<sha256>"
+  },
+  "tasks": [
+    {"id": "T10", "name": "<slice name>", "file": "tasks/T10.md",
+     "commit_subject": "<type>(<scope>): <subject>",
+     "status": "pending", "sha": null},
+    {"id": "T20", "name": "…", "file": "tasks/T20.md",
+     "commit_subject": "…", "status": "pending", "sha": null}
+  ],
+  "refactor_pass": {"status": "pending", "sha": null},
+  "review_step":   {"status": "pending", "sha": null},
+  "pr":            {"status": "pending", "url": null}
+}
+```
+
+Compute SHAs with `sha256sum <file> | cut -d' ' -f1`. `branch` and
+`base_sha` are filled in by `ship` at dispatch time.
+
+### concept.md
+
+Full issue body copied verbatim at plan time. Used by drift detection
+(`ship`, `review`, `apply` re-fetch the issue body and compare hashes).
+
+### stable-prefix.md
+
+This file is pasted **byte-identical** at the start of every subagent
+dispatch `ship` makes, so prompt caching hits on dispatches 2..N.
+Assemble it once here, at plan time, and never modify. Order:
 
 ```
-# Implementation plan for issue $ARGUMENTS — <one-line title>
+SKILLS TO LOAD: tdd, clean-code, lint-escape
 
-**Parent PRD:** #<prd-issue-number>
-**Goal:** <one sentence: what this delivers>
-**Blocked by:** #<issue-number> — its plan exposes interfaces; do not re-derive them. Or "None".
+HARD CONSTRAINTS (from CLAUDE.md — non-negotiable, verbatim, compressed):
+<the compressed hard-constraints block: untouchable files, forbidden
+ suppressions, required tooling, enforced commands. Extract quotes
+ verbatim; compress surrounding prose per brevity Rules.>
 
-<design-summary>
-3–5 short sentences on the approach: key components, interfaces, data/error flow.
-Brevity Rules apply — no filler, no hedges.
-</design-summary>
+TEST COMMAND: <exact test command from orientation>
+LINT COMMAND: <exact lint/check command from orientation>
 
-<acceptance-criteria>
-List every AC from the issue verbatim, each as a bullet. Each must map to
-exactly one `<task>` `Done when` below.
-- AC1: …
-- AC2: …
-</acceptance-criteria>
+HOUSE RULES (from the plan, read before every task):
+<paste the contents of house-rules.md verbatim>
 
-<conventions>
-Copy the slice's `## Conventions (from PRD)` section verbatim here
-(contents only, not the heading). If the slice has no cross-cutting
-conventions, write the single line:
+CONVENTIONS (from parent PRD — hard spec, follow verbatim):
+<paste the contents of conventions.md verbatim>
 
-None — slice-local decisions only.
+REASONING STYLE: Keep internal reasoning terse. No pre-summaries, no
+restating the task, no filler. Commit messages, PR bodies, and error
+quotes remain verbatim.
 
-Downstream: `ship` pastes this block into every subagent dispatch's
-stable prefix; `ship-light` Phase 2 reads it as hard spec.
-</conventions>
+CONTEXT HYGIENE: Do not re-read files you already read in this task. If
+your harness supports `clear_tool_uses_20250919`, fire it with `keep: 3`
+after each green test in this slice.
 
-<house-rules>
-Read before starting every task. Brevity Rules apply.
+--- (stable prefix ends here; everything above is identical across tasks) ---
+```
 
-- Follow the `tdd` skill: one failing test, then minimal code, then next. No writing all tests up front.
+### conventions.md
+
+Verbatim contents of the slice body's `## Conventions (from PRD)` section.
+If it says `None — slice-local decisions only.`, write that single line.
+
+### house-rules.md
+
+Brevity Rules apply. Contents:
+
+```
+- Follow the `tdd` skill: one failing test, then minimal code, then next.
 - Follow the `clean-code` skill.
-- Follow `<conventions>` verbatim — do not invent alternative names, shapes, or layouts. Escalate if a convention conflicts with the codebase.
+- Follow `conventions.md` verbatim — do not invent alternative names, shapes, or layouts. Escalate if a convention conflicts with the codebase.
 - DRY, YAGNI. No speculative abstractions. No error handling for impossible cases.
 - Use the pre-written commit message at the end of each task verbatim.
 - If a task conflicts with the codebase, pause and report — do not re-plan silently.
 - One task at a time. Do not read ahead or attempt other tasks.
-</house-rules>
 ```
 
-### File structure
+### design-summary.md
 
-Before the task list, map every file that will be created or modified, with a
-one-line responsibility for each. Wrap in `<file-structure>` tags. This
-locks decomposition before tasks start and lets the implementer (and the
-PRD-scoped review / apply sessions) see the whole shape. Follow established
-patterns in the codebase; do not unilaterally restructure unrelated files.
+3–5 short sentences on the approach: key components, interfaces,
+data/error flow. Brevity Rules apply.
+
+### acceptance-criteria.md
+
+Every AC from the issue, verbatim, one bullet each. Each must map to
+exactly one task's `Done when` line.
+
+### file-structure.md
 
 ```
-<file-structure>
 - Create: `path/to/new_file.py` — <responsibility>
 - Modify: `path/to/existing.py` — <what changes>
 - Test:   `tests/path/to/test_file.py` — <what it covers>
-</file-structure>
 ```
 
-### Assumptions
+### assumptions.md
 
-List 3–5 load-bearing assumptions the plan depends on (e.g. "Postgres 15+",
-"no feature-flag system exists", "logger is `structlog`"). These are the
-implementer's trigger for "pause and ask." Wrap in `<assumptions>` tags.
-Brevity Rules apply.
+3–5 load-bearing assumptions. Brevity Rules apply.
 
 ```
-<assumptions>
 - <assumption 1>
 - <assumption 2>
-- <assumption 3>
-</assumptions>
 ```
 
-### Tasks
+### review-step.md
 
-Tasks are **vertical slices**. A slice is the smallest change that delivers
-one observable behavior end-to-end and could ship alone. Soft cap: if a
-slice needs more than ~5 test cases or touches more than ~4 files, split
-it. One commit per slice, at the end, after refactor.
+```
+# Slice-level Review Step — #$ARGUMENTS (<one-line title>)
 
-**Task IDs.** Use gap-numbered IDs starting at `T10`, stepping by 10
-(`T10`, `T20`, `T30` …). Gap numbering lets you insert tasks later without
-renumbering (e.g., `T15` between `T10` and `T20`). Each task's opening tag
-attributes MUST include `id`, `name`, and `commit`. These are the keys the
-`ship` skill uses to extract one task block deterministically.
+Architectural invariants (enforced test file), recommended regression
+tests (advisory), self-report checklist.
 
-Each task must be **fully self-contained** — a subagent receiving only this
-task block (with no other plan context) must be able to execute it
-correctly. Never write "similar to Task N" or reference a previous task's
-code; repeat what the implementer needs.
+## Architectural Invariants
+- [ ] **<Invariant name>.** <What the test asserts. Symbol paths only.>
 
-Each task uses this structure (task body is full prose — brevity does NOT
-apply here):
+## Recommended Regression Tests
+- [ ] **<Scenario>.** <Setup, action, expected outcome.>
+
+## Self-report Checklist
+- [ ] `<lint command>` green.
+- [ ] `<test command>` green.
+- [ ] Invariants pass.
+- [ ] Regression tests exist or absences justified in PR.
+- [ ] No stale references to deleted symbols.
+```
+
+### tasks/T<id>.md (one file per task)
+
+Tasks are **vertical slices**. Soft cap: if a slice needs more than ~5
+test cases or touches more than ~4 files, split it.
+
+IDs are gap-numbered from `T10` stepping by 10 (`T10`, `T20`, …).
+The final task is always a documentation task (T<last>).
+
+Each file is fully self-contained — a subagent receiving only this file
+plus `stable-prefix.md` must be able to execute it correctly. Never
+write "similar to Task N" or reference another task's code; repeat what
+the implementer needs.
+
+Task body template (full prose — brevity does NOT apply):
 
 ```
 <task id="T10" name="<slice name>" commit="<type>(<scope>): <subject>">
@@ -331,12 +347,11 @@ apply here):
 **Files:**
 - Create: `exact/path/to/new_file.py` — <responsibility>
 - Modify: `exact/path/to/existing.py` — <what changes>
-- Test: `tests/exact/path/to/test_file.py`
+- Test:   `tests/exact/path/to/test_file.py`
 **Pre-reading (read before editing):**
 - `path/to/analogous_code.py::symbol` — existing pattern to mirror
 - `tdd` skill — if unsure about test shape
-- <any external doc only if genuinely non-obvious>
-**Done when:** <crisp acceptance criterion — must match one AC from `<acceptance-criteria>`>
+**Done when:** <crisp acceptance criterion — must match one AC>
 
 Per test in this slice, repeat steps 1–4:
 
@@ -351,224 +366,145 @@ Per test in this slice, repeat steps 1–4:
       assert ...
   ```
 - [ ] Step 2 — Run test, confirm it fails:
-  Run: `<exact command, e.g. pytest tests/path/test_file.py::test_name -v>`
+  Run: `<exact command>`
   Expected: FAIL with `<expected error substring>`
 - [ ] Step 3 — Implement minimal code in `<impl file>`.
   Approach: <1–3 sentences; reference analogous symbol by path>.
-  Only include code here if no analog exists in the repo.
 - [ ] Step 4 — Run test, confirm it passes:
   Run: `<same command>`
   Expected: PASS
 
 After all tests in the slice are green:
 
-- [ ] Refactor within the slice (naming, duplication). Tests stay green.
-- [ ] Verify: `<exact command to run the slice's tests>` — all PASS.
-      If the slice is user-visible, also run: `<manual check, e.g. curl, CLI>`.
-- [ ] Commit using the pre-written message in this task's `commit` attribute,
-  with a `Refs: #$ARGUMENTS T<id>` trailer:
+- [ ] Refactor within the slice. Tests stay green.
+- [ ] Verify: `<exact command>` — all PASS.
+      If user-visible, also run: `<manual check>`.
+- [ ] Commit using the task's `commit` attribute with a
+      `Refs: #$ARGUMENTS T<id>` trailer:
   ```bash
   git add <paths>
-  git commit -m "<commit attribute>" -m "Refs: #$ARGUMENTS T10"
+  git commit -m "<commit attribute verbatim>" -m "Refs: #$ARGUMENTS T<id>"
   ```
 
 </task>
 ```
 
+The opening XML tag `<task id="T<id>" name="…" commit="…">` must be
+present; `ship` does not re-parse the task file but other tools (review,
+future tooling) may extract sub-sections via `awk`.
+
 #### Documentation Task (always last)
 
-Every plan must end with a documentation task using the T-ID pattern.
-Fill in the actual file list from the Phase 1 orientation summary.
+Every plan ends with a doc task using the last T-ID:
 
 ```
-<task id="T<last>" name="Update documentation" commit="docs(<scope>): update documentation for issue $ARGUMENTS">
+<task id="T<last>" name="Update documentation" commit="docs(<scope>): update docs for issue $ARGUMENTS">
 
 **Goal:** All affected documentation reflects the post-implementation state.
 **Files:**
-- Modify: `CLAUDE.md` — update if new patterns or conventions were introduced
-- Modify: `README.md` — update architecture or usage sections if public shape
-  changed
-- Modify: `docs/<relevant>.md` — update API or design doc if applicable
-**Pre-reading:**
-- Orientation summary from Phase 1
-**Done when:** Every doc file from the orientation summary has been
-reviewed. Files that required changes are updated and committed. Files
-requiring no changes are noted explicitly ("no update needed — not affected
-by this issue").
+- Modify: `CLAUDE.md` — if new patterns or conventions were introduced
+- Modify: `README.md` — if public shape changed
+- Modify: `docs/<relevant>.md` — if applicable
+**Pre-reading:** Orientation summary from Phase 1.
+**Done when:** Every doc file from the orientation summary is either
+updated or explicitly noted "no update needed".
 
 - [ ] Review each file from the orientation summary's doc list.
-- [ ] For each file: update if needed, or note "no update needed" inline.
-- [ ] Commit using this task's `commit` attribute with a `Refs: #$ARGUMENTS T<last>` trailer.
+- [ ] Update or note "no update needed" inline.
+- [ ] Commit with a `Refs: #$ARGUMENTS T<last>` trailer.
 
 </task>
 ```
 
 ### Prescriptiveness rules
 
-- **Test steps:** write the full test code (given/when/then). Tests are short,
-  and the implementer is explicitly weak at test design — be prescriptive here.
+- **Test steps:** write the full test code. Be prescriptive.
 - **Implementation steps:** describe the approach and point at analogous
-  symbols by path. Do not pre-write the full implementation unless no analog
-  exists.
+  symbols. Do not pre-write the full implementation unless no analog exists.
 - Use exact file paths and exact commands everywhere.
+- Never write: `TBD`, `TODO`, `implement later`, `similar to Task N`,
+  test steps without test code, references to undefined symbols.
 
-### No placeholders
-
-These are plan failures — never write them:
-
-- "TBD", "TODO", "implement later", "fill in details".
-- "Add appropriate error handling" / "add validation" / "handle edge cases"
-  without saying which cases.
-- "Write tests for the above" without the actual test code.
-- "Similar to Task N" — repeat the test code; the implementer reads tasks in
-  isolation.
-- Test steps without test code.
-- References to types, functions, or methods not defined in any task and not
-  already present in the repo at a named path.
-
-### Review Step
-
-Append the following section to the end of every plan, after all tasks.
-Wrap in `<review-step>` tags so `ship` Phase 3 can extract it directly.
-
-```
 ---
 
-<review-step>
+## Phase 3 — Resume (`plan --resume`)
 
-# Slice-level Review Step — #$ARGUMENTS (<one-line title>)
+When `plan` is invoked with `--resume` (typically by `ship` after
+detecting drift):
 
-Guardrails to check before marking the PR done. This is the per-slice
-self-review. (The PRD-scoped `review` skill operates at a higher altitude
-once every slice has merged.) Coverage is enforced by the pipeline; the
-architectural invariants below run in CI as part of
-`<test command from orientation>`.
+1. Read existing `manifest.json`.
+2. Preserve entries where `status == "done"` — their `sha` and
+   `commit_subject` stay as-is.
+3. Re-run Phase 0 + Phase 1 (orientation + relevant interview) to refresh
+   the plan based on the current issue body.
+4. Re-write `concept.md`, `stable-prefix.md`, `conventions.md`,
+   `house-rules.md`, `acceptance-criteria.md`, `file-structure.md`,
+   `assumptions.md`, `review-step.md`, `design-summary.md`.
+5. Re-write `tasks/T<id>.md` files for every pending / blocked task
+   (delete stale fragments that no longer map to an AC).
+6. Update manifest hashes (`concept_sha256`, `section_hashes.*`,
+   `claude_md_sha`) and bump `plan_created_at`.
+7. Leave done-task fragments in place for forensic purposes.
 
-## Architectural Invariants (enforced test file)
+---
 
-New file: `tests/architecture/test_<issue_topic>_invariants.py`
+## Self-review
 
-- [ ] **<Invariant name>.** <What the test asserts. Reference exact symbol
-  paths and file paths. State the ast/pathlib check method.>
-
-## Recommended Regression Tests (advisory)
-
-Add to `tests/<module>/test_<topic>.py`. These cover the highest-risk
-behavior changes.
-
-- [ ] **<Scenario name>.** <Setup, action, expected outcome. One sentence.>
-
-## Self-report Checklist
-
-- [ ] `<lint/check command>` green.
-- [ ] `<test command>` green.
-- [ ] Architectural invariants above pass.
-- [ ] Recommended regression tests above exist, or absences justified in PR.
-- [ ] `git grep` confirms no stale references to deleted symbols.
-
-</review-step>
-```
-
-### Self-review
-
-After writing the plan, validate it mechanically. Write the plan to
-`/tmp/plan-draft-$ARGUMENTS.md` first, then run these checks. Fix any
-failures inline; no re-review pass.
-
-**Structural checks (must all pass before posting):**
+After writing all files, validate mechanically:
 
 ```bash
-P=/tmp/plan-draft-$ARGUMENTS.md
+D=.stenswf/$ARGUMENTS
 
-# 1. Every required top-level tag exists exactly once.
-for tag in design-summary acceptance-criteria conventions house-rules file-structure assumptions review-step; do
-  n=$(grep -c "<$tag>" "$P")
-  [ "$n" = "1" ] || echo "FAIL: <$tag> appears $n times (expected 1)"
+# 1. Required files exist.
+for f in manifest.json concept.md stable-prefix.md conventions.md house-rules.md \
+         design-summary.md acceptance-criteria.md file-structure.md assumptions.md \
+         review-step.md; do
+  [ -s "$D/$f" ] || echo "FAIL: $f missing or empty"
+done
+[ -d "$D/tasks" ] || echo "FAIL: tasks/ dir missing"
+ls "$D/tasks"/T*.md >/dev/null 2>&1 || echo "FAIL: no task fragments"
+
+# 2. manifest.json parses and lists existing task files.
+jq -e '.tasks[] | .file' "$D/manifest.json" | while read f; do
+  f=${f%\"}; f=${f#\"}
+  [ -s "$D/$f" ] || echo "FAIL: task file missing: $f"
 done
 
-# 2. Every <task> has id, name, commit attributes.
-awk '/<task /{
-  if ($0 !~ /id="T[0-9]+"/) print "FAIL: task missing id — " $0
-  if ($0 !~ /name="[^"]+"/)   print "FAIL: task missing name — " $0
-  if ($0 !~ /commit="[^"]+"/) print "FAIL: task missing commit — " $0
-}' "$P"
+# 3. Every <task> opening tag has id, name, commit attributes.
+for f in "$D"/tasks/T*.md; do
+  head -1 "$f" | grep -qE '<task id="T[0-9]+" name="[^"]+" commit="[^"]+">' \
+    || echo "FAIL: malformed opening tag in $f"
+done
 
-# 3. Task IDs are unique.
-grep -o 'id="T[0-9]*"' "$P" | sort | uniq -d | sed 's/^/FAIL: duplicate task id — /'
+# 4. Task IDs unique.
+grep -ohE 'id="T[0-9]+"' "$D"/tasks/*.md | sort | uniq -d \
+  | sed 's/^/FAIL: duplicate id /'
 
-# 4. Every AC bullet has a matching Done-when in some task.
-awk '/<acceptance-criteria>/,/<\/acceptance-criteria>/' "$P" \
-  | grep -oE '^- AC[0-9]+' \
+# 5. AC bullets each referenced by at least one Done-when.
+grep -oE '^- AC[0-9]+' "$D/acceptance-criteria.md" \
   | while read ac; do
-      grep -q "$ac" "$P" || echo "FAIL: $ac has no Done-when reference"
+      grep -q "$ac" "$D"/tasks/*.md || echo "FAIL: $ac has no Done-when"
     done
 ```
 
-**Content checks (read the plan yourself):**
+Content checks (read yourself):
 
-1. **Placeholder scan** — no `TBD`, `TODO`, `implement later`, `similar to
-   Task N`, or test step without test code. Fix.
-2. **Pointer check** — every task names at least one existing file/symbol
-   to read, modify, or mirror, or explicitly states "net-new, no analogous
-   code in repo."
-3. **Self-containment** — every `<task>` block can be handed to a
-   context-naive subagent with no other plan context and executed
-   correctly.
-4. **Type consistency** — names, signatures, paths used in later tasks
-   match earlier tasks.
-5. **Scope** — focused enough for a single plan, or split via `prd-to-issues`.
-6. **Ambiguity** — any requirement readable two ways? Pick one; make it
-   explicit.
+1. No placeholders (`TBD`, `TODO`, "similar to Task N").
+2. Every task names at least one existing file/symbol.
+3. Every task is self-contained — executable with only its file +
+   `stable-prefix.md`.
+4. Names, signatures, and paths consistent across tasks.
+5. Every ambiguity resolved to one explicit choice.
 
-Fix issues inline. No re-review.
+Fix inline. No re-review pass.
 
 ---
 
 ## Wrap-up
 
-1. **Post the plan comment.** Comment title line exactly:
-   `Implementation plan for issue $ARGUMENTS`
-   Body is the XML-tagged plan document from Phase 2.
+Tell the user (no labels, no issue comments, no plan-index comment):
 
-2. **Post the plan-index comment.** A separate, tiny second comment that
-   `ship` reads to bootstrap. Comment title line exactly:
-   `Implementation plan-index for issue $ARGUMENTS`
+> Plan written to `.stenswf/$ARGUMENTS/`. Tasks: T10, T20, T30, … Run
+> `/stenswf:ship $ARGUMENTS` to begin implementation.
 
-   Body format (brevity applies):
-
-   ```
-   Implementation plan-index for issue $ARGUMENTS
-
-   Tasks:
-   - T10: <name>
-   - T20: <name>
-   - T30: <name>
-   - ...
-
-   CLAUDE.md SHA: <output of `git log -1 --format=%H -- CLAUDE.md` or "none">
-   Plan comment URL: <permalink to the plan comment>
-   ```
-
-3. **Swap lifecycle labels on the issue:** add `planned`, remove
-   `needs-plan`. (Labels are created once per repo via the `bootstrap`
-   skill. Use whichever issue-tracker CLI is available.)
-
-4. **Append the implementation log table to the issue body** under the
-   `## Implementation log` heading. Create the section if absent. Use task
-   IDs as row keys (NOT task numbers):
-
-   ```
-   ## Implementation log
-
-   | Task | Status | Commit SHA |
-   |------|--------|------------|
-   | T10: <name> | ⬜ pending | — |
-   | T20: <name> | ⬜ pending | — |
-   | ...         | ...       | ... |
-   | Review step | ⬜ pending | — |
-   | PR / CI     | ⬜ pending | — |
-   ```
-
-5. **Stop.** Do not implement any changes. Tell the user:
-
-   > Plan posted on issue #$ARGUMENTS. Run the `ship` skill with this issue number to begin implementation.
+Do not modify the issue. Do not implement any changes.

@@ -1,166 +1,138 @@
 ---
 name: ship
-description: Implement an issue by dispatching one subagent per plan task (TDD + clean
-  code), then run a refactor pass, file a PR, and monitor CI to green.
+description: Implement a slice issue by dispatching one subagent per local task
+  fragment (TDD + clean code), run a refactor pass, file a PR, monitor CI to green,
+  archive the local plan on merge.
 disable-model-invocation: true
 ---
 
 ## Token Efficiency
 
-**Load and apply the `brevity` skill now, before the first response
-in this session.** It governs the orchestrator parent session: internal
-reasoning, tool-use narration, status updates between phases. Self-check
-every message against its rules before sending.
+**Load and apply the `brevity` skill now, before the first response.**
+It governs the orchestrator parent session: internal reasoning, tool-use
+narration, status updates between phases.
 
 The `brevity` skill excludes commit messages, PR bodies, `CI_BLOCKER`
-reports, subagent delegation messages, the plan-extraction blocks below,
-and the Phase 5 wrap-up comment (see `brevity` Scope). Write those in full
-prose.
+reports, subagent delegation messages, and the Phase 5 wrap-up comment —
+write those in full prose.
 
-Subagents do NOT load `brevity` (saves one concurrent skill per
-SkillsBench 2–3 sweet spot). A one-line terse-reasoning rule is inlined
-into every dispatch message instead.
-
-## Fetching the plan (redirect-then-awk)
-
-This skill reads the large plan comment written by `plan`. Never `cat` the
-whole comment — its contents would flood the orchestrator trajectory.
-
-Always use this pattern, in the orchestrator and in every fresh session
-spawned from this skill:
-
-```bash
-# 1. Redirect full plan comment to a scratch file. Empty stdout; content
-#    on disk only.
-gh issue view $ARGUMENTS --json comments \
-  -q '.comments[] | select(.body|contains("Implementation plan for issue")) | .body' \
-  > /tmp/plan-$ARGUMENTS.md
-wc -l /tmp/plan-$ARGUMENTS.md   # confirm file wrote; do NOT cat it
-
-# 2. Extract the plan-index (task list + CLAUDE SHA + permalink):
-gh issue view $ARGUMENTS --json comments \
-  -q '.comments[] | select(.body|contains("Implementation plan-index for issue")) | .body' \
-  > /tmp/plan-index-$ARGUMENTS.md
-
-# 3. Extract only what you need, by tag, for the current phase:
-awk '/<house-rules>/,/<\/house-rules>/'             /tmp/plan-$ARGUMENTS.md
-awk '/<assumptions>/,/<\/assumptions>/'             /tmp/plan-$ARGUMENTS.md
-awk '/<file-structure>/,/<\/file-structure>/'       /tmp/plan-$ARGUMENTS.md
-awk '/<acceptance-criteria>/,/<\/acceptance-criteria>/'  /tmp/plan-$ARGUMENTS.md
-awk '/<review-step>/,/<\/review-step>/'             /tmp/plan-$ARGUMENTS.md
-awk '/<task id="T10">/,/<\/task>/'                  /tmp/plan-$ARGUMENTS.md
-```
-
-Only the extracted text enters context. The redirect stdout is empty.
+Subagents do NOT load `brevity`. A one-line terse-reasoning rule is
+inlined into `stable-prefix.md` instead.
 
 ---
 
-Implement issue number $ARGUMENTS by dispatching subagents that follow the
-implementation plan attached to the issue as a comment.
+Implement issue number $ARGUMENTS by dispatching subagents that follow
+the local plan tree at `.stenswf/$ARGUMENTS/`. The local plan is the
+**definitive specification** for implementation; the issue body states
+the goal. Where they conflict, the local plan wins — unless the issue
+body has drifted since plan time (see Prerequisites drift check).
 
-The implementation plan comment is the **definitive specification**. The issue
-description states the goal; the plan governs. Where they conflict, the plan
-wins.
-
-If no suitable implementation plan comment is available, stop and ask the
-user to run the `plan` planning skill first.
+If `.stenswf/$ARGUMENTS/` does not exist, stop and ask the user to run
+`/stenswf:plan $ARGUMENTS` first.
 
 ---
 
 ## Prerequisites (complete before dispatching any subagent)
 
-- [ ] Detect the issue-tracker CLI available in this repo (`gh`, `glab`,
-  `tea`, etc.) and use it for every issue/label/PR command in this skill.
-  Translate the example `gh` syntax below to the detected tool.
-- [ ] Fetch plan + plan-index via the redirect-then-awk block above.
-  Confirm both files non-empty.
-- [ ] Extract the plan task list from the plan-index for progress tracking.
-- [ ] Extract `<assumptions>` and read once. Record the exact TEST command
-  and LINT command from assumptions.
-- [ ] Extract `<house-rules>` and read once. This is the stable prefix you
-  will paste into every subagent dispatch message (see Phase 1a).
-- [ ] Extract `<conventions>` and read once. This block is PRD-level hard
-  spec (naming, shape, layout, vocabulary) — paste verbatim into every
-  dispatch's stable prefix alongside `<house-rules>`:
+- [ ] Detect the issue-tracker CLI (`gh`, `glab`, `tea`, …) and use it
+  for every issue/PR command below. Translate `gh` syntax accordingly.
+
+- [ ] Confirm the local plan tree exists and looks healthy:
 
   ```bash
-  awk '/<conventions>/,/<\/conventions>/' /tmp/plan-$ARGUMENTS.md \
-    > /tmp/plan-$ARGUMENTS-conventions.md
-  wc -l /tmp/plan-$ARGUMENTS-conventions.md
+  D=.stenswf/$ARGUMENTS
+  [ -s "$D/manifest.json" ] || { echo "run /stenswf:plan $ARGUMENTS first"; exit 1; }
+  [ -s "$D/stable-prefix.md" ] || { echo "stable-prefix missing; re-run /stenswf:plan"; exit 1; }
   ```
-- [ ] Read `CLAUDE.md` OR `AGENTS.md` and extract all hard constraints:
-  untouchable files, forbidden suppressions, required tooling, enforced
-  commands. Compress filler per `brevity` Rules while keeping verbatim
-  anything quoted (commands, file paths, error patterns). The compressed
-  block is what you paste as `HARD CONSTRAINTS` in every dispatch.
-- [ ] Record `BASE_SHA`:
+
+- [ ] **Drift check** — re-fetch the current issue body and compare
+  hashes. Issue bodies can be edited by teammates between `plan` and
+  `ship`; silent divergence is the #1 cause of pipeline breakage.
+
+  ```bash
+  gh issue view $ARGUMENTS --json body -q .body > /tmp/slice-$ARGUMENTS-now.md
+  NOW_SHA=$(sha256sum /tmp/slice-$ARGUMENTS-now.md | cut -d' ' -f1)
+  PLAN_SHA=$(jq -r .concept_sha256 "$D/manifest.json")
+
+  # Also check CLAUDE.md drift
+  CLAUDE_NOW=$(git log -1 --format=%H -- CLAUDE.md AGENTS.md 2>/dev/null | head -1)
+  CLAUDE_PLAN=$(jq -r .claude_md_sha "$D/manifest.json")
+  ```
+
+  If `NOW_SHA != PLAN_SHA` OR `CLAUDE_NOW != CLAUDE_PLAN`:
+
+  1. Identify which sections changed by recomputing per-section hashes
+     on `/tmp/slice-$ARGUMENTS-now.md` (`acceptance_criteria`,
+     `conventions`, `what_to_build`) and comparing against
+     `manifest.json:section_hashes`.
+  2. Show the user:
+
+     ```
+     ⚠  Issue #$ARGUMENTS body has changed since plan was written.
+        Changed sections: <comma-separated list>
+        [diff of changed sections shown inline via `diff` of concept.md vs /tmp/slice-$ARGUMENTS-now.md,
+         capped at ~30 lines]
+
+        (r) re-plan       — run /stenswf:plan $ARGUMENTS --resume
+                             (keeps done tasks, regenerates the rest)
+        (c) continue      — proceed with stale plan
+        (a) abort
+     ```
+
+  3. Wait for user input. `r` → stop and tell user to run `plan --resume`;
+     `c` → proceed (log `"event":"drift-accepted"` to `log.jsonl`);
+     `a` → stop.
+
+- [ ] Record `BASE_SHA` and persist to manifest:
+
   ```bash
   BASE_SHA=$(git rev-parse HEAD)
-  echo "BASE_SHA: $BASE_SHA"
+  BRANCH=$(git branch --show-current)
+  jq --arg b "$BRANCH" --arg s "$BASE_SHA" \
+    '.branch=$b | .base_sha=$s' "$D/manifest.json" \
+    > "$D/manifest.json.tmp" && mv "$D/manifest.json.tmp" "$D/manifest.json"
   ```
-- [ ] Check the implementation log table in the issue body. If any tasks
-  are already marked ✅, skip them and resume from the first ⬜ pending
-  task. The log uses task IDs (`T10`, `T20` …) as row keys.
-- [ ] Apply the `shipping` label to the issue. Keep the `planned` label in
-  place so both states are visible. Labels are created once per repo via
-  the `bootstrap` skill — assume they exist; if not, run `bootstrap` and
-  retry.
+
+- [ ] **Resume detection** — read `manifest.tasks[]` and find the first
+  task with `status != "done"`. Skip completed tasks. If all tasks are
+  `done`, proceed to Phase 2 (Refactor).
+
+- [ ] Append a dispatch-start event to the audit log:
+
+  ```bash
+  printf '{"ts":"%s","event":"ship-start","base_sha":"%s"}\n' \
+    "$(date -u +%FT%TZ)" "$BASE_SHA" >> "$D/log.jsonl"
+  ```
 
 ---
 
 ## Phase 1 — Task Execution (Orchestrator Loop)
 
-Walk the tasks in order (T10, T20, T30 … from the plan-index). For each
-task:
+Walk pending tasks in order (T10, T20, T30 …) as listed in
+`manifest.tasks[]`.
 
 ### 1a. Delegate to a subagent
 
-Dispatch the task to an implementer subagent. The dispatch message is
-**stable-prefix-first** so prompt caching hits on dispatches 2..N. Every
-dispatch in this `ship` run reuses the same prefix (SKILLS → HARD
-CONSTRAINTS → TEST/LINT → HOUSE RULES → CONVENTIONS). Only the tail varies.
+Each dispatch pastes `stable-prefix.md` **verbatim** as the prompt head,
+then a short task-specific tail. The prefix is identical across all
+dispatches in this run — prompt caching hits on dispatches 2..N.
 
-Construct the dispatch message exactly in this order:
+Dispatch message structure:
 
 ```
-SKILLS TO LOAD: tdd, clean-code, lint-escape
-
-HARD CONSTRAINTS (from CLAUDE.md — non-negotiable, verbatim):
-<paste the compressed HARD CONSTRAINTS block from Prerequisites>
-
-TEST COMMAND: <exact test command from <assumptions>>
-LINT COMMAND: <exact lint/check command from <assumptions>>
-
-HOUSE RULES (from the plan, read before every task):
-<paste the <house-rules> block extracted in Prerequisites>
-
-CONVENTIONS (from parent PRD — hard spec, follow verbatim):
-<paste the <conventions> block extracted in Prerequisites>
-
-REASONING STYLE: Keep internal reasoning terse. No pre-summaries, no
-restating the task, no filler. Commit messages, PR bodies, and error quotes
-remain verbatim.
-
-CONTEXT HYGIENE: Do not re-read files you already read in this task. If
-your harness supports `clear_tool_uses_20250919`, fire it with `keep: 3`
-after each green test in this slice.
-
---- (stable prefix ends here; everything above is identical across tasks) ---
+$(cat .stenswf/$ARGUMENTS/stable-prefix.md)
 
 ISSUE: #$ARGUMENTS
 TASK_ID: T<id>
+TASK_FILE: .stenswf/$ARGUMENTS/tasks/T<id>.md
 
-FETCH YOUR TASK BLOCK (do this first, before any other action):
+FETCH YOUR TASK FRAGMENT (do this first, before any other action):
 
-  gh issue view $ARGUMENTS --json comments \
-    -q '.comments[] | select(.body|contains("Implementation plan for issue")) | .body' \
-    > /tmp/plan-$ARGUMENTS.md
-  wc -l /tmp/plan-$ARGUMENTS.md   # confirm; do not cat
-  awk '/<task id="T<id>">/,/<\/task>/' /tmp/plan-$ARGUMENTS.md
+  cat .stenswf/$ARGUMENTS/tasks/T<id>.md
 
 Execute the extracted task block exactly as written. It is fully
-self-contained: test code, file paths, commands, Done-when criterion, and
-the commit message (from the task's `commit="…"` attribute).
+self-contained: test code, file paths, commands, Done-when criterion,
+and the commit message (from the task's `commit="…"` attribute).
 
 At the end, commit with a `Refs: #$ARGUMENTS T<id>` trailer:
 
@@ -189,43 +161,52 @@ On failure (BLOCKED) use the verbose form:
   ─────────────────────────────────────────────
 ```
 
-Never tell the subagent to "read the plan" in prose. The explicit extract
+Never tell the subagent to "read the plan" in prose. The explicit `cat`
 command above is the only way it should touch the plan.
 
 ### 1b. Verify the subagent report
 
-After the subagent returns:
+- [ ] Parse the first line. Must match `TASK_REPORT T<id> DONE <sha>`.
+      Anything else (including `BLOCKED`) → stop.
+- [ ] Verify a commit was made:
 
-- [ ] Parse the first line. If it matches `TASK_REPORT T<id> DONE <sha>`,
-  continue. Anything else (including `BLOCKED`) → stop.
-- [ ] Verify commit was made:
   ```bash
   HEAD_SHA=$(git rev-parse HEAD)
   [ "$HEAD_SHA" != "$BASE_SHA" ] && echo "OK — committed" || echo "FAIL — no commit"
   ```
+
 - [ ] Verify the reported SHA matches `HEAD_SHA`.
-- [ ] If `BLOCKED` or no new commit: do **not** proceed to the next task.
-  Post a `TASK_BLOCKER` comment on the issue (template below) and stop.
+- [ ] If `BLOCKED` or no new commit: do NOT proceed. Post a
+      `TASK_BLOCKER` comment on the issue (template below) and stop.
 - [ ] Update `BASE_SHA = HEAD_SHA` for the next task.
 
-### 1c. Update the implementation log
+### 1c. Update manifest + audit log
 
-After each successful task, update the `## Implementation log` table in
-the **issue body** (edit the issue, not a new comment). Match rows by task
-ID, not by position:
+Update the materialised state in `manifest.json` (O(1) read for resume)
+and append to the audit trail (never read in hot path):
 
 ```bash
-# Example: mark T20 done with its SHA
-gh issue edit $ARGUMENTS --body "$(gh issue view $ARGUMENTS --json body -q .body \
-  | sed 's/| T20: .* | ⬜ pending | — |/| T20: <name> | ✅ done | '"$HEAD_SHA"' |/')"
+D=.stenswf/$ARGUMENTS
+
+# Update manifest: set task status/sha
+jq --arg id "T<id>" --arg sha "$HEAD_SHA" \
+  '(.tasks[] | select(.id==$id)) |= (.status="done" | .sha=$sha)' \
+  "$D/manifest.json" > "$D/manifest.json.tmp" \
+  && mv "$D/manifest.json.tmp" "$D/manifest.json"
+
+# Append to audit log
+printf '{"ts":"%s","event":"report","task":"T<id>","status":"done","head_sha":"%s"}\n' \
+  "$(date -u +%FT%TZ)" "$HEAD_SHA" >> "$D/log.jsonl"
 ```
 
-The table is the single source of truth for progress — never track state
-in memory across tasks.
+The manifest is the single source of truth for resume; the log is
+append-only forensic data.
 
 ### Task Blocker Template
 
-If a subagent reports `BLOCKED`, post this as an issue comment and stop:
+If a subagent reports `BLOCKED`, post this as an issue comment, append a
+blocked-event to `log.jsonl`, set the task's `status` in manifest to
+`"blocked"`, and stop:
 
 ```
 TASK_BLOCKER
@@ -247,41 +228,25 @@ Do not proceed to Phase 2 until the blocker is resolved.
 
 ## Phase 2 — Refactor Pass (fresh session)
 
-This phase runs in a **fresh session**, not the orchestrator parent. The
-orchestrator's trajectory is now heavy with N subagent dispatches and
-reports; a fresh session starts clean and reads only what the refactor
-actually needs. Anthropic's multi-agent context-engineering guidance:
-*"detailed search context remains within sub-agents while the lead agent
-synthesizes results."*
+This phase runs in a **fresh session**, not the orchestrator parent.
 
 **Fresh-session escape hatch.** If your harness cannot spawn a fresh
-session from within a skill (e.g., a plain Claude Code chat), run `/clear`
-(or the harness equivalent) at this point, then reload the inputs listed
-below manually before continuing. Do not silently continue in the
-orchestrator context — that defeats the whole phase.
+session, run `/clear` (or the harness equivalent), then reload the
+inputs below manually.
 
-**Inputs for the fresh session (redirect-then-awk):**
+**Inputs for the fresh session:**
 
 ```bash
 git diff $BASE_SHA..HEAD > /tmp/ship-$ARGUMENTS-refactor-diff.patch
-wc -l /tmp/ship-$ARGUMENTS-refactor-diff.patch
-
-gh issue view $ARGUMENTS --json comments \
-  -q '.comments[] | select(.body|contains("Implementation plan for issue")) | .body' \
-  > /tmp/plan-$ARGUMENTS.md
-awk '/<file-structure>/,/<\/file-structure>/'       /tmp/plan-$ARGUMENTS.md
-awk '/<acceptance-criteria>/,/<\/acceptance-criteria>/'  /tmp/plan-$ARGUMENTS.md
+cat .stenswf/$ARGUMENTS/file-structure.md
+cat .stenswf/$ARGUMENTS/acceptance-criteria.md
 ```
 
-The session reads: hard constraints from CLAUDE.md, the diff, the
-`<file-structure>`, the `<acceptance-criteria>`. Nothing else.
+Read those plus `CLAUDE.md` hard lines. Nothing else.
 
-**Commit sequencing note.** Each Phase 1 task was committed by its subagent
-using the pre-written commit message from the plan (verified by the
-`HEAD_SHA != BASE_SHA` check). The refactor pass produces **one additional
-commit** on top of those slice commits. Do not squash or amend the
-subagents' slice commits — they must remain atomic and demoable on their
-own.
+**Commit sequencing note.** Slice commits from Phase 1 stay atomic. The
+refactor pass produces one additional commit on top. Do not squash or
+amend the slice commits.
 
 Review every file touched across all tasks (from the diff) against:
 
@@ -289,95 +254,105 @@ Review every file touched across all tasks (from the diff) against:
 - Coding guidelines inferred from the repo.
 - `clean-code`, SOLID, DRY, KISS.
 
-Perform a focused refactor pass:
+Focused refactor:
 
-- Eliminate duplication introduced during TDD steps.
-- Clarify naming and structure where obviously beneficial.
-- Do not introduce new scope beyond what the issue and plan describe.
+- Eliminate TDD-introduced duplication.
+- Clarify naming where obviously beneficial.
+- Do NOT introduce new scope beyond the issue.
 
-Run the full lint/check command and test suite after the refactor. Apply
-the `lint-escape` skill if needed. This is the last coding step.
+Run lint + tests after the refactor. Apply `lint-escape` if needed.
+This is the last coding step.
 
-Commit the refactor pass (use imperative mood, conventional format):
+Commit:
 
 ```bash
 git add <changed paths>
 git commit -m "refactor(<scope>): post-implementation refactor for #$ARGUMENTS"
 ```
 
-Update `BASE_SHA` again after this commit. Return to the orchestrator.
+Update `BASE_SHA`. Mark manifest:
+
+```bash
+jq --arg sha "$(git rev-parse HEAD)" \
+  '.refactor_pass.status="done" | .refactor_pass.sha=$sha' \
+  .stenswf/$ARGUMENTS/manifest.json > /tmp/m.json \
+  && mv /tmp/m.json .stenswf/$ARGUMENTS/manifest.json
+```
+
+Return to the orchestrator.
 
 ---
 
 ## Phase 3 — Review Step
 
-Work through the `<review-step>` section of the plan. Extract it in the
-orchestrator parent session:
+Work through `.stenswf/$ARGUMENTS/review-step.md` in the orchestrator:
 
-```bash
-awk '/<review-step>/,/<\/review-step>/' /tmp/plan-$ARGUMENTS.md
-```
-
-- **Architectural Invariants:** run the invariant test file. All must pass.
+- **Architectural Invariants:** run the invariant test file. All pass.
 - **Recommended Regression Tests:** confirm each listed test exists, or
   note the justified absence in the PR body.
-- **Self-report Checklist:** execute each item. Fix any failure before
-  proceeding. Do not mark an item done without running the command.
+- **Self-report Checklist:** execute each item. Fix any failure.
 
-Mark the Review Step row in the implementation log as ✅ done with the
-current `HEAD_SHA`.
+Mark manifest:
+
+```bash
+jq --arg sha "$(git rev-parse HEAD)" \
+  '.review_step.status="done" | .review_step.sha=$sha' \
+  .stenswf/$ARGUMENTS/manifest.json > /tmp/m.json \
+  && mv /tmp/m.json .stenswf/$ARGUMENTS/manifest.json
+```
 
 ---
 
 ## Phase 4 — PR, CI Loop, and Merge Wait
 
-This phase is a **reusable sub-procedure**. The `apply` skill's PRD
-cleanup flow invokes it with a different branch and PR body. When called
-from `apply`, the parameters below are substituted by that caller.
+This phase is a **reusable sub-procedure**. `apply` (PRD-mode) invokes
+it with a different branch and PR body.
 
 ### File the PR
 
-- Stage all remaining changes.
-- Commit any remaining staged files (hooks must run and pass).
+- Stage and commit any remaining changes (hooks must pass).
 - Push the branch.
 - Open a PR against the default branch. PR body must include:
-  - One-sentence summary of what this delivers.
-  - Link to the issue (`Closes #$ARGUMENTS`).
-  - Summary of any `lint-escape` actions taken, with rationale (copy from
-    subagent reports).
+  - One-sentence summary.
+  - `Closes #$ARGUMENTS`.
+  - Summary of any `lint-escape` actions taken, with rationale.
   - Any justified absences from the Review Step checklist.
 
-Mark the `PR / CI` row in the implementation log as ✅ done with the PR URL.
+Update manifest with PR URL:
+
+```bash
+PR_URL=$(gh pr view --json url -q .url)
+jq --arg u "$PR_URL" '.pr.status="open" | .pr.url=$u' \
+  .stenswf/$ARGUMENTS/manifest.json > /tmp/m.json \
+  && mv /tmp/m.json .stenswf/$ARGUMENTS/manifest.json
+```
 
 ### CI Loop (max 3 fix cycles, each in a fresh session)
 
-After the PR is filed, monitor CI. Each fix cycle runs in a **fresh
-session** reading only the failing job log + `git diff BASE_SHA..HEAD`.
-The orchestrator parent spawns the cycle, waits for its result, then
-decides whether to run another cycle or proceed.
+Monitor CI. Each fix cycle runs in a **fresh session** reading only:
 
-**Fresh-session escape hatch.** If your harness cannot spawn fresh
-sessions, run `/clear` (or equivalent) at the start of each cycle and
-reload the two inputs below manually. Do not continue fixing in the
-orchestrator context \u2014 the accumulated dispatch/report trajectory will
-poison CI diagnosis.
+- `/tmp/ci-fail-$ARGUMENTS-cycle$N.log` (never `cat` CI logs — always
+  `tail`/`grep` extract)
+- `git diff $BASE_SHA..HEAD`
+- `CLAUDE.md` hard lines
 
 Per cycle:
 
 1. Orchestrator fetches failing job log:
    ```bash
    gh run view --log-failed > /tmp/ci-fail-$ARGUMENTS-cycle$N.log
+   wc -l /tmp/ci-fail-$ARGUMENTS-cycle$N.log   # confirm; do NOT cat
    ```
-2. Spawn fresh session with: `/tmp/ci-fail-$ARGUMENTS-cycle$N.log`,
-   `git diff $BASE_SHA..HEAD`, CLAUDE.md hard constraints.
-3. Fresh session identifies root cause (test failure, lint, type, hook),
-   applies the appropriate fix (clean-code change, or `lint-escape`
-   protocol), commits (hooks run), pushes, returns commit SHA to
-   orchestrator.
-4. Orchestrator waits for CI, updates `BASE_SHA = HEAD_SHA`.
+2. Spawn fresh session; diagnose via `tail`/`grep` extracts only:
+   ```bash
+   tail -200 /tmp/ci-fail-$ARGUMENTS-cycle$N.log
+   grep -nE 'FAIL|Error|^E |Traceback|##\[error\]|panic:' \
+     /tmp/ci-fail-$ARGUMENTS-cycle$N.log | tail -60
+   ```
+3. Fix, commit (hooks run), push, return commit SHA.
+4. Orchestrator waits for CI, updates `BASE_SHA`.
 
-**Cap: 3 fix cycles.** If CI is still failing after 3 cycles, orchestrator
-stops and posts:
+**Cap: 3 fix cycles.** If still failing, post on PR + issue:
 
 ```
 CI_BLOCKER
@@ -389,54 +364,63 @@ Cycles tried:
   Cycle 1: <approach and outcome>
   Cycle 2: <approach and outcome>
   Cycle 3: <approach and outcome>
-Options for resolution (choose one):
-  A) <concrete fix — specific file, line, change>
-  B) <config or environment change required>
+Options:
+  A) <concrete fix>
+  B) <config or environment change>
 ─────────────────────────────────────────────
 ```
 
-Post as both a PR comment and an issue comment. Do not push further commits.
+Stop.
 
 ### Merge Wait
 
-Once CI is green, wait for merge. Do not apply the `shipped` label yet —
-its semantics are "PR merged to main."
-
 ```bash
 while true; do
-  state=$(gh pr view <pr-number> --json state -q .state)
+  state=$(gh pr view --json state -q .state)
   [ "$state" = "MERGED" ] && break
   [ "$state" = "CLOSED" ] && { echo "PR closed without merge"; exit 1; }
   sleep 30
 done
 ```
 
-(On platforms without live-watching capability, poll via a loop in a
-terminal session, or prompt the user to confirm the merge.)
+Update manifest:
 
-Once merged:
+```bash
+jq '.pr.status="merged"' .stenswf/$ARGUMENTS/manifest.json \
+  > /tmp/m.json && mv /tmp/m.json .stenswf/$ARGUMENTS/manifest.json
+```
 
-- Apply the `shipped` label to the issue.
-- Remove the `shipping` label.
+No labels. The PR merge closes the issue via `Closes #$ARGUMENTS`.
 
 ---
 
-## Phase 5 — Wrap-up
+## Phase 5 — Wrap-up + archive
 
-Once the PR has merged and `shipped` is applied:
+Post a single wrap-up comment on the issue:
 
-- Post a wrap-up comment on the issue:
-  - Brief summary of the approach taken.
-  - List plan tasks completed (by T-ID and commit SHA, from the log table).
-  - Any `lint-escape` actions taken (from subagent reports).
-  - Any justified absences from the Review Step checklist.
+- Brief summary of the approach.
+- Task list by T-ID and commit SHA (from manifest).
+- Any `lint-escape` actions taken.
+- Any justified review-step absences.
 
-- The PR merge has already closed the issue via `Closes #$ARGUMENTS`; the
-  `prd`/`slice`/`planned`/`shipped` labels remain as historical record.
+**Archive the local plan tree** (cold storage — keeps forensic `log.jsonl`
++ manifest without polluting the active workspace):
 
-- If this issue is the last open slice under a parent PRD (query:
-  `gh issue list --label slice --state open --search "parent-prd:#<PRD>"`
-  returns empty), tell the user:
+```bash
+DATE=$(date +%Y-%m-%d)
+mkdir -p .stenswf/.archive
+mv ".stenswf/$ARGUMENTS" ".stenswf/.archive/$ARGUMENTS-$DATE"
+```
 
-  > All slices of PRD #<PRD> are shipped or abandoned. Run `/stenswf:review
-  > <PRD>` to run the PRD-scoped capstone review.
+If this was the last open slice of a parent PRD:
+
+```bash
+PARENT=$(jq -r .prd ".stenswf/.archive/$ARGUMENTS-$DATE/manifest.json")
+OPEN=$(gh issue list --state open \
+  --search "in:body \"Parent PRD\" \"#$PARENT\"" --json number -q 'length')
+if [ "$OPEN" = "0" ]; then
+  echo "All slices of PRD #$PARENT shipped. Run /stenswf:review $PARENT."
+fi
+```
+
+Tell the user the issue shipped and where the archive lives.

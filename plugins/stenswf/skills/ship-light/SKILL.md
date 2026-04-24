@@ -22,9 +22,9 @@ subagents, no plan comment, no XML extraction. The issue body IS the spec.
 - Open `Blocked by #N` exists.
 - Body declares `Lite-eligible: false`. If a structured disqualifier
   block is present (`Disqualifier: <tag>`), echo the tag in the one-line
-  abort reason (e.g. `aborting — files>15`). Exception: for issues
-  labelled `spike`, ignore a `Disqualifier: arch-unknown` — spike slices
-  exist to resolve unknowns.
+  abort reason (e.g. `aborting — files>15`). Exception: if the body's
+  `## Type` marker says `slice — spike`, ignore a
+  `Disqualifier: arch-unknown` — spike slices exist to resolve unknowns.
 - Scope plausibly exceeds the Lite envelope and the issue body did not
   already declare it non-Lite:
   - **> 15 files** changed (no distinction between src/test).
