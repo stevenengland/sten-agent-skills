@@ -1,6 +1,6 @@
 ---
 name: orchestrate
-description: Full python-refactor pipeline orchestrator. Chains measure, hunt-bugs, architecture, and plan-refactor in strict sequence using isolated subagents. Each phase receives only a compact JSON handoff from the previous phase — never the full session history. This prevents context rot across a long pipeline. After all phases complete, files a single summary issue with collapsible detail sections, then cleans up all temporary and deliverable files for this run. All output goes to .python-refactor/ at the project root. Use when the user says "analyze this codebase", "full refactor analysis", "find all issues", or invokes /python-refactor:orchestrate directly.
+description: Orchestrate the full python-refactor pipeline (measure → hunt-bugs → architecture → plan-refactor) via isolated subagents with compact JSON handoffs.
 ---
 
 # python-refactor: Orchestrate

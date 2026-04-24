@@ -1,8 +1,6 @@
 ---
 name: ship-light
-description: Implement a single, well-scoped slice issue end-to-end in one
-  session — branch, TDD, commit, PR, CI green. Lighter alternative to the
-  `plan` + `ship` pair for crisp single-slice work.
+description: Implement a single well-scoped slice issue end-to-end in one session — branch, TDD, commit, PR, CI green.
 disable-model-invocation: true
 ---
 

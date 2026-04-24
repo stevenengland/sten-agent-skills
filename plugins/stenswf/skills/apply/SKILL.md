@@ -1,7 +1,6 @@
 ---
 name: apply
-description: Apply a review — slice-mode (interactive per-suggestion) or PRD-mode
-  (themed cleanup PR from local `<prd-review>` findings, mirrored onto the PR).
+description: Apply a review — slice-mode (interactive per-suggestion) or PRD-mode (themed cleanup PR from local `<prd-review>` findings, mirrored onto the PR).
 disable-model-invocation: true
 ---
 

@@ -1,13 +1,6 @@
 ---
 name: adversarial-multi-model-review
-description: >
-  Adversarial review using multiple AI models, each covering all expert
-  perspectives independently. Models cross-review each other to produce a
-  definitive, consolidated list of improvements. Use when asked for a
-  thorough adversarial review, multi-model review, cross-model critique,
-  or when you want multiple AI perspectives on code, plans, designs, or
-  architecture. Runs in four phases — switch models between phases for
-  maximum adversarial value.
+description: Four-phase adversarial review where multiple AI models cover all expert perspectives independently and cross-review each other.
 argument-hint: 'Pass the file path, code block, plan, or design to review'
 ---
 

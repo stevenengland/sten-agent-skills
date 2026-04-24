@@ -1,10 +1,6 @@
 ---
 name: slice-e2e
-description: One-shot lite pipeline for a slice issue — dispatches
-  `plan-light` then `ship-light` as separate subagent sessions for
-  context separation. Thin orchestrator; makes no judgment calls
-  itself. Escalates cleanly to heavy `plan` + `ship` if either phase
-  aborts.
+description: One-shot lite pipeline dispatching `plan-light` then `ship-light` in separate subagent sessions for context separation.
 disable-model-invocation: true
 ---
 

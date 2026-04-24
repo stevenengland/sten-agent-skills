@@ -1,9 +1,6 @@
 ---
 name: brevity
-description: >
-  Plain-English brevity for internal reasoning and dialogue. Keeps full prose for
-  code, commits, PRs, plans, PRDs, reviews, and user-facing warnings. Use whenever
-  a workflow skill references `brevity`, or on request ("be brief", "be concise").
+description: Plain-English brevity for internal reasoning and dialogue, preserving full prose in code, commits, PRs, plans, and reviews.
 ---
 
 ## Activation

@@ -1,6 +1,6 @@
 ---
 name: documentation-with-mermaid
-description: Diagram-first documentation patterns for any project.  Use when creating or updating docs, ADRs, changelogs, docstrings, or any reference material.
+description: Diagram-first documentation patterns for docs, ADRs, changelogs, docstrings, and reference material in any project.
 license: MIT
 metadata:
   tags: documentation, diagrams, mermaid, markdown

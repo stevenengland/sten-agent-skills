@@ -1,6 +1,6 @@
 ---
 name: hunt-bugs
-description: Actively hunt real bugs in a Python codebase using two phases. Phase 1 is free agentic organic exploration guided by static metrics — the agent reads high-signal files completely, reasons step-by-step through logic errors, Python footguns, semantic drift, and integration failures, and builds a candidate list. Phase 2 uses Hypothesis property-based testing to confirm and reproduce each candidate. Outputs BUG_REPORT_<RUN_ID>.md and Hypothesis test files to .python-refactor/. Auto-runs python-refactor:measure if codebase_metrics.json is missing. When invoked by the orchestrator, returns a compact JSON handoff.
+description: Hunt real Python bugs via metric-guided organic exploration then Hypothesis property-based confirmation, writing BUG_REPORT to .python-refactor/.
 ---
 
 # python-refactor: Hunt Bugs

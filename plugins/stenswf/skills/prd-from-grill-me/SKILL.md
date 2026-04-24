@@ -1,7 +1,6 @@
 ---
 name: prd-from-grill-me
-description: Create a PRD through user interview, codebase exploration, and module
-  design, then submit as an issue.
+description: Create a PRD through user interview, codebase exploration, and module design, then submit as an issue.
 ---
 
 **Load and apply `brevity` now.** See [../../references/brevity-load.md](../../references/brevity-load.md).

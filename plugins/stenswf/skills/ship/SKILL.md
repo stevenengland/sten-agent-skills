@@ -1,8 +1,6 @@
 ---
 name: ship
-description: Implement a slice issue by dispatching one subagent per local task
-  fragment (TDD + clean code), run a refactor pass, file a PR, monitor CI to green,
-  archive the local plan on merge.
+description: Implement a slice issue by dispatching one subagent per local task fragment (TDD + clean code), run a refactor pass, file a PR, monitor CI to green, and archive the local plan on merge.
 disable-model-invocation: true
 ---
 

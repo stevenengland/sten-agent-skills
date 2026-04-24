@@ -1,8 +1,6 @@
 ---
 name: plan
-description: Understand and plan a slice issue end-to-end. Produces a local plan
-  tree under `.stenswf/<issue>/` with per-task fragments, a stable-prefix dispatch
-  file, and a manifest. The issue body remains the conceptual contract.
+description: Plan a slice issue end-to-end, producing a per-task fragment tree and dispatch manifest under `.stenswf/<issue>/`.
 disable-model-invocation: true
 ---
 

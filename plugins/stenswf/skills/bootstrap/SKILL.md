@@ -1,8 +1,6 @@
 ---
 name: bootstrap
-description: One-shot, human-invoked setup for repo-level artifacts the planning
-  and shipping skills rely on. Adds `.stenswf/` to `.gitignore` and creates the
-  local state root. Run once per repo.
+description: One-shot repo setup for stenswf planning/shipping — gitignores `.stenswf/` and creates the local state root.
 disable-model-invocation: true
 ---
 

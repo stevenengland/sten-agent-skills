@@ -1,6 +1,6 @@
 ---
 name: measure
-description: Instrument a Python project with static analysis tools and write codebase_metrics.json to .python-refactor/. Runs radon (cyclomatic complexity, maintainability index, Halstead metrics), vulture (dead code), bandit (security patterns), semgrep (OWASP), skylos (taint analysis), and grimp (module coupling graph) in parallel. Raw tool output goes to .python-refactor/tmp/ and is cleaned after aggregation. Invoked automatically by other skills in this suite when codebase_metrics.json is missing. When invoked by the orchestrator, returns a compact JSON handoff instead of a prose summary.
+description: Instrument a Python project with radon, vulture, bandit, semgrep, skylos, and grimp, writing aggregated codebase_metrics.json to .python-refactor/.
 ---
 
 # python-refactor: Measure

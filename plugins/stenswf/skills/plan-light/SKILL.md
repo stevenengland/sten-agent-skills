@@ -1,10 +1,6 @@
 ---
 name: plan-light
-description: Lightweight planning for a well-scoped slice issue. Produces a
-  single plan-light.md plus a 4-field plan-light.json identity card under
-  `.stenswf/<issue>/` that `ship-light` can optionally consume. Makes
-  educated guesses silently; escalates to heavy `plan` + `ship` only when
-  genuinely blocked. Works with any model.
+description: Lightweight planning for a well-scoped slice issue — `plan-light.md` plus a 4-field JSON identity card consumable by `ship-light`.
 disable-model-invocation: true
 ---
 

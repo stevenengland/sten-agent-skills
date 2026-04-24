@@ -1,7 +1,6 @@
 ---
 name: prd-to-issues
-description: Break a PRD into independently-grabbable issues using tracer-bullet vertical
-  slices.
+description: Break a PRD into independently-grabbable issues using tracer-bullet vertical slices.
 ---
 
 **Load and apply `brevity` now.** See [../../references/brevity-load.md](../../references/brevity-load.md).

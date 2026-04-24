@@ -1,6 +1,6 @@
 ---
 name: plan-refactor
-description: Generate a prioritized, dependency-safe refactor plan from codebase_metrics.json and BUG_REPORT_<RUN_ID>.md in .python-refactor/. Produces REFACTOR_PLAN_<RUN_ID>.md with P0-P3 triage, per-finding action items, bug fix stubs with minimal reproductions, security fix stubs with CWE references, a topologically-sorted execution sequence respecting module dependencies, and a test gap analysis listing all P0/P1 files with no test coverage. Auto-runs measure if codebase_metrics.json is missing. Incorporates BUG_REPORT if present. When invoked by the orchestrator, returns a compact JSON handoff.
+description: Generate a P0–P3, dependency-safe Python refactor plan from codebase_metrics.json (and any BUG_REPORT) with test-gap analysis.
 ---
 
 # python-refactor: Plan Refactor

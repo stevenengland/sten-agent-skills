@@ -1,6 +1,6 @@
 ---
 name: sync-upstream-skills
-description: Walk the tracked skills in sources.yaml, compare each local skill against its upstream source, and interview the user about which upstream changes are worth importing. Use when user wants to refresh skills from upstream, check for upstream updates, sync sources, or review divergence from original sources.
+description: Walk tracked skills in sources.yaml, diff each against its upstream, and interview the user about which upstream changes are worth importing.
 disable-model-invocation: true
 ---
 

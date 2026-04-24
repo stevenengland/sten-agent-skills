@@ -1,6 +1,6 @@
 ---
 name: docker-expert
-description: "Docker containerization expert with deep knowledge of multi-stage builds, image optimization, container security, Docker Compose orchestration, and production deployment patterns. Use PROACTIVELY for any Docker-related topic"
+description: Docker expert for multi-stage builds, image optimization, container security, Compose orchestration, and production deployment patterns.
 ---
 
 # Docker Expert

@@ -1,6 +1,6 @@
 ---
 name: test-file-compaction
-description: Refactors existing test files to reduce line count and eliminate repetition without dropping any test case, assertion, or edge-case coverage. Extracts fixtures, parametrizes duplicate test bodies, introduces shared assertion helpers, and hoists repeated constants — preserving full test semantics throughout.
+description: Refactor test files to cut lines and repetition via fixtures, parametrization, shared helpers, and hoisted constants — preserving every test semantic.
 disable-model-invocation: true
 ---
 

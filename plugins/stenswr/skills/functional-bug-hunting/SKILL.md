@@ -1,6 +1,6 @@
 ---
 name: functional-bug-hunting
-description: Hunt for behavioural bugs worth fixing during a refactor — logic errors, wrong invariants, silent corruption, incorrect happy-path or edge-case handling. Language-agnostic counterpart to python-refactor:hunt-bugs. Use when scoping a refactor and you need a triaged list of real functional defects to fold into the plan.
+description: Hunt behavioural bugs worth folding into a refactor — logic errors, wrong invariants, silent corruption, bad happy-path or edge-case handling.
 disable-model-invocation: true
 ---
 

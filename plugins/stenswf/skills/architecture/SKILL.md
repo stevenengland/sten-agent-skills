@@ -1,6 +1,6 @@
 ---
 name: architecture
-description: Guide architectural decision-making for new projects or significant code changes. Use when starting a new project, choosing a design pattern, evaluating architecture for a large refactor, or when the user asks which architecture pattern to use.
+description: Guide architectural decision-making for new projects, large refactors, or design-pattern selection.
 ---
 
 # Architecture Guidance

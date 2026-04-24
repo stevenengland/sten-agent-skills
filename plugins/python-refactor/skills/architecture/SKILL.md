@@ -1,6 +1,6 @@
 ---
 name: architecture
-description: Explore a Python codebase to find opportunities to deepen shallow modules, reduce coupling, and improve testability. Reads codebase_metrics.json from .python-refactor/ (auto-runs measure if missing) and cross-references BUG_REPORT_<RUN_ID>.md if present to show which architectural patterns are hiding confirmed bugs. Presents numbered candidates, spawns parallel design subagents for the chosen candidate, recommends the strongest interface design, and creates issue RFCs. Use when the user wants architecture review, module deepening, or coupling reduction.
+description: Find Python architectural improvements (deeper modules, lower coupling, better testability) via metric- and bug-report-informed RFCs.
 ---
 
 # python-refactor: Architecture

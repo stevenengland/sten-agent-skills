@@ -1,6 +1,6 @@
 ---
 name: test-file-refactor
-description: Lossy test-file hygiene — propose pruning of tests that no longer pull their weight (mock-of-internal, call-count assertions, private-method tests, change-detector, dead, duplicate, skipped-without-reason) and surface coverage gaps worth filling (happy-path-only, undocumented raise paths, broken imports, integration-test blind spots). Produces a PLAN file for user review; never deletes on its own. The lossy counterpart to test-file-compaction (which preserves every test). Python/pytest first with a deterministic analyzer script; falls back to pure LLM mode for other languages.
+description: Lossy test-file hygiene — propose pruning low-value tests and flag coverage gaps as a PLAN for user review, never deleting on its own.
 disable-model-invocation: true
 ---
 
