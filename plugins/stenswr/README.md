@@ -24,7 +24,7 @@ below, or propose a new axis.
 | 1 — Discover | `security-bug-hunting` *(placeholder)* | n/a | Find security defects worth fixing during the refactor |
 | 2 — Critique | `plan-reviewer` | n/a | Multi-perspective critique of a refactor plan |
 | 3 — Test hygiene | `test-file-compaction` | **lossless** | Shrink test files without changing coverage |
-| 3 — Test hygiene | `test-file-refactor` *(placeholder)* | **lossy** | Cull needless tests, surface coverage gaps worth filling |
+| 3 — Test hygiene | `test-file-refactor` | **lossy** | Cull needless tests, surface coverage gaps worth filling |
 
 ### What belongs here
 
@@ -49,7 +49,7 @@ below, or propose a new axis.
 | `/stenswr:test-file-compaction` | Lossless test-file compaction |
 | `/stenswr:functional-bug-hunting` | **Placeholder** — behavioural bug hunting |
 | `/stenswr:security-bug-hunting` | **Placeholder** — security defect hunting |
-| `/stenswr:test-file-refactor` | **Placeholder** — lossy test cull + coverage-gap surfacing |
+| `/stenswr:test-file-refactor` | Lossy test cull + coverage-gap surfacing (produces a PLAN; deletes nothing) |
 
 Placeholder skills declare their `name` and `description` but have no
 process body yet. They are visible to the platform's skill index but
@@ -80,7 +80,7 @@ STEN-AGENT-SKILLS/                       ← Repo root
 │       │   ├── test-file-compaction/
 │       │   ├── functional-bug-hunting/  ← placeholder
 │       │   ├── security-bug-hunting/    ← placeholder
-│       │   └── test-file-refactor/      ← placeholder
+│       │   └── test-file-refactor/
 │       └── README.md                    ← This file
 │
 ├── plugins/stenswf/                     ← Sibling: execution workflow

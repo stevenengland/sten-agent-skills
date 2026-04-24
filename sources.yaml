@@ -68,9 +68,9 @@
 - skill: plugins/stenswr/skills/test-file-refactor
   upstream: ""
   ref: ""
-  last_reviewed: ""
+  last_reviewed: "2026-04-24"
   status: own-invention
-  notes: "Placeholder stub; no implementation yet."
+  notes: "Lossy test hygiene; synthesizes Matt Pocock TDD (aihero.dev) with Khorikov and Google SWE change-detector guidance."
 
 - skill: plugins/stenswf/skills/grill-me
   upstream: https://github.com/mattpocock/skills
@@ -120,3 +120,80 @@
   last_reviewed: ""
   status: own-invention
   notes: ""
+
+- skill: plugins/stenswf/skills/plan
+  upstream: ""
+  ref: ""
+  last_reviewed: ""
+  status: own-invention
+  notes: "Heavy-path planner; emits .stenswf/<issue>/ plan tree."
+
+- skill: plugins/stenswf/skills/plan-light
+  upstream: ""
+  ref: ""
+  last_reviewed: ""
+  status: own-invention
+  notes: "Lite-path advisory planner; consumed optionally by ship-light."
+
+- skill: plugins/stenswf/skills/ship
+  upstream: ""
+  ref: ""
+  last_reviewed: ""
+  status: own-invention
+  notes: "Heavy-path orchestrator; dispatches one subagent per task fragment."
+
+- skill: plugins/stenswf/skills/ship-light
+  upstream: ""
+  ref: ""
+  last_reviewed: ""
+  status: own-invention
+  notes: "Lite-path single-session shipper."
+
+- skill: plugins/stenswf/skills/slice-e2e
+  upstream: ""
+  ref: ""
+  last_reviewed: ""
+  status: own-invention
+  notes: "One-shot lite-path orchestrator."
+
+- skill: plugins/stenswf/skills/review
+  upstream: ""
+  ref: ""
+  last_reviewed: ""
+  status: own-invention
+  notes: "Router; dispatches to slice.md or prd.md based on front-matter type."
+
+- skill: plugins/stenswf/skills/apply
+  upstream: ""
+  ref: ""
+  last_reviewed: ""
+  status: own-invention
+  notes: "Router; dispatches to slice.md (interactive) or prd.md (themed cleanup PR)."
+
+- skill: plugins/stenswf/skills/architecture
+  upstream: ""
+  ref: ""
+  last_reviewed: ""
+  status: own-invention
+  notes: "PRD-phase architecture helper."
+
+- skill: plugins/stenswf/skills/bootstrap
+  upstream: ""
+  ref: ""
+  last_reviewed: ""
+  status: own-invention
+  notes: "One-time repo setup for .stenswf/ workspace."
+
+- skill: plugins/stenswf/skills/brevity
+  upstream: ""
+  ref: ""
+  last_reviewed: ""
+  status: own-invention
+  notes: "Reasoning-brevity directive loaded by orchestrator skills."
+
+- skill: plugins/stenswf/skills/clean-code
+  upstream: ""
+  ref: ""
+  last_reviewed: ""
+  status: own-invention
+  notes: "Clean-code pass loaded by ship/ship-light refactor steps."
