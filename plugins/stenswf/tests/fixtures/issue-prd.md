@@ -4,7 +4,7 @@
 type: PRD
 lite_eligible: false
 conventions_source: self
-prd_base_sha: "abcdef0123456"
+prd_base_sha: abcdef0123456
 -->
 
 ## Problem

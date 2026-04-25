@@ -7,7 +7,7 @@ lite_eligible: false
 conventions_source: prd
 prd_ref: "42"
 disqualifier: "multi-subsystem + schema migration"
-prd_base_sha: "0123456abcdef"
+prd_base_sha: 0123456abcdef
 -->
 
 ## What to build

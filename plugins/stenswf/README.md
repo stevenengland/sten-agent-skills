@@ -290,8 +290,8 @@ Claude Code discovers and loads it automatically. Reload if already running:
 
 1. **Capture the idea.** `/stenswf:grill-me` → shared understanding.
 2. **Write the PRD.** `/stenswf:prd-from-grill-me` → issue filed with
-   `type: PRD` front-matter; PRD base SHA recorded (git tag
-   `prd-<N>-base`).
+   `type: PRD` front-matter; PRD base SHA recorded in front-matter
+   (`prd_base_sha`).
 3. **Break it down.** `/stenswf:prd-to-issues` → vertical-slice issues,
    each with `type: slice — HITL|AFK|spike` front-matter.
 4. **For each slice:**
