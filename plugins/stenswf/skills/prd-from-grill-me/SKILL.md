@@ -43,7 +43,7 @@ Invoked when the user wants to create a PRD. Skip steps if unnecessary.
 4a. **Lock bikeshed decisions now.** Surface every decision that would
     otherwise be re-litigated inside slice issues (naming, shape,
     layout, test layout, error surfacing, vocabularies). Resolve them
-    upfront so slices stay AFK and Lite.
+    upfront so downstream issues stay AFK and Lite.
 
     For each, ask the user their preference (with your recommendation).
     Record the resolved decision in the PRD's `## Conventions` section.
@@ -60,7 +60,7 @@ Invoked when the user wants to create a PRD. Skip steps if unnecessary.
     which sections of the template carry the load.
 
     Then pause and step back: which decisions are still implicit and
-    would otherwise leak as HITL ambiguity into every downstream slice?
+    would otherwise leak as HITL ambiguity into every downstream issue?
     Which conventions did the interview surface but not lock? Are any
     "obvious" defaults actually contested in this codebase? Revise
     `## Conventions` and `## Implementation Decisions` before writing.
@@ -86,12 +86,8 @@ Invoked when the user wants to create a PRD. Skip steps if unnecessary.
    ```
 
    Embed `prd_base_sha: $PRD_BASE` in the front-matter block (see
-   template). After the issue is created and its number `<N>` is known:
-
-   ```bash
-   git tag "prd-<N>-base" "$PRD_BASE"
-   git push origin "prd-<N>-base"
-   ```
+   template). The front-matter field is the sole anchor consumed by
+   `review` and `apply`.
 
    Do NOT apply any label. Mode is detected from the front-matter
    `type: PRD` marker.
@@ -140,7 +136,7 @@ Invoked when the user wants to create a PRD. Skip steps if unnecessary.
    (see that file for the auto-incremented-ID awk). Adapt
    title/rationale/refs from each PRD item.
 
-   **After creating the issue, offer the chained handover:**
+   **After creating the issue, display this prompt and STOP.**
 
    > PRD created as issue #N.
    >
@@ -151,9 +147,15 @@ Invoked when the user wants to create a PRD. Skip steps if unnecessary.
    >
    > Default: N
 
-   If the user's response is `y`/`yes`/`proceed`/`go` (case-insensitive),
-   immediately invoke `prd-to-issues` at **Step 3 (HITL triage)**,
-   treating Steps 1–2 as done. Any other response → stop.
+   **HARD STOP.** Do not invoke `prd-to-issues`. Do not draft slices. Do
+   not dispatch any subagent. Do not read any further files. End your
+   turn now and wait for the user's literal next message.
+
+   **On the next user message:**
+   - If the message is `y`, `yes`, `proceed`, or `go` (case-insensitive,
+     trimmed) → invoke `prd-to-issues` starting at its **Step 3 (HITL
+     triage)**, treating Steps 1–2 as already done.
+   - Any other message → end. Do not slice.
 
 ---
 

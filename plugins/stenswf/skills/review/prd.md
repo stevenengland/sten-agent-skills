@@ -22,19 +22,11 @@ Abandoned slices should be manually closed
 
 ## Step 1 — Resolve the PRD base
 
-Portable (no PCRE, no `\K`) — prefer tag, fall back to front-matter:
+Resolved exclusively from the PRD issue front-matter `prd_base_sha`:
 
 ```bash
-PRD_BASE=$(git rev-parse "prd-$ARGUMENTS-base" 2>/dev/null)
-if [ -z "$PRD_BASE" ]; then
-  PRD_BASE=$(get_fm prd_base_sha "/tmp/slice-$ARGUMENTS.md")
-fi
-if [ -z "$PRD_BASE" ]; then
-  # Legacy fallback (pre-front-matter PRDs): line-form `**PRD base SHA:** <sha>`.
-  PRD_BASE=$(grep -oE 'PRD base SHA:[[:space:]]*[0-9a-f]{7,40}' \
-    /tmp/slice-$ARGUMENTS.md | awk '{print $NF}' | head -1)
-fi
-[ -n "$PRD_BASE" ] || { echo "cannot resolve PRD base"; exit 1; }
+PRD_BASE=$(get_fm prd_base_sha "/tmp/slice-$ARGUMENTS.md")
+[ -n "$PRD_BASE" ] || { echo "PRD #$ARGUMENTS missing prd_base_sha in front-matter" >&2; exit 1; }
 ```
 
 ## Step 2 — Compute the delivered diff

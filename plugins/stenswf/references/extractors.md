@@ -92,10 +92,9 @@ esac
 
 ## PRD base SHA
 
-Portable (no PCRE, no `\K`):
+Resolved exclusively from the PRD issue front-matter:
 
 ```bash
 PRD_BASE=$(get_fm prd_base_sha /tmp/slice-$ARGUMENTS.md)
-# Fallback to the git tag if front-matter missing (legacy inception):
-[ -z "$PRD_BASE" ] && PRD_BASE=$(git rev-parse "prd-$ARGUMENTS-base" 2>/dev/null)
+[ -n "$PRD_BASE" ] || { echo "PRD #$ARGUMENTS missing prd_base_sha in front-matter" >&2; exit 1; }
 ```

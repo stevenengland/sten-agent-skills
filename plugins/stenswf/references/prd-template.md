@@ -61,12 +61,5 @@ coverage targets). Not test case enumeration.
 
 ## Post-create step
 
-After `gh issue create` returns the issue number `<N>`:
-
-```bash
-git tag "prd-<N>-base" "<PRD_BASE>"
-git push origin "prd-<N>-base"
-```
-
-The tag is the durable anchor for `review` in PRD-mode. The
-`prd_base_sha` front-matter field is the redundant pointer.
+The `prd_base_sha` front-matter field is the durable anchor for
+`review` and `apply` in PRD-mode. No remote tag is created.

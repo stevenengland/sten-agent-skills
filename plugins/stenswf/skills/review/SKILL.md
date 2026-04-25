@@ -50,11 +50,8 @@ if [ "$TYPE" = "PRD" ] && [ ! -f ".stenswf/$ARGUMENTS/manifest.json" ]; then
   mkdir -p ".stenswf/$ARGUMENTS"
   cp "/tmp/slice-$ARGUMENTS.md" ".stenswf/$ARGUMENTS/concept.md"
   CONCEPT_SHA=$(sha256sum ".stenswf/$ARGUMENTS/concept.md" | awk '{print $1}')
-  # Portable PRD-base resolution (no grep -oP / \K).
-  PRD_BASE=$(git rev-parse "prd-$ARGUMENTS-base" 2>/dev/null)
-  [ -z "$PRD_BASE" ] && PRD_BASE=$(get_fm prd_base_sha "/tmp/slice-$ARGUMENTS.md")
-  [ -z "$PRD_BASE" ] && PRD_BASE=$(grep -oE 'prd_base_sha:[[:space:]]*[0-9a-f]{7,40}' \
-    "/tmp/slice-$ARGUMENTS.md" | awk '{print $NF}' | head -1)
+  PRD_BASE=$(get_fm prd_base_sha "/tmp/slice-$ARGUMENTS.md")
+  [ -n "$PRD_BASE" ] || { echo "PRD #$ARGUMENTS missing prd_base_sha in front-matter" >&2; exit 1; }
   cat > ".stenswf/$ARGUMENTS/manifest.json" <<EOF
 {
   "issue": $ARGUMENTS,
