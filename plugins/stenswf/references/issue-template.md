@@ -9,11 +9,16 @@ type: slice — AFK
 lite_eligible: true
 conventions_source: prd#<PRD-N>
 prd_ref: <PRD-N>
+# bug_ref: <ORIGINAL-BUG-N>   # uncomment for bug-brief-derived slices
 -->
 
 ## Parent PRD
 
 #<prd-issue-number>
+
+(For bug-brief-derived slices, the parent is the bug-brief issue
+number; the original raw bug report is referenced in front-matter
+as `bug_ref`.)
 
 ## What to build
 
@@ -23,8 +28,8 @@ duplicating content.
 
 ## Conventions (from PRD)
 
-Copy the PRD's `## Conventions` section verbatim (contents only — do
-not repeat the `## Conventions` heading). If the PRD says
+Copy the parent PRD's or bug-brief's `## Conventions` section verbatim
+(contents only — do not repeat the heading). If the parent says
 `None — slice-local decisions only.`, copy that single line.
 
 ## Acceptance criteria
@@ -46,6 +51,13 @@ if exploration produced nothing reliable.
 - Create: `path/to/new.py` — <one-line responsibility>
 - Modify: `path/to/existing.py` — <what changes>
 - Test:   `tests/path/to/test_file.py` — <what it covers>
+
+## Invariants preserved
+
+Optional. **Required** when parent has `class: refactor` or
+`class: bug-brief`. List behaviors that MUST stay unchanged (e.g.
+"public API stable", "existing green tests stay green"). Lifted
+verbatim from the parent's `## Invariants Preserved` section.
 ```
 
 ## Front-matter rules

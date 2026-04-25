@@ -11,6 +11,17 @@ Contains three coordinated workflows plus always-on craft skills.
 ## Four tracks at a glance
 
 ```
+             Raw GitHub issue (bug | feature | refactor request)
+                             │
+             ┌───────────────┴────────────────┐
+             │ broken behavior?               │ desired change?
+             │                                │
+   /stenswf:triage-issue          /stenswf:prd-from-grill-me <N>
+   ├─ REJECT (dup/oos/info)        ├─ Phase 0 issue intake
+   └─ CONVERT                       └─ class auto-detect
+      bug-brief + slice(s)            (capability/integration/
+         │                              migration/refactor)
+         ▼                                  │
                      ┌─────────────────────────────────────────┐
                      │    front-matter: stenswf:v1 marker      │
                      │    (type, lite_eligible, prd_ref, …)    │
@@ -18,13 +29,16 @@ Contains three coordinated workflows plus always-on craft skills.
                                         │
                  ┌──────────────────────┼──────────────────────┐
                  │                      │                      │
-          lite_eligible:true     lite_eligible:false    type: PRD
+          lite_eligible:true     lite_eligible:false    type: PRD | bug-brief
                  │                      │                      │
          ┌───────┴────────┐             │                      │
          │                │             │                      │
    ship-light       slice-e2e        plan                   review
    (single-         (plan-light      + ship                 (PRD-mode
-    session)         + ship-light)    (heavy tree)           capstone)
+    session)         + ship-light)    (heavy tree)           capstone /
+                                                              bug-brief
+                                                              slice-mode
+                                                              on children)
                                                                  │
                                                                  ↓
                                                               apply
@@ -44,12 +58,35 @@ Contains three coordinated workflows plus always-on craft skills.
 
 ## Workflows
 
+### Bug triage (raw issue → bug-brief + slice)
+
+```
+/stenswf:triage-issue <N>      → REJECT (duplicate / out-of-scope /
+                                 needs-info), or CONVERT: emit a
+                                 bug-brief issue + child slice(s) and
+                                 close the original. No quick-fix lane;
+                                 every accepted bug becomes a slice.
+```
+
+Dedup uses GitHub search PLUS persistent `.stenswf/.out-of-scope/`
+rejection memory (per-clone, not committed). The original issue
+stays untouched as the durable intake record. The bug-brief is a
+narrow PRD-shaped artifact (`type: bug-brief`, `class: bug-brief`),
+with its own decision anchor and base SHA. See
+[references/bug-brief-class.md](references/bug-brief-class.md) and
+[references/out-of-scope-memory.md](references/out-of-scope-memory.md).
+
 ### Feature inception (idea → PRD → issues)
 
 ```
-/stenswf:grill-me              → stress-test the idea, resolve decision tree
-/stenswf:prd-from-grill-me     → produce a PRD and file it as an issue
-/stenswf:prd-to-issues         → split the PRD into vertical-slice issues
+/stenswf:grill-me                  → stress-test the idea, resolve decision tree
+/stenswf:prd-from-grill-me         → produce a PRD and file it as an issue
+/stenswf:prd-from-grill-me <N>     → from an existing feature/refactor
+                                     request issue (Phase 0 intake;
+                                     class auto-detect: capability /
+                                     integration / migration / refactor;
+                                     closes the original on PRD create)
+/stenswf:prd-to-issues             → split the PRD into vertical-slice issues
 ```
 
 ### Issue lifecycle (plan → ship → review → apply)
@@ -83,14 +120,18 @@ Contains three coordinated workflows plus always-on craft skills.
 
 `review` and `apply` auto-detect **mode** from the target issue's
 `<!-- stenswf:v1 ... -->` front-matter `type:` field (set by
-`prd-from-grill-me` / `prd-to-issues`). No labels are used anywhere.
+`prd-from-grill-me` / `prd-to-issues` / `triage-issue`). No labels are
+used anywhere.
 
 - `type: PRD` → PRD-mode (capstone review / themed cleanup).
+- `type: bug-brief` → slice-mode-on-children (no capstone). See
+  [references/mode-detection.md](references/mode-detection.md).
 - `type: slice — HITL|AFK|spike` → Slice-mode.
 
-PRD-mode `review` is **gated**: refuses to run while any slice is still
-open (queried by body reference `"Parent PRD" "#N"`, not by labels).
-Close abandoned slices before re-running.
+PRD-mode and bug-brief-mode `review` are **gated**: refuse to run
+while any child slice is still open (queried by body reference
+`"Parent PRD" "#N"`, not by labels). Close abandoned slices before
+re-running.
 
 ### Choosing the right path
 
@@ -132,6 +173,7 @@ your harness (or manually invoke) accordingly.
 
 | Skill | Recommended model | Rationale |
 |---|---|---|
+| `/stenswf:triage-issue` | Opus | Backward tracing + root-cause analysis on unfamiliar code |
 | `/stenswf:grill-me` | Sonnet | Fast interactive Q&A; relentlessness over depth |
 | `/stenswf:prd-from-grill-me` | Opus | Long-context design synthesis; industry-pattern research |
 | `/stenswf:prd-to-issues` | Sonnet | Structured slicing; tight templates |
@@ -174,15 +216,21 @@ STEN-AGENT-SKILLS/                       ← Repo root
 │       ├── references/                  ← Lazy-loaded reference bodies
 │       │   ├── front-matter-schema.md
 │       │   ├── extractors.md
+│       │   ├── mode-detection.md
 │       │   ├── drift-check.md
 │       │   ├── brevity-load.md
+│       │   ├── context-hygiene.md
 │       │   ├── decision-anchor-link.md
 │       │   ├── pr-ci-merge.md
 │       │   ├── feedback-log.md
+│       │   ├── feedback-session.md
 │       │   ├── prd-template.md
 │       │   ├── issue-template.md
+│       │   ├── bug-brief-class.md
+│       │   ├── out-of-scope-memory.md
 │       │   ├── plan-task-template.md
-│       │   └── plan-artifact-schemas.md
+│       │   ├── plan-artifact-schemas.md
+│       │   └── reasoning-effects.md
 │       ├── scripts/                     ← Shared executables
 │       │   └── log-issue.sh
 │       ├── tests/                       ← Fixtures for manual verification
@@ -198,6 +246,7 @@ STEN-AGENT-SKILLS/                       ← Repo root
 │       │   ├── grill-me/
 │       │   ├── prd-from-grill-me/
 │       │   ├── prd-to-issues/
+│       │   ├── triage-issue/
 │       │   ├── bootstrap/
 │       │   ├── clean-code/
 │       │   ├── tdd/

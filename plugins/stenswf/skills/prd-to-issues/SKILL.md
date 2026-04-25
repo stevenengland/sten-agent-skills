@@ -12,13 +12,19 @@ Break a PRD into independently-grabbable issues using vertical slices
 
 ## Process
 
-### 1. Locate the PRD
+### 1. Locate the PRD (or bug-brief)
 
-**Fast-path:** if chained from `prd-from-grill-me`, skip fetch — note the
-issue number and continue.
+**Fast-path:** if chained from `prd-from-grill-me` or `triage-issue`,
+skip fetch — note the issue number and continue.
 
-Otherwise, ask the user for the PRD issue number. Fetch via
-`gh issue view` (or `glab`/`tea`). If no CLI, ask the user for content.
+Otherwise, ask the user for the PRD or bug-brief issue number. Fetch
+via `gh issue view` (or `glab`/`tea`). If no CLI, ask the user for
+content.
+
+Read `class:` from front-matter (per
+[../../references/extractors.md](../../references/extractors.md)). If
+`class: bug-brief`, **bug-brief mode** is active for the rest of this
+skill. See *§ Bug-brief mode* below — it changes Steps 4–5 behavior.
 
 ### 2. Explore the codebase (optional, via subagent)
 
@@ -170,3 +176,68 @@ supersessions do not retroactively update slice anchors. See
 Log workflow friction per
 [../../references/feedback-session.md](../../references/feedback-session.md)
 with `STENSWF_SKILL=prd-to-issues`.
+
+---
+
+## Bug-brief mode
+
+Activated when the parent issue has `class: bug-brief` (set by
+`/stenswf:triage-issue`). Behavior changes:
+
+### Step-3 modification (HITL triage)
+
+Still runs. A bug-brief may introduce conventions to prevent recurrence
+(e.g. "all pagination cursors must include a stable tiebreaker"); these
+are bikeshed-class and belong in the bug-brief's `## Conventions`.
+Treat the bug-brief identically to a PRD here.
+
+### Step-4 modification (default to one slice)
+
+The `triage-issue` Phase-5 fan-out gate already decided that fan-out is
+warranted (otherwise `triage-issue` would have created the slice
+itself). If we are in this skill, fan-out is the chosen path.
+
+Default to **the minimum number of slices** that satisfies all three
+fan-out criteria:
+
+1. Affected files >15 OR cross-module OR schema migration.
+2. Genuine chain of root causes.
+3. Each slice independently testable.
+
+Each bug-brief-derived slice gets:
+
+- `prd_ref: <bug-brief-N>` (the bug-brief plays the PRD role).
+- `conventions_source: bug-brief#<bug-brief-N>`.
+- `bug_ref: <original-bug-N>` (lifted from the bug-brief's manifest
+  `bug_ref` field).
+- `## Invariants preserved` body section copied verbatim from the
+  bug-brief's `## Invariants Preserved`.
+- ACs include both behavior-restoration checkboxes AND
+  invariant-preservation checkboxes.
+
+### Step-5 modification (skip granularity quiz when N=1)
+
+If the fan-out produces a single slice, skip the slice-set quiz —
+present the slice for confirmation, then proceed. The granularity
+debate only applies when N>1.
+
+### Step-7+ — close the original bug report
+
+After all slices are created and the bug-brief manifest is updated,
+close the **original bug report** (the issue referenced by the
+bug-brief's `bug_ref`):
+
+```bash
+ORIG_BUG=$(jq -r '.bug_ref // empty' ".stenswf/$BB_NUM/manifest.json")
+if [ -n "$ORIG_BUG" ]; then
+  SLICES_LIST=$(printf '#%s, ' $SLICES | sed 's/, $//')
+  gh issue comment "$ORIG_BUG" --body \
+"Triaged → bug-brief #$BB_NUM, slices: $SLICES_LIST.
+The original report is preserved here as the durable intake record.
+Status updates will appear on the slices."
+  gh issue close "$ORIG_BUG" --reason completed
+fi
+```
+
+(For single-slice triage, `triage-issue` already closed the original;
+this step is a no-op when `bug_ref` is absent or already closed.)

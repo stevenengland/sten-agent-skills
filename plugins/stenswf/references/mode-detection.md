@@ -13,10 +13,18 @@ TYPE=$(get_fm type /tmp/slice-$ARGUMENTS.md)
 
 ## Dispatch
 
-- `TYPE == "PRD"` → PRD-mode → read `prd.md` and execute.
+- `TYPE == "PRD"` → PRD-mode → read `prd.md` and execute (capstone
+  review / themed cleanup).
+- `TYPE == "bug-brief"` → bug-brief-mode → behaves as **slice-mode on
+  children**: review/apply runs the slice-mode flow against the
+  bug-brief's child slice(s), no capstone synthesis. Gating mirrors
+  PRD-mode (refuses while any child slice is open). Bug-briefs typically
+  have one child; capstone semantics are intentionally skipped because a
+  single-defect retrospective is not the same as a feature retrospective.
 - `TYPE` starts with `slice` → Slice-mode → read `slice.md` and execute.
-- Unrecognised or missing → fall back to `.stenswf/$ARGUMENTS/manifest.json:.kind`.
-  If still undetermined, ask the user and log `contract_violation`.
+- Unrecognised or missing → fall back to `.stenswf/$ARGUMENTS/manifest.json:.kind`
+  (`prd` | `bug-brief` | `slice`). If still undetermined, ask the user
+  and log `contract_violation`.
 
 **Announce the detected mode** as the first line of output, then load
 the matching sub-skill body.

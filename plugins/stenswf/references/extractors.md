@@ -45,6 +45,9 @@ LITE=$(get_fm lite_eligible /tmp/slice-$ARGUMENTS.md)
 CONV_SRC=$(get_fm conventions_source /tmp/slice-$ARGUMENTS.md)
 PRD_REF=$(get_fm prd_ref /tmp/slice-$ARGUMENTS.md)
 DISQ=$(get_fm disqualifier /tmp/slice-$ARGUMENTS.md)
+CLASS=$(get_fm class /tmp/slice-$ARGUMENTS.md)        # PRD/bug-brief only
+BUG_REF=$(get_fm bug_ref /tmp/slice-$ARGUMENTS.md)    # slice (optional)
+AFFECTS_PRD=$(get_fm affects_prd /tmp/slice-$ARGUMENTS.md)  # bug-brief (optional)
 ```
 
 ## Extract body sections (post-front-matter)
@@ -82,6 +85,7 @@ terminates at the next `## ` — no `| sed '$d'` or `tail -n +3` hacks.
 TYPE=$(printf '%s' "$TYPE" | sed 's/–/—/g; s/--/—/g; s/ *— */ — /g')
 case "$TYPE" in
   PRD) MODE=prd ;;
+  bug-brief) MODE=bug-brief ;;
   "slice — HITL"|"slice — AFK"|"slice — spike")
     MODE=slice
     SLICE_TYPE=${TYPE#slice — }   # HITL | AFK | spike

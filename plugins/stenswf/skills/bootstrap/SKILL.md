@@ -86,12 +86,16 @@ bootstrap continues.
 
 ```bash
 mkdir -p .stenswf/.archive
+mkdir -p .stenswf/.out-of-scope
 touch .stenswf/.archive/.keep
+touch .stenswf/.out-of-scope/.keep
 ```
 
 `.stenswf/` is excluded per-clone via `.git/info/exclude`, but creating
 it upfront lets `plan` write into `.stenswf/<issue>/` on first use
-without a `mkdir -p` surprise.
+without a `mkdir -p` surprise. `.stenswf/.out-of-scope/` is the
+persistent rejection memory used by `/stenswf:triage-issue` Phase 1
+(dedup) — see [../../references/out-of-scope-memory.md](../../references/out-of-scope-memory.md).
 
 ### 3. Confirm
 

@@ -11,8 +11,68 @@ The PRD document itself is a full-prose artifact (already excluded by
 
 Invoked when the user wants to create a PRD. Skip steps if unnecessary.
 
+## Phase 0 — Issue intake (optional)
+
+If `$ARGUMENTS` is a GitHub issue number, treat it as an existing
+feature/refactor/integration/migration request to convert into a PRD.
+This is the entry mode used when the user runs
+`/stenswf:prd-from-grill-me <issue>` rather than a blank-page session.
+
+```bash
+if printf '%s' "${ARGUMENTS:-}" | grep -Eq '^[0-9]+$'; then
+  ORIG="$ARGUMENTS"
+  gh issue view "$ORIG" --json title,body,state \
+    -q '"# " + .title + "\n\n" + .body' > /tmp/req-$ORIG.md
+
+  # Refuse retriage / replanning of an already-shaped issue.
+  if head -10 /tmp/req-$ORIG.md | grep -q '^<!-- stenswf:v1'; then
+    echo "Issue #$ORIG already has stenswf:v1 front-matter. Use /stenswf:plan / /stenswf:plan-light / /stenswf:triage-issue as appropriate." >&2
+    exit 1
+  fi
+else
+  ORIG=""
+fi
+```
+
+If `$ORIG` is set:
+
+1. **Step-back classification** (per
+   [../../references/reasoning-effects.md](../../references/reasoning-effects.md)).
+   Read `/tmp/req-$ORIG.md`. Classify the request as one of:
+   - `capability` — new user-facing feature.
+   - `integration` — new system boundary or external service.
+   - `migration` — behavior-preserving move with non-trivial risk.
+   - `refactor` — structural change, behavior preserved (no new
+     capability for users).
+
+   If the body describes **broken behavior** rather than a desired
+   change, abort: *"This looks like a bug report. Recommended:
+   `/stenswf:triage-issue $ORIG`."*
+
+2. Print a 5-line summary + the classification. Ask the user to
+   confirm. On disagreement, re-classify and re-confirm.
+
+3. Use `/tmp/req-$ORIG.md` as the Step-1 long description input —
+   skip Step 1's open-ended question.
+
+4. Bias subsequent template work toward the class:
+   - `refactor` → make `## Invariants Preserved` and `## Risks of Not
+     Doing This` first-class. `## User Stories` may be replaced by
+     "Restoration / preservation" stories.
+   - `migration` → emphasise sequenced rollout in `## Solution`.
+   - `integration` → emphasise contracts in `## Implementation
+     Decisions`.
+   - `capability` → standard.
+
+5. Record `class:` in the PRD front-matter (Step 5 already requires it
+   per [../../references/prd-template.md](../../references/prd-template.md)).
+
+If `$ORIG` is empty, behave as before (blank-page interview from Step 1).
+
+## Phase 1 — Steps
+
 1. Ask the user for a long, detailed description of the problem and any
-   solution ideas.
+   solution ideas. **Skip if Phase 0 already populated `/tmp/req-$ORIG.md`.**
 
 2. Explore the repo via an Explore subagent (≤300 words, thoroughness: medium).
    Do NOT read files directly.
@@ -57,7 +117,12 @@ Invoked when the user wants to create a PRD. Skip steps if unnecessary.
 
     First, classify: is this PRD primarily a *new capability*, an
     *integration*, a *migration*, or a *refactor*? The class shapes
-    which sections of the template carry the load.
+    which sections of the template carry the load. **Phase 0** may have
+    already locked this from an existing issue — reuse that
+    classification unless the interview revealed it was wrong. Record
+    in the PRD front-matter as `class:` (see
+    [../../references/prd-template.md](../../references/prd-template.md)
+    — the field is required).
 
     Then pause and step back: which decisions are still implicit and
     would otherwise leak as HITL ambiguity into every downstream issue?
@@ -65,6 +130,10 @@ Invoked when the user wants to create a PRD. Skip steps if unnecessary.
     "obvious" defaults actually contested in this codebase? Revise
     `## Conventions` and `## Implementation Decisions` before writing.
 
+    For `class: refactor` PRDs: also fill `## Invariants Preserved`
+    (required) and `## Risks of Not Doing This`. For `class: migration`,
+    `## Invariants Preserved` is required (behavior preservation is the
+    whole point).
 5. Write the PRD using the template at
    [../../references/prd-template.md](../../references/prd-template.md).
    Create as an issue (CLI when available; otherwise present formatted
@@ -121,6 +190,19 @@ Invoked when the user wants to create a PRD. Skip steps if unnecessary.
    ```
 
    The tree is excluded per-clone via `.git/info/exclude` (see `bootstrap`).
+
+   **If Phase 0 was driven by an existing issue (`$ORIG` set):** comment
+   on the original and close it after the PRD issue exists — the original
+   stays as the durable intake record, but its lifecycle ends here.
+
+   ```bash
+   if [ -n "${ORIG:-}" ]; then
+     gh issue comment "$ORIG" --body \
+"Triaged → PRD #$N. The request is preserved here as the intake record;
+status updates will appear on the PRD and its slices."
+     gh issue close "$ORIG" --reason completed
+   fi
+   ```
 
    **Seed anchor entries (LLM task).** Walk the PRD body and append one
    entry per qualifying item:

@@ -7,6 +7,7 @@ written back into the front-matter block after creation.
 ```markdown
 <!-- stenswf:v1
 type: PRD
+class: capability
 prd_base_sha: <PRD_BASE>
 -->
 
@@ -57,9 +58,35 @@ Explicitly list what this PRD does NOT cover. Prevents slice scope-creep.
 
 Test strategy at PRD scope (integration boundaries, happy-path
 coverage targets). Not test case enumeration.
+
+## Invariants Preserved (refactor / bug-brief only)
+
+Optional. Required when `class: refactor` or `class: bug-brief`.
+List behaviors that MUST stay unchanged (e.g. "public API stable",
+"all green tests stay green", "persisted state shape unchanged").
+
+## Risks of Not Doing This (refactor only)
+
+Optional. For `class: refactor` PRDs that lack user-stories, document
+what continues to break / drift if this work is deferred.
 ```
+
+## Class shapes which sections carry the load
+
+| Class | Required | N/A or de-emphasised |
+|---|---|---|
+| `capability`  | Problem, Solution, User Stories, Implementation Decisions, Conventions, Out of Scope, Testing Decisions | Invariants Preserved, Risks of Not Doing This |
+| `integration` | Problem, Solution, Implementation Decisions, Conventions, Out of Scope, Testing Decisions | (User Stories optional) |
+| `migration`   | Problem, Implementation Decisions, Invariants Preserved, Conventions, Out of Scope, Testing Decisions | (Solution may be a sequenced rollout) |
+| `refactor`    | Problem, Implementation Decisions, Invariants Preserved, Risks of Not Doing This, Conventions, Out of Scope, Testing Decisions | User Stories (replaced by Invariants) |
+| `bug-brief`   | Problem (= report summary), Root Cause, Implementation Decisions, Invariants Preserved, Conventions, Out of Scope, Testing Decisions | User Stories, Solution (the slice IS the solution) |
+
+For `class: bug-brief`, see also
+[bug-brief-class.md](bug-brief-class.md) for the section-by-section
+spec, the `## Root Cause` block, and `affects_prd` semantics.
 
 ## Post-create step
 
 The `prd_base_sha` front-matter field is the durable anchor for
-`review` and `apply` in PRD-mode. No remote tag is created.
+`review` and `apply` in PRD-mode (and bug-brief-mode). No remote tag is
+created.

@@ -26,23 +26,31 @@ Rules:
 
 | Key | Values | Notes |
 |---|---|---|
-| `type` | `PRD` \| `slice — HITL` \| `slice — AFK` \| `slice — spike` | Mode + slice-type marker. |
+| `type` | `PRD` \| `bug-brief` \| `slice — HITL` \| `slice — AFK` \| `slice — spike` | Mode + slice-type marker. `bug-brief` is a narrow PRD-shaped artifact emitted by `triage-issue`. |
+
+## Required keys (PRD + bug-brief issues)
+
+| Key | Values | Notes |
+|---|---|---|
+| `class` | `capability` \| `integration` \| `migration` \| `refactor` \| `bug-brief` | Shapes which template sections carry the load. `bug-brief` is reserved for `triage-issue` output. |
+| `prd_base_sha` | 7-40 hex chars | Set by `prd-from-grill-me` / `triage-issue`. |
 
 ## Required keys (slice issues only)
 
 | Key | Values | Notes |
 |---|---|---|
 | `lite_eligible` | `true` \| `false` | Gate for `ship-light` / `plan-light`. |
-| `conventions_source` | `prd#<N>` \| `none` | Where slice conventions come from. `none` = slice-local only. |
-| `prd_ref` | issue number (int) | Parent PRD. Used by `review/slice` to synthesize lite-path conventions. |
+| `conventions_source` | `prd#<N>` \| `bug-brief#<N>` \| `none` | Where slice conventions come from. `none` = slice-local only. |
+| `prd_ref` | issue number (int) | Parent PRD or bug-brief. Used by `review/slice` to synthesize lite-path conventions. |
 
 ## Optional keys
 
 | Key | Values | Notes |
 |---|---|---|
 | `disqualifier` | `files>15` \| `cross-module` \| `schema-migration` \| `arch-unknown` \| `hitl-cat3` | Required when `lite_eligible: false`. |
-| `prd_base_sha` | 7-40 hex chars | PRD-mode only. Set by `prd-from-grill-me`. |
 | `blocked_by` | space-separated issue numbers | E.g. `123 456`. Absence = no blockers. |
+| `bug_ref` | issue number (int) | Slices only. Original raw bug-report issue this slice descends from. Informational; not a routing gate. |
+| `affects_prd` | issue number (int) | Bug-brief only. Linked feature PRD (defect discovered against its scope). Informational. |
 
 ## Extraction (canonical)
 

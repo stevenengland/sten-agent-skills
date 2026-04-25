@@ -13,6 +13,7 @@ Write contract by skill (one-line summary):
 | Skill | Writes? | When | Category |
 |---|---|---|---|
 | `prd-from-grill-me` | yes | seed | arch, decision |
+| `triage-issue` | yes | Phase 5 convert | arch (root cause), decision (introduced convention) |
 | `prd-to-issues` | yes | stub inheritance | inherited |
 | `plan` | yes | Phase 1 interview | decision, arch |
 | `plan-light` | rare | Phase 3 only | decision |

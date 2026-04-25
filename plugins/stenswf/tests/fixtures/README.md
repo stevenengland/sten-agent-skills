@@ -30,3 +30,5 @@ expectations still hold.
 | `issue-slice-heavy.md`   | `plan` + `ship` (lite_eligible=false, disqualifier set) |
 | `issue-slice-lite.md`    | `ship-light` eligible (lite_eligible=true) |
 | `issue-prd.md`           | PRD-mode (type=PRD) |
+| `triage-issue-clean-repro.md` | `triage-issue` Phase-4 default → C-1 (single slice). Bug-brief + one AFK lite slice. |
+| `triage-issue-ambiguous.md`   | `triage-issue` Phase-4 only offers R-info (needs-info). No derived artifacts. |
