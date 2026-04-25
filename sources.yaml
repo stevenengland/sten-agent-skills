@@ -23,6 +23,13 @@
   status: tracked
   notes: ""
 
+- skill: skills/ubiquitous-language
+  upstream: https://github.com/mattpocock/skills
+  ref: ""
+  last_reviewed: ""
+  status: tracked
+  notes: ""
+
 - skill: plugins/stenswr/skills/improve-codebase-architecture
   upstream: https://github.com/mattpocock/skills
   ref: ""
