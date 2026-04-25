@@ -1,6 +1,6 @@
 ---
 name: bootstrap
-description: One-shot repo setup for stenswf planning/shipping — gitignores `.stenswf/` and creates the local state root.
+description: One-shot repo setup for stenswf planning/shipping.
 disable-model-invocation: true
 ---
 
@@ -15,9 +15,11 @@ this one-shot flow.
 # Bootstrap
 
 **Human-invoked only.** Subagents and model-initiated flows must not call
-this skill — it is intended to be run once per repository, by a human, before
-the first use of `prd-from-grill-me`, `prd-to-issues`, `plan`, or `ship`. All
-operations are idempotent and safe to re-run.
+this skill — it is intended to be run once **per clone**, by a human, before
+the first use of `prd-from-grill-me`, `prd-to-issues`, `plan`, or `ship`.
+The exclusion rule it installs lives in `.git/info/exclude` (not committed),
+so every developer must run it after cloning. All operations are idempotent
+and safe to re-run.
 
 The workflow skills (`plan`, `ship`, `review`, `apply`) will still work
 without running this skill — they create `.stenswf/` on demand. Running
@@ -27,14 +29,15 @@ this skill once upfront just avoids a surprised first-run.
 
 ## What this skill provisions
 
-1. **`.stenswf/` in `.gitignore`** — the local state root used by `plan`,
-   `ship`, `review`, and `apply` to store per-issue fragments, manifest,
-   review findings, apply state, append-only audit logs, and the
-   cross-skill decision anchor (`decisions.md`, lazily created by the
-   first lifecycle skill that touches a given issue). Gitignored so
-   per-developer state never leaks into team history — with one
-   exception: the committed `.stenswf/README.md` (layout overview for a
-   fresh clone), enabled via `!.stenswf/README.md`.
+1. **`.stenswf/` excluded via `.git/info/exclude`** — the local state
+   root used by `plan`, `ship`, `review`, and `apply` to store per-issue
+   fragments, manifest, review findings, apply state, append-only audit
+   logs, and the cross-skill decision anchor (`decisions.md`, lazily
+   created by the first lifecycle skill that touches a given issue).
+   The exclusion rule is written to `.git/info/exclude` (per-clone, not
+   tracked), **not** to `.gitignore`. Nothing under `.stenswf/` is ever
+   committed. Each developer must run `/stenswf:bootstrap` once after
+   cloning to install the exclusion rule.
 2. **`.stenswf/` directory** with an empty `.archive/` subdir — created
    up front so skills never need to `mkdir -p` at dispatch time.
    Per-issue subtrees (`.stenswf/<issue>/`) are NOT created here — they
@@ -54,36 +57,30 @@ You may delete them manually at your convenience.
 
 ## Steps
 
-### 1. Add `.stenswf/` to `.gitignore`
+### 1. Exclude `.stenswf/` via `.git/info/exclude`
 
 ```bash
-if ! grep -qxF '.stenswf/*' .gitignore 2>/dev/null && \
-   ! grep -qxF '.stenswf/'  .gitignore 2>/dev/null; then
-  printf '\n# stenswf local planning + execution state\n# (ignore contents, not the directory, so README exception works)\n.stenswf/*\n!.stenswf/README.md\n' >> .gitignore
-  echo "added .stenswf/* (with README exception) to .gitignore"
+EXCLUDE=.git/info/exclude
+if [ ! -f "$EXCLUDE" ] || [ ! -w "$EXCLUDE" ]; then
+  echo "stenswf: $EXCLUDE not found or not writable — skipping ignore step"
+  echo "        (run inside a standard git repo to enable; continuing)"
 else
-  # Upgrade legacy `.stenswf/` to `.stenswf/*` so the re-include works
-  # (git cannot re-include a file inside an excluded directory).
-  if grep -qxF '.stenswf/' .gitignore 2>/dev/null; then
-    sed -i.bak 's|^\.stenswf/$|.stenswf/*|' .gitignore && rm -f .gitignore.bak
-    echo "upgraded .stenswf/ → .stenswf/* in .gitignore"
-  fi
-  if ! grep -qxF '!.stenswf/README.md' .gitignore 2>/dev/null; then
-    printf '!.stenswf/README.md\n' >> .gitignore
-    echo "added !.stenswf/README.md exception to .gitignore"
+  if grep -qxF '.stenswf/' "$EXCLUDE"; then
+    echo "stenswf: .stenswf/ already excluded in $EXCLUDE"
   else
-    echo ".stenswf/* already in .gitignore"
+    printf '\n# stenswf local planning + execution state (per-clone; not committed)\n.stenswf/\n' >> "$EXCLUDE"
+    echo "stenswf: added .stenswf/ to $EXCLUDE"
   fi
 fi
 ```
 
-The `.stenswf/*` + `!.stenswf/README.md` pair lets us commit a single
-layout overview so a fresh clone can discover `.stenswf/`'s purpose.
-(Using `.stenswf/` alone would ignore the entire directory and git
-cannot re-include files inside an excluded directory.)
-
-Commit the `.gitignore` change if the repo convention requires it —
-this is the only team-visible artifact this skill touches.
+`.git/info/exclude` is git's per-clone ignore file. It is created
+automatically by `git init`, lives outside the working tree, and is
+**not** committed — so the exclusion rule never leaks into team
+history. Each developer who clones the repo must run this skill once
+to install their own copy of the rule. If the file is missing (linked
+worktrees, submodules, non-git dirs), this step soft-fails and
+bootstrap continues.
 
 ### 2. Create the local state root
 
@@ -92,17 +89,20 @@ mkdir -p .stenswf/.archive
 touch .stenswf/.archive/.keep
 ```
 
-`.stenswf/` is gitignored, but creating it upfront lets `plan` write
-into `.stenswf/<issue>/` on first use without a `mkdir -p` surprise.
+`.stenswf/` is excluded per-clone via `.git/info/exclude`, but creating
+it upfront lets `plan` write into `.stenswf/<issue>/` on first use
+without a `mkdir -p` surprise.
 
 ### 3. Confirm
 
 ```bash
 ls -la .stenswf/
-grep '.stenswf/' .gitignore
+grep -F '.stenswf/' .git/info/exclude 2>/dev/null || echo "(exclude step skipped)"
 ```
 
 Done. Tell the user:
 
-> stenswf local state initialised. `.stenswf/` is gitignored; per-issue
-> fragments will be created by `/stenswf:plan <issue>` on first use.
+> stenswf local state initialised. `.stenswf/` is excluded **per-clone**
+> via `.git/info/exclude` (not committed to `.gitignore`). Each developer
+> must run `/stenswf:bootstrap` once after cloning. Per-issue fragments
+> will be created by `/stenswf:plan <issue>` on first use.

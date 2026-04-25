@@ -26,7 +26,7 @@ TDD. Frequent commits.
 
 ## Where artifacts live
 
-Under `.stenswf/$ARGUMENTS/` (gitignored, repo-root). Issue body holds
+Under `.stenswf/$ARGUMENTS/` (excluded per-clone via `.git/info/exclude`, repo-root). Issue body holds
 only the conceptual plan (front-matter + `What to build`, `Acceptance
 criteria`, `Conventions (from PRD)`, `Files (hint)`). No labels.
 

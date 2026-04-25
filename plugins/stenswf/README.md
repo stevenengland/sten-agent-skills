@@ -325,8 +325,13 @@ Claude Code discovers and loads it automatically. Reload if already running:
 
 ### Local plumbing overview
 
+> **Per-clone setup:** `.stenswf/` is excluded via `.git/info/exclude`
+> (not `.gitignore`), so nothing under it is ever committed. Each
+> developer must run `/stenswf:bootstrap` once after cloning to install
+> the exclusion rule.
+
 ```
-.stenswf/                      (gitignored; per-developer)
+.stenswf/                      (excluded per-clone via .git/info/exclude; per-developer)
 ├── <issue>/                   (active plan + execution state)
 │   ├── manifest.json          (heavy-plan: materialised state: tasks[], pr, hashes)
 │   ├── concept.md             (heavy-plan: issue body snapshot for drift detection)
@@ -574,7 +579,7 @@ semantics make it inherently stable under concurrent writes.
 
 ### Two-tier model (local vs committed excerpt)
 
-- **Local:** `.stenswf/<N>/decisions.md` (full, gitignored, per-developer).
+- **Local:** `.stenswf/<N>/decisions.md` (full, per-developer; excluded via `.git/info/exclude`, see `bootstrap`).
 - **Committed excerpt:** `docs/stenswf/decisions/prd-<N>.md`, written
   silently by `apply` PRD-mode at PRD close. Curation filter:
   `Category ∈ {arch, decision}` ∧ not-superseded ∧ `Refs:` contains a

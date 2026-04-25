@@ -124,7 +124,7 @@ Invoked when the user wants to create a PRD. Skip steps if unnecessary.
    EOF
    ```
 
-   The tree is gitignored (see `bootstrap`).
+   The tree is excluded per-clone via `.git/info/exclude` (see `bootstrap`).
 
    **Seed anchor entries (LLM task).** Walk the PRD body and append one
    entry per qualifying item:

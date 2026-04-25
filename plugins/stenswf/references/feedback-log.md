@@ -9,7 +9,7 @@ log. Readers (you, future improvement passes) grep it for patterns.
 .stenswf/_feedback/<YYYY-MM-DD>.jsonl
 ```
 
-Gitignored by the existing `.stenswf/*` rule (see `bootstrap`).
+Excluded per-clone by the `.stenswf/` rule in `.git/info/exclude` (see `bootstrap`).
 
 ## Schema (one JSON object per line)
 
