@@ -40,6 +40,7 @@ gh issue view $ARGUMENTS --json body -q .body > /tmp/slice-$ARGUMENTS.md
 TYPE=$(get_fm type /tmp/slice-$ARGUMENTS.md)
 LITE=$(get_fm lite_eligible /tmp/slice-$ARGUMENTS.md)
 DISQ=$(get_fm disqualifier /tmp/slice-$ARGUMENTS.md)
+OVERRIDE=$(get_fm lite_override /tmp/slice-$ARGUMENTS.md)
 BLOCKED=$(get_fm blocked_by /tmp/slice-$ARGUMENTS.md)
 ```
 
@@ -60,6 +61,28 @@ extract_section 'Acceptance criteria'      /tmp/slice-$ARGUMENTS.md > /tmp/slice
 extract_section 'Files \(hint\)'           /tmp/slice-$ARGUMENTS.md > /tmp/slice-$ARGUMENTS-files.md
 ```
 
+**Manual override (`lite_override`).** A non-empty `lite_override`
+field bypasses the `LITE == "false"` gate ONLY when the disqualifier
+is blast-radius (`files>15` or `cross-module`). For
+`schema-migration`, `arch-unknown`, or `hitl-cat3`, the override is
+ignored and `ROUTE_HEAVY` still fires — these disqualifiers signal
+work the lite path is structurally unfit to handle (irreversible
+change, unresolved architecture, mandatory human-in-loop). When the
+override is honored, log `user_override` with the reason as evidence
+and continue normally:
+
+```bash
+if [ "$LITE" = "false" ] && [ -n "$OVERRIDE" ]; then
+  case "$DISQ" in
+    files\>15|cross-module)
+      bash plugins/stenswf/scripts/log-issue.sh user_override \
+        "lite_override honored on #$ARGUMENTS ($DISQ)" "$OVERRIDE"
+      LITE=true   # treat as lite for the remaining gate checks
+      ;;
+  esac
+fi
+```
+
 Lite envelope check — emit `ROUTE_HEAVY` as FINAL line and exit if any:
 
 - `LITE == "false"` → `ROUTE_HEAVY: lite-ineligible — $DISQ`.
@@ -72,6 +95,12 @@ Lite envelope check — emit `ROUTE_HEAVY` as FINAL line and exit if any:
 
 Exception: `TYPE == "slice — spike"` ignores `arch-unknown` —
 spikes exist to resolve unknowns.
+
+Exception: when `lite_override` was honored above, the blast-radius
+sub-bullets (>15 files, multi-module) are also waived for this run —
+the override IS the attestation that those signals are acceptable.
+The schema-migration and architectural-decision sub-bullets remain
+in force regardless of override.
 
 ---
 

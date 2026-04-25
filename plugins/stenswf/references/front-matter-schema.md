@@ -48,6 +48,7 @@ Rules:
 | Key | Values | Notes |
 |---|---|---|
 | `disqualifier` | `files>15` \| `cross-module` \| `schema-migration` \| `arch-unknown` \| `hitl-cat3` | Required when `lite_eligible: false`. |
+| `lite_override` | free-text, non-empty | Slices only. Manual attestation that forces the lite path despite `lite_eligible: false`. Honored ONLY when `disqualifier` is `files>15` or `cross-module`; ignored for `schema-migration` / `arch-unknown` / `hitl-cat3`. Consumers (`plan-light`, `ship-light`) log `user_override` with the reason as evidence. Not emitted by `prd-to-issues` / `triage-issue` — added manually post-triage. |
 | `blocked_by` | space-separated issue numbers | E.g. `123 456`. Absence = no blockers. |
 | `bug_ref` | issue number (int) | Slices only. Original raw bug-report issue this slice descends from. Informational; not a routing gate. |
 | `affects_prd` | issue number (int) | Bug-brief only. Linked feature PRD (defect discovered against its scope). Informational. |

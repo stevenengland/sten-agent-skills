@@ -26,6 +26,7 @@ gh issue view $ARGUMENTS --json body -q .body > /tmp/slice-$ARGUMENTS.md
 TYPE=$(get_fm type /tmp/slice-$ARGUMENTS.md)
 LITE=$(get_fm lite_eligible /tmp/slice-$ARGUMENTS.md)
 DISQ=$(get_fm disqualifier /tmp/slice-$ARGUMENTS.md)
+OVERRIDE=$(get_fm lite_override /tmp/slice-$ARGUMENTS.md)
 BLOCKED=$(get_fm blocked_by /tmp/slice-$ARGUMENTS.md)
 ```
 
@@ -36,8 +37,28 @@ nothing posted to issue) if any:
 - `BLOCKED` non-empty.
 - `LITE == "false"`. Echo the disqualifier: `aborting — $DISQ`.
   Exception: `TYPE == "slice — spike"` ignores `arch-unknown`.
+  Exception: `lite_override` is non-empty AND `DISQ` is `files>15` or
+  `cross-module` — honor the override and continue. Log `user_override`
+  with the reason as evidence:
+  ```bash
+  if [ "$LITE" = "false" ] && [ -n "$OVERRIDE" ]; then
+    case "$DISQ" in
+      files\>15|cross-module)
+        bash plugins/stenswf/scripts/log-issue.sh user_override \
+          "lite_override honored on #$ARGUMENTS ($DISQ)" "$OVERRIDE"
+        LITE=true
+        ;;
+    esac
+  fi
+  ```
+  `lite_override` is NOT honored for `schema-migration`, `arch-unknown`,
+  or `hitl-cat3` — these signal work the lite path is structurally
+  unfit to handle.
 - Scope plausibly exceeds the Lite envelope (> 15 files, multi-module,
-  schema migration, unresolved arch decision).
+  schema migration, unresolved arch decision). When `lite_override`
+  was honored above, the blast-radius sub-clauses (>15 files,
+  multi-module) are waived for this run; schema-migration and
+  unresolved arch decision remain disqualifying.
 
 When in doubt, proceed — the Phase 3 rubberduck will catch drift.
 

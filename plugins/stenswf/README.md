@@ -145,6 +145,16 @@ Three ways to take a slice issue from creation to merged PR:
   - `Lite-eligible: true` in the issue body (set by `prd-to-issues`).
   - No open `Blocked by`.
 
+  **Manual override.** A slice marked `lite_eligible: false` whose
+  disqualifier is `files>15` or `cross-module` may carry a
+  `lite_override: <reason>` front-matter field to force the lite path
+  (e.g. mechanical renames, codemod-driven sweeps). Other
+  disqualifiers (`schema-migration`, `arch-unknown`, `hitl-cat3`)
+  cannot be overridden — they signal work the lite path is
+  structurally unfit to handle. Honored overrides are logged via
+  `user_override`. See
+  [references/front-matter-schema.md](references/front-matter-schema.md).
+
 - **Lite guided one-shot — `/stenswf:slice-e2e <issue>`.** Dispatches
   `plan-light` then `ship-light` as separate subagent sessions with
   context separation. Writes an advisory `plan-light.md` to
