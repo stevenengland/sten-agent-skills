@@ -187,6 +187,22 @@ bash plugins/stenswf/skills/plan/scripts/plan-self-review.sh "$ARGUMENTS"
 Fix any failures and re-run until `OK`. Log `tool_failure` if the
 validator cannot run (missing `jq`, etc.).
 
+Then run a **semantic** pre-finalize reflection — the validator checks
+artifact shape, not reasoning quality. Pause and step back:
+
+- Could a zero-context implementer execute every task fragment from
+  the local plan alone, without re-reading this issue?
+- Does each task's `Done when` map to at least one acceptance
+  criterion, and vice-versa?
+- Did any task grow past the size where a fresh subagent could finish
+  it in one sitting? Should it split?
+- Did the plan miss a `first-read` file that the implementer will
+  certainly need?
+- Are any inter-task dependencies implicit (shared types, config
+  keys, schema fields) but not declared in `blocked_by`?
+
+If the answer changes the plan, revise and re-run the validator.
+
 ---
 
 ## Feedback

@@ -142,6 +142,20 @@ entry (source `plan-light`) to `.stenswf/$ARGUMENTS/decisions.md` per
 [../../references/decision-anchor-link.md](../../references/decision-anchor-link.md).
 Otherwise skip.
 
+**Pre-finalize reflection — before printing `READY`.** The checklist
+above verifies *shape*; this verifies *reasoning*. Pause and step
+back:
+
+- Is this slice genuinely lite, or did I bury complexity under task
+  titles to fit the 6-task cap?
+- Did I treat any non-trivial decision as "obvious" without recording
+  it as an assumption or `decision` entry?
+- Did any AC remain partially covered (e.g., happy-path only, error
+  path implicit)?
+- Would emitting `ROUTE_HEAVY` actually be more honest here?
+
+If the answer changes the plan, revise. Only then print the final line.
+
 Then tell the user:
 
 > Plan written to `.stenswf/$ARGUMENTS/plan-light.md`. Run

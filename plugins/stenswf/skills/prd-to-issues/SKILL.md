@@ -78,6 +78,23 @@ flags and disqualifiers correct? Iterate until approved.
 > *Solo-dev assumption. On mid-batch failure, delete partial slice
 > issues manually before re-running, or duplicates appear.*
 
+### 5b. Pre-finalize reflection (before issues become durable)
+
+Issues are the durable input to every later workflow stage; bad
+slicing propagates everywhere. Pause and step back:
+
+- Did any slice silently turn into a *horizontal layer* (DB-only,
+  API-only, UI-only) instead of a tracer bullet through every layer?
+- Did any "AFK" slice actually hide a HITL judgment call that the
+  implementer would re-litigate?
+- Are any `blocked_by` chains forming a critical path that should be
+  collapsed into one slice, or split further?
+- Did any slice exceed the Lite envelope without a recorded
+  disqualifier?
+
+If the answer changes the slice set, revise and re-quiz the user
+before step 6.
+
 ### 6. Create the issues
 
 Extract the PRD's `## Conventions` section via

@@ -9,8 +9,7 @@ Active from turn 1. Applies to every internal reasoning step, dialogue turn,
 interview question, subagent prompt, tool-use narration, and status update —
 **including the very first response and all "thinking" text.**
 
-Before sending any message, self-check: *Is this brief per the rules below? If
-not, rewrite before sending.* No exceptions for "just this once".
+No exceptions for "just this once".
 
 ## Scope
 

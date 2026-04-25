@@ -51,6 +51,13 @@ then load `slice.md` or `prd.md` accordingly.
   by enumerating suggestion/finding IDs. On re-run, load and resume —
   do not overwrite `applied`/`skipped` entries.
 
+**Constraint reminder before handing off to mode-specific logic.**
+The single most dangerous failure of this skill is corrupting
+`apply-state.json` on resume. Restate before proceeding: **on re-run,
+load and resume — never overwrite entries with `status: applied` or
+`status: skipped`. New runs only mutate `pending`/`approved` entries.
+If state looks inconsistent, stop and surface, do not heal silently.**
+
 ---
 
 ## Feedback

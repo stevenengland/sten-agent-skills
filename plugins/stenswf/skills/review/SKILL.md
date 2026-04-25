@@ -16,6 +16,13 @@ You are in **plan-only mode**. Do not apply edits, create files outside
 `.stenswf/<issue>/` or `/tmp/`, or run state-modifying git commands.
 Output is a structured review artifact on disk.
 
+**Constraint reminder before loading mode-specific logic.** The mode
+files (`slice.md`, `prd.md`) are long; the no-edits invariant must
+survive that read. Restate before proceeding: **plan-only — no
+edits, no file creation outside `.stenswf/<issue>/` or `/tmp/`, no
+state-modifying git, no `git commit/push/reset/rebase/merge`. Output
+is a review artifact on disk and nothing else.**
+
 ## Mode Detection
 
 Detect mode (slice vs PRD) per

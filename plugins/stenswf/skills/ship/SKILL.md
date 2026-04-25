@@ -67,6 +67,14 @@ Walk pending tasks in order (`T10`, `T20`, …). When all report `done`,
 proceed to [post-dispatch.md](post-dispatch.md) for Phases 2–5
 (refactor pass, review step, PR + CI + merge, archive).
 
+**Cross-task seam reflection — before handoff to `post-dispatch.md`.**
+Per-task `done` ≠ slice-level integration `done`. Each subagent
+verified its own fragment in isolation; nobody verified the seams
+between fragments. Pause and step back: are there contracts or
+assumptions spanning two tasks that no single task owned? If yes,
+file a follow-up task fragment and resume the orchestrator loop
+instead of advancing.
+
 ---
 
 ## Feedback

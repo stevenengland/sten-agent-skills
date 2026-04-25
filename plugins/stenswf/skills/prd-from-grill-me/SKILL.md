@@ -53,6 +53,18 @@ Invoked when the user wants to create a PRD. Skip steps if unnecessary.
     function naming, descriptor shape, test-file split, error surfacing,
     domain vocabulary.
 
+4b. **Step back and reflect before writing the PRD.**
+
+    First, classify: is this PRD primarily a *new capability*, an
+    *integration*, a *migration*, or a *refactor*? The class shapes
+    which sections of the template carry the load.
+
+    Then pause and step back: which decisions are still implicit and
+    would otherwise leak as HITL ambiguity into every downstream slice?
+    Which conventions did the interview surface but not lock? Are any
+    "obvious" defaults actually contested in this codebase? Revise
+    `## Conventions` and `## Implementation Decisions` before writing.
+
 5. Write the PRD using the template at
    [../../references/prd-template.md](../../references/prd-template.md).
    Create as an issue (CLI when available; otherwise present formatted
