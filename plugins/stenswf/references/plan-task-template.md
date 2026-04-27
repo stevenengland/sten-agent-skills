@@ -11,6 +11,10 @@ Each file is fully self-contained — a subagent receiving only this
 file plus `stable-prefix.md` must execute it correctly. Never write
 "similar to Task N"; repeat what the implementer needs.
 
+Commit subjects follow the canonical Conventional Commits spec at
+[conventional-commits.md](conventional-commits.md). Allowed types for
+`ship`-dispatched tasks: `feat|fix|refactor|perf|docs|test|chore|build|ci`.
+
 ## Body (full prose — brevity does NOT apply)
 
 ```

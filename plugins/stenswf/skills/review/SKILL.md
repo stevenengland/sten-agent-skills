@@ -34,9 +34,14 @@ of behavior change is the gate; loading `tdd` is the lens; whether
 to write a test follows from the AC tag, not from this skill. See
 [../../references/behavior-change-signal.md](../../references/behavior-change-signal.md).
 
-Detect mode (slice vs PRD) per
+Detect mode (slice / PRD / bug-brief) per
 [../../references/mode-detection.md](../../references/mode-detection.md),
-then load `slice.md` or `prd.md` accordingly.
+then load the matching sub-file:
+
+- `TYPE == "PRD"` → load [prd.md](prd.md).
+- `TYPE == "bug-brief"` → load [bug-brief.md](bug-brief.md) (gates
+  like PRD-mode, then iterates children running slice-mode logic).
+- `TYPE` starts with `slice` → load [slice.md](slice.md).
 
 ## Drift check (both modes)
 
@@ -50,23 +55,27 @@ and log `user_override` via
 On `r`e-plan after user acceptance: overwrite `concept.md`, recompute
 `concept_sha256`.
 
-## PRD-mode local-state backfill
+## PRD-mode / bug-brief-mode local-state backfill
 
-For PRDs created before the seeding step existed:
+For PRDs or bug-briefs created before the seeding step existed:
 
 ```bash
-if [ "$TYPE" = "PRD" ] && [ ! -f ".stenswf/$ARGUMENTS/manifest.json" ]; then
+if { [ "$TYPE" = "PRD" ] || [ "$TYPE" = "bug-brief" ]; } \
+   && [ ! -f ".stenswf/$ARGUMENTS/manifest.json" ]; then
   mkdir -p ".stenswf/$ARGUMENTS"
   cp "/tmp/slice-$ARGUMENTS.md" ".stenswf/$ARGUMENTS/concept.md"
   CONCEPT_SHA=$(sha256sum ".stenswf/$ARGUMENTS/concept.md" | awk '{print $1}')
+  CLAUDE_SHA=$(git log -1 --format=%H -- CLAUDE.md AGENTS.md 2>/dev/null | head -1)
   PRD_BASE=$(get_fm prd_base_sha "/tmp/slice-$ARGUMENTS.md")
-  [ -n "$PRD_BASE" ] || { echo "PRD #$ARGUMENTS missing prd_base_sha in front-matter" >&2; exit 1; }
+  [ -n "$PRD_BASE" ] || { echo "#$ARGUMENTS missing prd_base_sha in front-matter" >&2; exit 1; }
+  KIND=$( [ "$TYPE" = "PRD" ] && echo prd || echo bug-brief )
   cat > ".stenswf/$ARGUMENTS/manifest.json" <<EOF
 {
   "issue": $ARGUMENTS,
-  "kind": "prd",
+  "kind": "$KIND",
   "base_sha": "$PRD_BASE",
   "concept_sha256": "$CONCEPT_SHA",
+  "claude_md_sha": "$CLAUDE_SHA",
   "plan_created_at": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
   "slices": [],
   "review_step": {"status": "pending", "sha": null}

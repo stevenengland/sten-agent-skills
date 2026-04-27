@@ -39,12 +39,20 @@ behavior change is the gate; loading `tdd` is the lens; whether to
 write a test follows from the AC tag, not from this skill. See
 [../../references/behavior-change-signal.md](../../references/behavior-change-signal.md).
 
-Confirm the target is a slice issue:
+Confirm the target is a slice issue. Use the canonical front-matter
+extractor from
+[../../references/extractors.md](../../references/extractors.md) — do
+NOT scrape body sections (issues encode `type` only inside the
+`<!-- stenswf:v1 -->` HTML-comment block):
 
 ```bash
 gh issue view $ARGUMENTS --json body -q .body > /tmp/slice-$ARGUMENTS.md
-TYPE=$(awk '/^## Type/,/^## /' /tmp/slice-$ARGUMENTS.md \
-  | sed '$d' | tail -n +3 | head -1 | tr -d '[:space:]')
+# Version guard + key read per extractors.md
+if ! head -5 /tmp/slice-$ARGUMENTS.md | grep -q '^<!-- stenswf:v1'; then
+  echo "issue #$ARGUMENTS has no stenswf:v1 front-matter — re-run prd-to-issues or prd-from-grill-me" >&2
+  exit 1
+fi
+TYPE=$(get_fm type /tmp/slice-$ARGUMENTS.md)
 ```
 
 - `$TYPE` starts with `slice` → continue.
@@ -81,6 +89,15 @@ FINAL=$(printf '%s\n' "$SUBAGENT_OUTPUT" | awk 'NF' | tail -1)
 Branch on the envelope:
 
 - **`READY`** → continue to Phase 2.
+- **`ABORT_NOT_SLICE: <reason>`** → print to the user:
+
+  > `plan-light` aborted: <reason>
+  >
+  > This is a PRD or non-slice issue. Run:
+  >
+  >     /stenswf:prd-to-issues <PRD-N>
+
+  Exit. Do not post anything on the issue.
 - **`ROUTE_HEAVY: <reason>`** → print to the user:
 
   > `plan-light` aborted: <reason>

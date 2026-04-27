@@ -11,6 +11,36 @@ to write a test follows from the AC tag, not from this skill. See
 
 Work through `.stenswf/$ARGUMENTS/review/slice.md`.
 
+## Step 0 — Freshness check
+
+The review artifact carries a `<!-- reviewed-at: <SHA> diff-sha256:
+<HASH> -->` trailer (see [../review/slice.md](../review/slice.md)
+Output section). Refuse to apply against a working diff that no
+longer matches the reviewed diff:
+
+```bash
+ART=".stenswf/$ARGUMENTS/review/slice.md"
+REVIEWED_SHA=$(grep -oE 'reviewed-at: [0-9a-f]+' "$ART" | awk '{print $2}' | head -1)
+REVIEWED_DIFF=$(grep -oE 'diff-sha256: [0-9a-f]+' "$ART" | awk '{print $2}' | head -1)
+
+# Fall back to legacy reviews missing the trailer (one-time leniency).
+if [ -z "$REVIEWED_SHA" ] || [ -z "$REVIEWED_DIFF" ]; then
+  echo "warn: review artifact predates freshness stamp; proceeding without check" >&2
+  bash plugins/stenswf/scripts/log-issue.sh missing_artifact \
+    "review/slice.md missing reviewed-at/diff-sha256 trailer" "$ART"
+else
+  CUR_SHA=$(git rev-parse HEAD)
+  CUR_DIFF=$(git diff --staged | sha256sum | cut -d' ' -f1)
+  if [ "$REVIEWED_DIFF" != "$CUR_DIFF" ]; then
+    echo "review/slice.md is stale (reviewed at $REVIEWED_SHA / $REVIEWED_DIFF; current $CUR_SHA / $CUR_DIFF)" >&2
+    echo "Re-run /stenswf:review $ARGUMENTS before applying." >&2
+    bash plugins/stenswf/scripts/log-issue.sh contract_violation \
+      "slice review artifact stale" "reviewed=$REVIEWED_DIFF current=$CUR_DIFF"
+    exit 1
+  fi
+fi
+```
+
 ## YOLO Mode
 
 If the user says **YOLO**:
@@ -34,13 +64,31 @@ For each numbered suggestion:
 2. If worth doing, ask:
    _"Suggestion #N: [one-line summary] — implement this?"_
 3. Wait for yes/no.
-4. Track approvals in `apply-state.json` under `entries.S<n>`:
+4. Track approvals in `apply-state.json` under `entries.S<n>`.
+   **Resume-safe write:** never overwrite an entry already in
+   `applied` or `skipped` state (the resume contract from
+   [SKILL.md](SKILL.md)):
 
    ```bash
-   jq --arg id "S$N" --arg status "approved" \
+   ID="S$N"
+   STATUS="approved"   # or "skipped" with a reason
+   STATE=".stenswf/$ARGUMENTS/apply-state.json"
+   CUR=$(jq -r --arg id "$ID" '.entries[$id].status // "missing"' "$STATE")
+   case "$CUR" in
+     applied|skipped)
+       echo "refusing to overwrite $ID (status=$CUR); inspect $STATE manually" >&2
+       bash plugins/stenswf/scripts/log-issue.sh contract_violation \
+         "apply-state overwrite refused for $ID" "current=$CUR target=$STATUS"
+       exit 1
+       ;;
+     missing)
+       echo "$ID not found in $STATE (init step skipped?)" >&2
+       exit 1
+       ;;
+   esac
+   jq --arg id "$ID" --arg status "$STATUS" \
      '.entries[$id] = {"status":$status,"commit_sha":null,"reason":null}' \
-     .stenswf/$ARGUMENTS/apply-state.json > /tmp/as.json \
-     && mv /tmp/as.json .stenswf/$ARGUMENTS/apply-state.json
+     "$STATE" > /tmp/as.json && mv /tmp/as.json "$STATE"
    ```
 
    Use `status: "skipped"` with a `reason` for declined suggestions.
@@ -88,7 +136,9 @@ category, source `apply`) and strikethrough the old header per
   Refs: #$ARGUMENTS
   ```
 
-  `type`: `feat|fix|refactor|perf|docs|test|chore|build|ci|style|revert`.
+  `apply` slice-mode allowed types per
+  [../../references/conventional-commits.md](../../references/conventional-commits.md):
+  `feat|fix|refactor|perf|docs|test|chore|build|ci|style|revert`.
 
 - Push the branch and close the issue. No labels applied.
 

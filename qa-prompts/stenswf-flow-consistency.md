@@ -59,6 +59,24 @@ itself as a finding and continue using the chain documented in each SKILL.md.
    - Frontmatter schema drift between skills.
    - Tool/permission assumptions that contradict each other.
 
+5. **Documentation up to date.** Verify the surrounding docs match the current
+   skill behaviour:
+   - `plugins/stenswf/README.md` (skill list, flow diagram, examples).
+   - Top-level `README.md`, `AGENTS.md`, `CLAUDE.md` references to stenswf.
+   - `docs/stenswf/**` (decisions, ADRs) — flag stale or contradicted entries.
+   - Any example commands / artifact paths quoted in docs must exist verbatim
+     in the skills they describe.
+
+6. **Plugin ceremony up to date.** Verify the plugin manifests and metadata:
+   - `plugins/stenswf/plugin.json` and `plugins/stenswf/.claude-plugin/plugin.json`
+     are in sync (version, name, description, declared skills/commands).
+   - Every skill folder under `{{PLUGIN_ROOT}}` is registered (and vice versa —
+     no manifest entry points to a missing folder).
+   - SKILL.md frontmatter (`name`, `description`, allowed tools) matches the
+     manifest entry; description is one sentence (repo rule).
+   - Version bump is warranted if behaviour changed since last tag; flag if not.
+   - Any `scripts/` or `references/` paths cited from skills resolve.
+
 ### Output format (both agents must use this exact shape)
 
 ```
@@ -94,3 +112,7 @@ Constraints for both agents:
    findings as the topic. Grill until every blocker has either:
    - a confirmed root cause and a chosen fix direction, or
    - an explicit decision to defer with rationale.
+4. Produce an **update plan** (still no edits) covering: skill fixes, docs to
+   refresh (`README.md`, `AGENTS.md`, `CLAUDE.md`, `docs/stenswf/**`), and
+   plugin ceremony (`plugin.json`, `.claude-plugin/plugin.json`, version bump).
+   Save to `tmp/stenswf-flow-consistency-plan.md`.

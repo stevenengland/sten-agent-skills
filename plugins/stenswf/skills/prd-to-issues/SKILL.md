@@ -184,6 +184,7 @@ conventions_source: prd#<PRD-N>   # or "none" for slice-local only
 prd_ref: <PRD-N>
 # disqualifier: files>15     # required when lite_eligible: false
 # blocked_by: 123 456        # optional, space-separated
+# migration_mode: behavior-preserving   # REQUIRED on slices whose parent has class: migration; REJECTED elsewhere. Values: behavior-preserving | contract-changing
 -->
 ```
 

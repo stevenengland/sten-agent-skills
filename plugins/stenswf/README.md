@@ -104,7 +104,8 @@ with its own decision anchor and base SHA. See
                                  subtree. Escalates via ROUTE_HEAVY.
 /stenswf:ship-light <issue>    → single-session lite path: branch + TDD +
                                  PR + CI (issue-body-only by default;
-                                 auto-consumes `plan-light.md` if present
+                                 auto-consumes `plan-light.md` +
+                                 `plan-light.json` if both are present
                                  and the issue body hasn't drifted)
 /stenswf:slice-e2e <issue>     → one-shot lite pipeline: dispatches
                                  `plan-light` then `ship-light` as
@@ -142,7 +143,7 @@ Three ways to take a slice issue from creation to merged PR:
 
   - Slice is single-subsystem, ≤ 15 files, no schema migration.
   - ACs are crisp checkbox items (no "figure out X" wording).
-  - `Lite-eligible: true` in the issue body (set by `prd-to-issues`).
+  - `lite_eligible: true` in the issue body front-matter (set by `prd-to-issues`).
   - No open `Blocked by`.
 
   **Manual override.** A slice marked `lite_eligible: false` whose
@@ -170,7 +171,7 @@ Three ways to take a slice issue from creation to merged PR:
   - Multi-subsystem, schema/migration involved, architecturally
     uncertain.
   - HITL slice (human design review wanted).
-  - `Lite-eligible: false` or absent.
+  - `lite_eligible: false` or absent.
   - Either light skill returned `ROUTE_HEAVY` for this issue.
 
 Both light skills' preflight gates abort cleanly to `plan` + `ship` if
@@ -210,8 +211,10 @@ parent session invokes them — no separate routing.
 
 > Refactor-focused skills (`plan-reviewer`, `test-file-compaction`, etc.) moved to the sibling [`stenswr`](../stenswr/) plugin. Invoke them explicitly as `/stenswr:<skill>` when needed — `stenswf` no longer invokes them implicitly.
 
-Conventional Commits formatting is inlined in `plan`, `ship`, and `apply`
-— no separate skill load needed.
+Conventional Commits formatting follows the canonical spec at
+[references/conventional-commits.md](references/conventional-commits.md).
+`plan`, `ship`, `ship-light`, and `apply` reference the spec inline
+at their commit steps — no separate skill load needed.
 
 ---
 
@@ -274,10 +277,12 @@ STEN-AGENT-SKILLS/                       ← Repo root
 │       │   ├── out-of-scope-memory.md
 │       │   ├── plan-task-template.md
 │       │   ├── plan-artifact-schemas.md
+│       │   ├── conventional-commits.md
 │       │   ├── behavior-change-signal.md
 │       │   └── reasoning-effects.md
 │       ├── scripts/                     ← Shared executables
-│       │   └── log-issue.sh
+│       │   ├── log-issue.sh
+│       │   └── inherit-decisions.sh
 │       ├── tests/                       ← Fixtures for manual verification
 │       │   └── fixtures/
 │       ├── skills/                      ← All plugin skills
@@ -389,7 +394,7 @@ Claude Code discovers and loads it automatically. Reload if already running:
 3. **Break it down.** `/stenswf:prd-to-issues` → vertical-slice issues,
    each with `type: slice — HITL|AFK|spike` front-matter.
 4. **For each slice:**
-   - **Lite shortest** (`Lite-eligible: true` in the issue body):
+   - **Lite shortest** (`lite_eligible: true` in the issue body front-matter):
      1. `/stenswf:ship-light <slice-N>` → branch, TDD, PR, CI green in
         one session. No local plan. Auto-consumes `plan-light.md` if
         present (and current).
@@ -400,7 +405,9 @@ Claude Code discovers and loads it automatically. Reload if already running:
         `ship-light` consumes the plan automatically.
      Or split manually: `/stenswf:plan-light <slice-N>` then
      `/stenswf:ship-light <slice-N>` in the same session.
-   - **Full path** (HITL, multi-subsystem, or `Lite-eligible: false`):
+     `ship-light` consumes both `plan-light.md` and `plan-light.json`
+     if both are current.
+   - **Full path** (HITL, multi-subsystem, or `lite_eligible: false`):
      1. `/stenswf:plan <slice-N>` → writes `.stenswf/<slice-N>/` locally:
         manifest, per-task fragments, pre-assembled `stable-prefix.md`.
      2. `/stenswf:ship <slice-N>` → dispatches one subagent per task

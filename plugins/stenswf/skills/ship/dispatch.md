@@ -53,7 +53,9 @@ FETCH YOUR TASK FRAGMENT (do this first):
 Execute the extracted task block exactly as written. It is fully
 self-contained: test code, paths, commands, Done-when, commit message.
 
-At the end, commit with a `Refs: #$ARGUMENTS T<id>` trailer:
+At the end, commit with a `Refs: #$ARGUMENTS T<id>` trailer (full
+commit-message spec at
+[../../references/conventional-commits.md](../../references/conventional-commits.md)):
 
   git add <paths from Files>
   git commit -m "<commit attribute verbatim>" -m "Refs: #$ARGUMENTS T<id>"

@@ -420,12 +420,14 @@ Mirrors `prd-from-grill-me` step 5 verbatim, with `kind: "bug-brief"`.
 mkdir -p ".stenswf/$BB_NUM"
 gh issue view "$BB_NUM" --json body -q .body > ".stenswf/$BB_NUM/concept.md"
 CONCEPT_SHA=$(sha256sum ".stenswf/$BB_NUM/concept.md" | awk '{print $1}')
+CLAUDE_SHA=$(git log -1 --format=%H -- CLAUDE.md AGENTS.md 2>/dev/null | head -1)
 cat > ".stenswf/$BB_NUM/manifest.json" <<EOF
 {
   "issue": $BB_NUM,
   "kind": "bug-brief",
   "base_sha": "$PRD_BASE",
   "concept_sha256": "$CONCEPT_SHA",
+  "claude_md_sha": "$CLAUDE_SHA",
   "plan_created_at": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
   "slices": [],
   "review_step": {"status": "pending", "sha": null},

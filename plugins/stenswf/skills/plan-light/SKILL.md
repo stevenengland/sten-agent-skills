@@ -25,6 +25,7 @@ Final line of output must be exactly one of:
 ```
 READY
 ROUTE_HEAVY: <one-sentence reason>
+ABORT_NOT_SLICE: route to prd-to-issues
 ```
 
 ---
@@ -48,8 +49,12 @@ Gate:
 
 - `TYPE == "PRD"` or missing → abort to the user:
   *"Not a slice issue — use `/stenswf:prd-to-issues` to break the PRD
-  down first."* Log `contract_violation`. Emit `ROUTE_HEAVY: not a
-  slice — route to prd-to-issues` as FINAL line, then exit.
+  down first."* Log `contract_violation`. Emit
+  `ABORT_NOT_SLICE: route to prd-to-issues` as FINAL line, then exit.
+  (`ABORT_NOT_SLICE` is intentionally distinct from `ROUTE_HEAVY`
+  because the user does NOT need heavy `plan` + `ship` here — they
+  need a different stage entirely. `slice-e2e` recognises this
+  envelope and routes accordingly.)
 - `TYPE` starts with `slice` → continue.
 
 Extract envelope-check inputs (body sections):

@@ -22,19 +22,19 @@ read-only; undocumented decisions surface as findings.
 
 If `.stenswf/$ARGUMENTS/conventions.md` is absent (common on the lite
 path where `plan`/`plan-light` didn't run or was skipped), synthesize
-`.stenswf/$ARGUMENTS/conventions.synth.md` from available sources
-before the five-perspective pass. Log provenance.
+`.stenswf/$ARGUMENTS/review/conventions.synth.md` from available
+sources before the five-perspective pass. Log provenance.
 
 ```bash
 D=".stenswf/$ARGUMENTS"
-mkdir -p "$D"
+mkdir -p "$D/review"
 
 if [ -s "$D/conventions.md" ]; then
   CONV_FILE="$D/conventions.md"
 else
   # Always regenerate .synth from current PRD; prefer real file when present.
   PRD_REF=$(get_fm prd_ref /tmp/slice-$ARGUMENTS.md)
-  SYNTH="$D/conventions.synth.md"
+  SYNTH="$D/review/conventions.synth.md"
 
   {
     printf '<!-- synthesized by review/slice. Sources: '
@@ -181,6 +181,19 @@ Write to `.stenswf/$ARGUMENTS/review/slice.md`:
    **Priority:** high
 
 Summary: N high | M medium | K low
+
+<!-- reviewed-at: <HEAD-SHA> diff-sha256: <staged-diff-sha256> -->
+```
+
+**Freshness stamp.** Append the trailer comment at write time so
+`apply` can detect a stale review when the working diff has moved
+since:
+
+```bash
+OUT=".stenswf/$ARGUMENTS/review/slice.md"
+HEAD_SHA=$(git rev-parse HEAD)
+DIFF_SHA=$(git diff --staged | sha256sum | cut -d' ' -f1)
+printf '\n<!-- reviewed-at: %s diff-sha256: %s -->\n' "$HEAD_SHA" "$DIFF_SHA" >> "$OUT"
 ```
 
 ### Schema validation (self-check)

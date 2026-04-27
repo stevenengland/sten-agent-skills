@@ -10,6 +10,7 @@ lite_eligible: true
 conventions_source: prd#<PRD-N>
 prd_ref: <PRD-N>
 # bug_ref: <ORIGINAL-BUG-N>   # uncomment for bug-brief-derived slices
+# migration_mode: behavior-preserving   # REQUIRED on slices whose parent has class: migration; values: behavior-preserving | contract-changing
 -->
 
 ## Parent PRD

@@ -46,6 +46,13 @@ computed from `extract_acs` (per
 [../../references/extractors.md](../../references/extractors.md));
 never hand-authored.
 
+**Kind values.** `"slice-light"` is the intentional vocabulary for
+lite plan-ahead artifacts (distinct from heavy `manifest.json`'s
+`"slice"`). When `ship-light` runs directly without a prior
+`plan-light`, it seeds an `anchor.json` with `kind: "slice-shipped"`
+using this same shape — see
+[../ship-light/SKILL.md](../ship-light/SKILL.md) Phase 4.
+
 ```bash
 SIG=$( { cat /tmp/slice-$ARGUMENTS-what.md; \
          cat /tmp/slice-$ARGUMENTS-conv.md; \

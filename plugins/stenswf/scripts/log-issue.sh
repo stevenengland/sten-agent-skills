@@ -11,7 +11,8 @@
 #   STENSWF_ISSUE        — current issue number. Default: "".
 #
 # Fixed categories: contract_violation | ambiguous_instruction |
-#                   missing_artifact  | tool_failure | user_override
+#                   missing_artifact  | tool_failure | user_override |
+#                   behavior_change_override
 
 set -eu
 
@@ -25,7 +26,7 @@ if [ -z "$CATEGORY" ] || [ -z "$SUMMARY" ]; then
 fi
 
 case "$CATEGORY" in
-  contract_violation|ambiguous_instruction|missing_artifact|tool_failure|user_override) ;;
+  contract_violation|ambiguous_instruction|missing_artifact|tool_failure|user_override|behavior_change_override) ;;
   *)
     echo "unknown category: $CATEGORY (see references/feedback-log.md)" >&2
     exit 2
@@ -39,6 +40,8 @@ mkdir -p "$DIR"
 LOG="$DIR/$DATE_UTC.jsonl"
 
 # Portable JSON field escaper (\ -> \\, " -> \", drop control chars).
+# Multi-line input is joined with a literal \n separator BETWEEN lines
+# (no trailing \n on the last line).
 esc() {
   printf '%s' "$1" | awk '
     BEGIN { ORS="" }
@@ -48,10 +51,10 @@ esc() {
       gsub(/"/, "\\\"", s)
       gsub(/\t/, "\\t", s)
       gsub(/\r/, "", s)
+      if (NR > 1) printf "\\n"
       print s
     }
-    NR < ORS_N { print "\\n" }
-  ' ORS_N=999999
+  '
 }
 
 SKILL_ESC=$(esc "${STENSWF_SKILL:-unknown}")

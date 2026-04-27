@@ -184,12 +184,14 @@ If `$ORIG` is empty, behave as before (blank-page interview from Step 1).
    mkdir -p ".stenswf/$N"
    gh issue view "$N" --json body -q .body > ".stenswf/$N/concept.md"
    CONCEPT_SHA=$(sha256sum ".stenswf/$N/concept.md" | awk '{print $1}')
+   CLAUDE_SHA=$(git log -1 --format=%H -- CLAUDE.md AGENTS.md 2>/dev/null | head -1)
    cat > ".stenswf/$N/manifest.json" <<EOF
    {
      "issue": $N,
      "kind": "prd",
      "base_sha": "$PRD_BASE",
      "concept_sha256": "$CONCEPT_SHA",
+     "claude_md_sha": "$CLAUDE_SHA",
      "plan_created_at": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
      "slices": [],
      "review_step": {"status": "pending", "sha": null}

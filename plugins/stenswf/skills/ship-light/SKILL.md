@@ -130,7 +130,7 @@ fires `behavior_change_override`.
 
   ```bash
   set -euo pipefail
-  BASE_SHA=$(git rev-parse HEAD)
+  ORIG_HEAD=$(git rev-parse HEAD)              # pre-checkout HEAD (informational)
   DEFAULT=$(gh repo view --json defaultBranchRef -q .defaultBranchRef.name)
   [ -n "$DEFAULT" ] || { echo "ROUTE_HEAVY: could not resolve default branch"; exit 1; }
   git fetch origin "$DEFAULT"
@@ -141,6 +141,7 @@ fires `behavior_change_override`.
     echo "ROUTE_HEAVY: branch creation failed (likely stale $BR from prior run; delete it or check it out manually, then re-run)"
     exit 1
   }
+  BASE_SHA=$(git rev-parse HEAD)               # branch base — used for scope-drift diff in Phase 3
   ```
 
 ## Phase 1 exit gate — HARD INVARIANT
@@ -197,10 +198,11 @@ match `## Conventions (from PRD)` verbatim — on conflict, stop and
 hand off to `/stenswf:plan` + `/stenswf:ship`. Log
 `contract_violation` if the conflict was discovered late.
 
-Conventional Commits:
+Conventional Commits (full spec at
+[../../references/conventional-commits.md](../../references/conventional-commits.md)):
 
 ```bash
-git commit -m "<type>(<scope>): <imperative subject>" -m "Refs #$ARGUMENTS"
+git commit -m "<type>(<scope>): <imperative subject>" -m "Refs: #$ARGUMENTS"
 ```
 
 `type`: `feat|fix|refactor|perf|docs|test|chore|build|ci`. Subject
@@ -250,7 +252,7 @@ Same session, no subagent. Orthogonal to `clean-code`:
   `TODO|FIXME|print(|console\.log|debugger` and commented-out blocks.
 
 If anything was fixed, re-run tests+lint, then:
-`git commit -am "refactor(<scope>): self-critique pass" -m "Refs #$ARGUMENTS"`.
+`git commit -am "refactor(<scope>): self-critique pass" -m "Refs: #$ARGUMENTS"`.
 
 If the rubberduck rejected a concrete alternative, append one
 `decision` entry (source `ship-light`) to
@@ -274,8 +276,38 @@ fi
 
 ## Phase 4 — Push and PR
 
-Final test + lint must pass (or `lint-escape`-justified). Then run the
-shared PR+CI procedure with `CI_MAX_CYCLES=2` and `WAIT_FOR_MERGE=no`:
+Final test + lint must pass (or `lint-escape`-justified).
+
+**Drift anchor for direct path.** When `ship-light` was invoked
+directly (no prior `plan-light` run), seed a minimal anchor so later
+`/stenswf:review` and `/stenswf:apply` have a drift baseline. Reuses
+the `plan-light.json` shape with `kind: "slice-shipped"`. Skip if a
+`plan-light.json` is already present (the lite plan-ahead path):
+
+```bash
+ANCHOR=".stenswf/$ARGUMENTS/anchor.json"
+PLAN_JSON=".stenswf/$ARGUMENTS/plan-light.json"
+if [ ! -s "$PLAN_JSON" ] && [ ! -s "$ANCHOR" ]; then
+  mkdir -p ".stenswf/$ARGUMENTS"
+  SIG=$( { \
+    extract_section 'What to build'            /tmp/slice-$ARGUMENTS.md; \
+    extract_section 'Conventions \(from PRD\)' /tmp/slice-$ARGUMENTS.md; \
+    extract_section 'Acceptance criteria'      /tmp/slice-$ARGUMENTS.md; \
+  } | sha256sum | cut -d' ' -f1)
+  cat > "$ANCHOR" <<EOF
+{
+  "issue": $ARGUMENTS,
+  "kind": "slice-shipped",
+  "plan_created_at": "$(date -u +%FT%TZ)",
+  "source_signature": "$SIG",
+  "behavior_change_acs": []
+}
+EOF
+fi
+```
+
+Then run the shared PR+CI procedure with `CI_MAX_CYCLES=2` and
+`WAIT_FOR_MERGE=no`:
 [../../references/pr-ci-merge.md](../../references/pr-ci-merge.md).
 
 PR body template: [pr-body.md](pr-body.md). Verbatim, no brevity compression.

@@ -9,6 +9,26 @@ of behavior change is the gate; loading `tdd` is the lens; whether
 to write a test follows from the AC tag, not from this skill. See
 [../../references/behavior-change-signal.md](../../references/behavior-change-signal.md).
 
+## Step 0 — Strict gating (mirrors review/prd.md)
+
+Refuse to run while any slice of this PRD is still open. The capstone
+review already enforces this gate, but `apply` may be invoked directly
+on an old PRD whose children have since drifted back to open
+(reverted, reopened, or new follow-up slices linked to the same PRD):
+
+```bash
+OPEN=$(gh issue list --state open \
+  --search "in:body \"Parent PRD\" \"#$ARGUMENTS\"" \
+  --json number,title)
+
+if [ "$(printf '%s' "$OPEN" | jq 'length')" -gt 0 ]; then
+  echo "PRD-apply blocked: slices still open:" >&2
+  printf '%s' "$OPEN" | jq -r '.[] | "  #\(.number) \(.title)"' >&2
+  echo "Ship them first or close abandoned ones with: gh issue close <N> --reason \"not planned\"" >&2
+  exit 1
+fi
+```
+
 ## Short-circuit: zero findings
 
 Parse `<counts>` from the XML:
@@ -92,13 +112,30 @@ For each approved axis group (severity order: critical → low):
    Types by axis: `test(...)`, `refactor(...)`, `fix(...)`,
    `chore(ops):`, `feat(ops):`.
 
-4. Update `apply-state.json`:
+4. Update `apply-state.json`. **Resume-safe write:** abort if the row
+   was already `applied` or `skipped` (the resume contract from
+   [SKILL.md](SKILL.md) forbids overwriting terminal states):
 
    ```bash
-   jq --arg id "F1" --arg sha "$(git rev-parse HEAD)" \
+   ID="F1"
+   SHA=$(git rev-parse HEAD)
+   STATE=".stenswf/$ARGUMENTS/apply-state.json"
+   CUR=$(jq -r --arg id "$ID" '.entries[$id].status // "missing"' "$STATE")
+   case "$CUR" in
+     applied|skipped)
+       echo "refusing to overwrite $ID (status=$CUR); inspect $STATE manually" >&2
+       bash plugins/stenswf/scripts/log-issue.sh contract_violation \
+         "apply-state overwrite refused for $ID" "current=$CUR target=applied"
+       exit 1
+       ;;
+     missing)
+       echo "$ID not found in $STATE (init step skipped?)" >&2
+       exit 1
+       ;;
+   esac
+   jq --arg id "$ID" --arg sha "$SHA" \
      '.entries[$id] = {"status":"applied","commit_sha":$sha,"reason":null}' \
-     .stenswf/$ARGUMENTS/apply-state.json > /tmp/as.json \
-     && mv /tmp/as.json .stenswf/$ARGUMENTS/apply-state.json
+     "$STATE" > /tmp/as.json && mv /tmp/as.json "$STATE"
    ```
 
 5. Update `BASE_SHA = HEAD_SHA`.

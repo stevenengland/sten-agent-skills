@@ -24,15 +24,25 @@ Capture feedback-session baseline per
 Apply context-hygiene per
 [../../references/context-hygiene.md](../../references/context-hygiene.md).
 
-Detect mode (slice vs PRD) per
+Detect mode (slice / PRD / bug-brief) per
 [../../references/mode-detection.md](../../references/mode-detection.md),
-then load `slice.md` or `prd.md` accordingly.
+then load the matching sub-file:
 
-## Prerequisites (both modes)
+- `TYPE == "PRD"` → load [prd.md](prd.md).
+- `TYPE == "bug-brief"` → load [bug-brief.md](bug-brief.md) (gates
+  like PRD-mode, then iterates children running slice-mode apply).
+- `TYPE` starts with `slice` → load [slice.md](slice.md).
+
+## Prerequisites (slice + PRD modes)
+
+*(Skipped in bug-brief-mode — see [bug-brief.md](bug-brief.md), which
+enforces per-child prerequisites.)*
 
 - Confirm the review artifact exists on disk:
   - Slice-mode: `.stenswf/$ARGUMENTS/review/slice.md`.
   - PRD-mode: `.stenswf/$ARGUMENTS/review/prd-review.xml`.
+  - Bug-brief-mode delegates this check to each child slice; see
+    [bug-brief.md](bug-brief.md).
 
   If missing, stop: `Run /stenswf:review $ARGUMENTS first.` Log
   `missing_artifact`.
