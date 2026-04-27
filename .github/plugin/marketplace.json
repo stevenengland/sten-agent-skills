@@ -14,7 +14,7 @@
     {
       "name": "stenswf",
       "description": "StEn Software Workflow bundle. Issue lifecycle (plan → ship → review → apply, with PRD-mode capstone, plus ship-light single-session lite path), PRD inception (grill-me → prd-from-grill-me → prd-to-issues). Refactor-focused skills (plan-reviewer, test-file-compaction, etc.) now live in the sibling stenswr plugin.",
-      "version": "0.2.0",
+      "version": "0.11.0",
       "source": "plugins/stenswf"
     },
     {
