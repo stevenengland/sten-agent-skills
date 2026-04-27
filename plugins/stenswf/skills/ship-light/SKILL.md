@@ -13,6 +13,15 @@ subagents, no plan comment, no XML extraction. The issue body IS the spec.
 
 ## Phase 0 — Preflight gate
 
+**Ceremony invariant (TDD-as-lens).** This skill MUST NOT (a)
+instruct skipping tests for ACs annotated `(behavior)`, (b) remove
+`tdd` from any SKILLS TO LOAD list, (c) accept `manual check` or
+"rely on existing suite" as completion evidence for a `(behavior)`
+AC, or (d) emit guidance that contradicts `tdd/SKILL.md`. Detection
+of behavior change is the gate; loading `tdd` is the lens; whether
+to write a test follows from the AC tag, not from this skill. See
+[../../references/behavior-change-signal.md](../../references/behavior-change-signal.md).
+
 Capture feedback-session baseline per
 [../../references/feedback-session.md](../../references/feedback-session.md).
 Apply context-hygiene per
@@ -64,6 +73,10 @@ When in doubt, proceed — the Phase 3 rubberduck will catch drift.
 
 ## Phase 0.5 — Plan-light detection (optional)
 
+`lite_override` (Phase 0) waives **blast-radius** disqualifiers only;
+behavior-change detection and `tdd`-loading are unaffected by the
+override. Honoring the override does NOT skip AC-tag re-validation.
+
 If `plan-light` has been run, its pair of artifacts is on disk. Detect
 and (if current) consume as advisory:
 
@@ -81,14 +94,23 @@ if [ -s "$PLAN_MD" ] && [ -s "$PLAN_JSON" ]; then
 
   if [ "$CUR_SIG" = "$PLAN_SIG" ]; then
     echo "plan-light current; using as advisory guidance"
+    # Capture the planner's behavior tag list for cross-check in Phase 2.
+    PLAN_BEHAVIOR_ACS=$(jq -r '.behavior_change_acs[]?' "$PLAN_JSON" \
+      | tr '\n' ' ' | sed 's/ *$//')
   else
     echo "plan-light stale; ignoring, proceeding from issue body"
+    PLAN_BEHAVIOR_ACS=""
   fi
+else
+  PLAN_BEHAVIOR_ACS=""
 fi
 ```
 
 **Precedence.** Issue body ACs are authoritative for "done."
 `plan-light.md` is advisory only. If they disagree, issue body wins.
+`PLAN_BEHAVIOR_ACS` (when set) is consumed by Phase 2 as a
+planner-vs-shipper cross-check — divergence from the live issue body
+fires `behavior_change_override`.
 
 ## Phase 1 — Setup
 
@@ -107,20 +129,72 @@ fi
 - Branch off default (portable across branch names):
 
   ```bash
+  set -euo pipefail
   BASE_SHA=$(git rev-parse HEAD)
   DEFAULT=$(gh repo view --json defaultBranchRef -q .defaultBranchRef.name)
+  [ -n "$DEFAULT" ] || { echo "ROUTE_HEAVY: could not resolve default branch"; exit 1; }
   git fetch origin "$DEFAULT"
   SLUG=$(gh issue view $ARGUMENTS --json title -q .title \
     | tr '[:upper:] ' '[:lower:]-' | tr -cd 'a-z0-9-' | cut -c1-40)
-  git checkout -b "impl/$ARGUMENTS-$SLUG" "origin/$DEFAULT"
+  BR="impl/$ARGUMENTS-$SLUG"
+  git checkout -b "$BR" "origin/$DEFAULT" || {
+    echo "ROUTE_HEAVY: branch creation failed (likely stale $BR from prior run; delete it or check it out manually, then re-run)"
+    exit 1
+  }
   ```
+
+## Phase 1 exit gate — HARD INVARIANT
+
+Before any Phase 2 work (no test, no code, no commit) the following
+MUST hold:
+
+```bash
+CUR=$(git branch --show-current)
+AHEAD=$(git rev-list HEAD ^"origin/$DEFAULT" --count)
+[ "$CUR" = "impl/$ARGUMENTS-$SLUG" ] && [ "$AHEAD" = "0" ] || {
+  echo "ROUTE_HEAVY: phase 1 gate failed (on=$CUR, ahead=$AHEAD); recover manually if commits are local-only:"
+  echo "  git branch impl/$ARGUMENTS-$SLUG && git reset --hard origin/$DEFAULT && git checkout impl/$ARGUMENTS-$SLUG"
+  exit 1
+}
+```
+
+Do NOT "fix" a violation by retroactively branching off a dirty HEAD.
+Abort and route heavy.
 
 ## Phase 2 — TDD per acceptance criterion
 
-For each AC in order: failing test → minimal code → green → refactor
-(`clean-code`) → commit. One commit per behavioral change. Names,
-shapes, layouts match `## Conventions (from PRD)` verbatim — on conflict,
-stop and hand off to `/stenswf:plan` + `/stenswf:ship`. Log
+**AC-tag re-validation.** Use `extract_acs` from
+[../../references/extractors.md](../../references/extractors.md) to
+parse `/tmp/slice-$ARGUMENTS.md` into `AC<n>\t<tag>\t<text>`
+records. The extractor itself hard-errors and logs
+`contract_violation` on any untagged AC — abort with
+`ROUTE_HEAVY: untagged AC — re-run prd-to-issues / triage-issue`
+in that case. Re-evaluate every parsed tag against the heuristic
+ladder in
+[../../references/behavior-change-signal.md](../../references/behavior-change-signal.md).
+Disagreement with the issue body → re-tag silently for this run
+and log `behavior_change_override` with `<ac> <old>→<new>
+<reason>` as evidence.
+
+**Planner-vs-shipper cross-check (when plan-light is current).** If
+`PLAN_BEHAVIOR_ACS` was populated in Phase 0.5, compare it
+set-equal against the live `BEHAVIOR_ACS` from `extract_acs`. Any
+AC present in one set and absent from the other fires a
+`behavior_change_override` log entry with `<ac> <old>→<new>
+plan-light vs issue body divergence` as evidence. Live `BEHAVIOR_ACS`
+wins (ship is authoritative). When `plan-light` was not current or
+absent, this cross-check is skipped.
+
+Per-AC gate based on the tag:
+
+- **`(behavior)` AC** — failing test → minimal code → green →
+  refactor (`clean-code`) → commit. RED-first is mandatory.
+- **`(structural)` AC** — skip RED. Run the existing suite; it MUST
+  stay green. MUST NOT delete tests covering behavior. Commit.
+
+For each AC in order, follow the gate above. Names, shapes, layouts
+match `## Conventions (from PRD)` verbatim — on conflict, stop and
+hand off to `/stenswf:plan` + `/stenswf:ship`. Log
 `contract_violation` if the conflict was discovered late.
 
 Conventional Commits:
@@ -146,14 +220,32 @@ captures rejected alternatives.
 
 Same session, no subagent. Orthogonal to `clean-code`:
 
-- **AC → test mapping.** Each AC has a test proving it. Missing → add.
+- **AC → test mapping.** Each `(behavior)` AC has a test proving it.
+  Missing → add. Each `(structural)` AC has the existing suite still
+  green; MUST NOT have deleted any test covering behavior.
 - **Convention drift.** Grep diff for new symbols; confirm every new
   module path, function name, class name, and field set matches
   `## Conventions (from PRD)` verbatim. Drift → fix or hand off.
 - **Scope drift.** `git diff $BASE_SHA..HEAD` — anything not required
   by an AC → delete or justify in one sentence.
-- **Untested error path.** Grep diff for new/changed
-  `raise|throw|return Err|return nil|panic(`. Untested → add a test.
+- **Untested behavior change (irrefutable backstop).** Diff-grep for
+  new/changed exported symbols, signatures, error exits
+  (`raise|throw|return Err|return nil|panic(`), public endpoints,
+  CLI flags, config keys, persisted shapes. Any uncovered → fail
+  rubberduck. This check overrides the per-AC gate: a `(structural)`
+  AC tag does NOT exempt new exported behavior from coverage. Per
+  [../../references/behavior-change-signal.md](../../references/behavior-change-signal.md).
+- **Bad-test audit (refactor-time diagnostic).** For any test that
+  broke during the rubberduck refactor, classify as **legitimate**
+  (refactor changed observable behavior) or
+  **implementation-coupled** (mocked an internal collaborator,
+  asserted on private state, queried internal storage instead of
+  the public interface, or re-implemented production logic in
+  fixture form). Implementation-coupled: rewrite to the public
+  interface or delete with one-line justification appended to
+  `lite-notes.md`'s `## Assumptions (ship-light)` section. **No
+  green-by-deletion of a behavior test** — behavior coverage MUST
+  NOT drop.
 - **Leftover smell.** Grep diff for
   `TODO|FIXME|print(|console\.log|debugger` and commented-out blocks.
 
@@ -199,9 +291,12 @@ post `CI_BLOCKER (ship-light cap reached)` and log `tool_failure`.
 ## Out of scope (deliberate)
 
 No plan comment, `<task>` blocks, XML/awk extraction. No subagent
-dispatch (except optional Cycle-2 `/clear`). No review-step, invariant
-gate, or multi-axis review — use `/stenswf:review $ARGUMENTS`
-separately. No labels. No implementation-log table. No worktrees.
+dispatch (except optional Cycle-2 `/clear`). No content-review step or
+multi-axis review (use `/stenswf:review $ARGUMENTS` separately). No
+labels. No implementation-log table. No worktrees.
+
+(Phase 1 exit gate is a workflow invariant, not a review gate — it
+guards branch identity, not code quality.)
 
 If the slice grows past the preflight envelope mid-flight: stop, hand
 off to `/stenswf:plan` + `/stenswf:ship`. Do not silently re-plan.
@@ -212,10 +307,15 @@ Log `ambiguous_instruction`.
 Final line must be exactly one of:
 
 ```
-MERGED <pr-url>
+PR_OPENED <pr-url>
 CI_BLOCKER <pr-url>
 ROUTE_HEAVY: <one-sentence reason>
 ```
+
+`PR_OPENED` (not `MERGED`) — `ship-light` runs with `WAIT_FOR_MERGE=no`,
+so "merged" would be a lie. `<pr-url>` is the canonical `$PR_URL`
+captured and validated by [pr-ci-merge.md](../../references/pr-ci-merge.md);
+never improvise a URL from `git`/`gh` stderr.
 
 ---
 

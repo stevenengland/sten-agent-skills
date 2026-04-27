@@ -34,9 +34,15 @@ Copy the parent PRD's or bug-brief's `## Conventions` section verbatim
 
 ## Acceptance criteria
 
-- [ ] Criterion 1
-- [ ] Criterion 2
-- [ ] Criterion 3
+Every checkbox MUST carry a tag as its first parenthesised token:
+either `(behavior)` or `(structural)`. Untagged ACs are a hard error
+and will be rejected by `plan`, `plan-light`, `ship`, and
+`ship-light`. See
+[behavior-change-signal.md](behavior-change-signal.md).
+
+- [ ] (behavior) Criterion 1 — observable outcome
+- [ ] (behavior) Criterion 2 — observable outcome
+- [ ] (structural) Criterion 3 — rename / move / reformat only
 
 ## User stories addressed
 

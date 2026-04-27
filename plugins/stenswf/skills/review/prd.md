@@ -1,5 +1,14 @@
 # PRD-mode — 5-axis capstone review
 
+**Ceremony invariant (TDD-as-lens).** This mode MUST NOT (a)
+instruct skipping tests for ACs annotated `(behavior)`, (b) remove
+`tdd` from any SKILLS TO LOAD list, (c) accept `manual check` or
+"rely on existing suite" as completion evidence for a `(behavior)`
+AC, or (d) emit guidance that contradicts `tdd/SKILL.md`. Detection
+of behavior change is the gate; loading `tdd` is the lens; whether
+to write a test follows from the AC tag, not from this skill. See
+[../../references/behavior-change-signal.md](../../references/behavior-change-signal.md).
+
 PRD-mode reviews an entire delivered PRD: the union of all merged
 slices since the PRD was recorded. Strategic review, not per-file.
 
@@ -99,6 +108,9 @@ paradigms, dead code?
 ### Axis 4 — Test strategy
 
 Coverage matches PRD risk surface? Critical stories without E2E? Gaps?
+Implementation-coupled tests across the delivered slices (per
+[../../references/behavior-change-signal.md](../../references/behavior-change-signal.md)
+bad-test audit) — list as findings; behavior coverage MUST NOT drop.
 
 ### Axis 5 — Ops readiness
 

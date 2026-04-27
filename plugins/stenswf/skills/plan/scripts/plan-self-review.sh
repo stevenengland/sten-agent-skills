@@ -34,6 +34,27 @@ if [ -s "$D/manifest.json" ]; then
       [ -s "$D/$f" ] || printf 'x'
     done)
     [ -z "$MISS" ] || fail "manifest-listed task file(s) missing: ${#MISS} entries"
+
+    # 2a. TDD-as-lens: every task must carry a boolean `behavior_change`
+    # and an `acs[]` array (each AC: id + boolean + text). Per-task
+    # `behavior_change` must be `any(acs.behavior_change)`.
+    BAD_TASK=$(jq -r '
+      .tasks[] | select(
+        (.behavior_change | type) != "boolean"
+        or (.acs | type)          != "array"
+        or any(.acs[]?;
+             (.id            | type) != "string"
+          or (.behavior_change| type) != "boolean"
+          or (.text          | type) != "string")
+      ) | .id' "$D/manifest.json")
+    [ -z "$BAD_TASK" ] || fail "tasks missing/invalid behavior_change|acs[]: $BAD_TASK"
+
+    BAD_AGG=$(jq -r '
+      .tasks[]
+      | select((.acs | length) > 0)
+      | select(.behavior_change != ([.acs[].behavior_change] | any))
+      | .id' "$D/manifest.json")
+    [ -z "$BAD_AGG" ] || fail "tasks where behavior_change != any(acs.behavior_change): $BAD_AGG"
   fi
 fi
 

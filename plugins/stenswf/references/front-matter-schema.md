@@ -52,6 +52,7 @@ Rules:
 | `blocked_by` | space-separated issue numbers | E.g. `123 456`. Absence = no blockers. |
 | `bug_ref` | issue number (int) | Slices only. Original raw bug-report issue this slice descends from. Informational; not a routing gate. |
 | `affects_prd` | issue number (int) | Bug-brief only. Linked feature PRD (defect discovered against its scope). Informational. |
+| `migration_mode` | `behavior-preserving` \| `contract-changing` | **Required** on slices whose parent has `class: migration`; absent everywhere else. Biases the behavior-change heuristic; see [behavior-change-signal.md](behavior-change-signal.md). |
 
 ## Extraction (canonical)
 

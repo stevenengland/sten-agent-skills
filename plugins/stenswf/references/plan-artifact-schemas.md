@@ -43,7 +43,18 @@ Materialized under `.stenswf/$ARGUMENTS/` by `plan` Phase 2.
   "tasks": [
     {"id": "T10", "name": "<slice name>", "file": "tasks/T10.md",
      "commit_subject": "<type>(<scope>): <subject>",
-     "status": "pending", "sha": null}
+     "status": "pending", "sha": null,
+     "behavior_change": true,
+     "acs": [
+       {"id": "AC1", "behavior_change": true,  "text": "..."},
+       {"id": "AC2", "behavior_change": false, "text": "..."}
+     ]},
+    {"id": "T<last>", "name": "Update documentation",
+     "file": "tasks/T<last>.md",
+     "commit_subject": "docs(<scope>): update docs for issue <n>",
+     "status": "pending", "sha": null,
+     "behavior_change": false,
+     "acs": []}
   ],
   "refactor_pass": {"status": "pending", "sha": null},
   "review_step":   {"status": "pending", "sha": null},
@@ -53,6 +64,11 @@ Materialized under `.stenswf/$ARGUMENTS/` by `plan` Phase 2.
 
 SHA computation: `sha256sum <file> | cut -d' ' -f1`. `branch` +
 `base_sha` are filled by `ship` at dispatch time.
+
+Per-task `behavior_change` is `any(acs.behavior_change)`. Per-AC
+`behavior_change` is the boolean form of the issue body's AC tag
+(`(behavior)` → `true`, `(structural)` → `false`). See
+[behavior-change-signal.md](behavior-change-signal.md).
 
 ## concept.md
 

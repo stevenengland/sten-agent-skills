@@ -37,8 +37,14 @@ conventions. Analogous symbol paths inline where useful.
 
 ## 2. `plan-light.json`
 
-4-field identity stub. `ship-light` recomputes `source_signature` at
+5-field identity stub. `ship-light` recomputes `source_signature` at
 consume time — mismatch → plan treated as stale, ignored.
+`behavior_change_acs` mirrors AC tags from the issue body (per
+[../../references/behavior-change-signal.md](../../references/behavior-change-signal.md))
+as a JSON array of AC ids whose tag is `(behavior)`. The list is
+computed from `extract_acs` (per
+[../../references/extractors.md](../../references/extractors.md));
+never hand-authored.
 
 ```bash
 SIG=$( { cat /tmp/slice-$ARGUMENTS-what.md; \
@@ -46,12 +52,18 @@ SIG=$( { cat /tmp/slice-$ARGUMENTS-what.md; \
          cat /tmp/slice-$ARGUMENTS-acs.md; \
        } | sha256sum | cut -d' ' -f1)
 
+# extract_acs hard-errors itself on untagged ACs; BEHAVIOR_ACS is the
+# space-separated id list it produces.
+ACS_JSON=$(printf '%s' "${BEHAVIOR_ACS}" \
+  | tr ' ' '\n' | awk 'NF{printf "%s\"%s\"", (n++?",":""), $0} END{print ""}')
+
 cat > ".stenswf/$ARGUMENTS/plan-light.json" <<EOF
 {
   "issue": $ARGUMENTS,
   "kind": "slice-light",
   "plan_created_at": "$(date -u +%FT%TZ)",
-  "source_signature": "$SIG"
+  "source_signature": "$SIG",
+  "behavior_change_acs": [${ACS_JSON}]
 }
 EOF
 ```
@@ -80,6 +92,6 @@ to `plan-light.md`'s `## Assumptions` section.
 
 ## Out of scope (deliberate)
 
-No `manifest.json` beyond the 4-field stub. No `stable-prefix.md`. No
+No `manifest.json` beyond the 5-field stub. No `stable-prefix.md`. No
 separate conventions/house-rules/design-summary files. No `--resume`.
 Re-running overwrites in place.

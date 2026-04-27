@@ -25,6 +25,15 @@ is a review artifact on disk and nothing else.**
 
 ## Mode Detection
 
+**Ceremony invariant (TDD-as-lens).** This skill MUST NOT (a)
+instruct skipping tests for ACs annotated `(behavior)`, (b) remove
+`tdd` from any SKILLS TO LOAD list, (c) accept `manual check` or
+"rely on existing suite" as completion evidence for a `(behavior)`
+AC, or (d) emit guidance that contradicts `tdd/SKILL.md`. Detection
+of behavior change is the gate; loading `tdd` is the lens; whether
+to write a test follows from the AC tag, not from this skill. See
+[../../references/behavior-change-signal.md](../../references/behavior-change-signal.md).
+
 Detect mode (slice vs PRD) per
 [../../references/mode-detection.md](../../references/mode-detection.md),
 then load `slice.md` or `prd.md` accordingly.

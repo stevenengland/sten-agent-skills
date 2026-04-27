@@ -1,6 +1,6 @@
 ---
 name: plan-light
-description: Lightweight planning for a well-scoped slice issue — `plan-light.md` plus a 4-field JSON identity card consumable by `ship-light`.
+description: Lightweight planning for a well-scoped slice issue — `plan-light.md` plus a 5-field JSON identity card consumable by `ship-light`.
 disable-model-invocation: true
 ---
 
@@ -124,18 +124,80 @@ Otherwise dispatch ONE `Explore` subagent (thoroughness: quick, ≤300 words):
 
 ## Phase 2 — Self-resolve decisions (silent)
 
+**AC-tag validation.** Use `extract_acs` from
+[../../references/extractors.md](../../references/extractors.md) to
+parse the AC section into `AC<n>\t<tag>\t<text>` records (IDs are
+positional). The extractor itself hard-errors and logs
+`contract_violation` on any untagged AC — abort with
+`ROUTE_HEAVY: untagged AC — re-run prd-to-issues / triage-issue`.
+Re-evaluate each parsed tag against the heuristic ladder in
+[../../references/behavior-change-signal.md](../../references/behavior-change-signal.md);
+disagreement with the issue body → re-tag silently for the
+manifest mirror only (do NOT rewrite the issue body — heavy `plan`
+does that). Mirror tagged-`behavior` AC ids into `plan-light.json`
+`behavior_change_acs` per [artifacts.md](artifacts.md).
+
+**Migration-mode bias.** If the slice front-matter carries
+`migration_mode` (only present when the parent PRD is
+`class: migration`; see
+[../../references/front-matter-schema.md](../../references/front-matter-schema.md)),
+apply the bias when the heuristic ladder falls through to rule 5
+("default on ambiguity"):
+
+- `behavior-preserving` → default to `(structural)`.
+- `contract-changing` → default to `(behavior)`.
+- absent → default to `(behavior)` (the bare rule 5).
+
+Producer tags still win where they are unambiguous; the bias only
+shifts the rule-5 fallback.
+
 Walk each AC. For every ambiguity:
 
 1. Covered by `## Conventions (from PRD)` → use silently.
 2. Codebase analog exists → mirror silently, record in `## Assumptions`.
+   When two analogs are equally supported, prefer the one that better
+   matches [../tdd/interface-design.md](../tdd/interface-design.md)
+   (deps as params, return-don't-mutate, small surface).
 3. Two materially different paths, no tiebreaker → abort:
    `ROUTE_HEAVY: arch decision needed — <one sentence>`. Log `ambiguous_instruction`.
 4. AC wording ambiguous enough for two behaviors → abort:
    `ROUTE_HEAVY: AC ambiguity — <quote AC, propose two reads>`. Log `ambiguous_instruction`.
 5. Convention conflicts with codebase → abort:
    `ROUTE_HEAVY: convention conflicts with <path> — <one sentence>`. Log `contract_violation`.
+6. Implied interface violates the testability lens (no params,
+   hidden mutation, sprawling surface; see
+   [../tdd/interface-design.md](../tdd/interface-design.md)) and no
+   analog supports a sane shape → abort:
+   `ROUTE_HEAVY: testability conflict — <one sentence>`. Log
+   `ambiguous_instruction`.
 
 No interview. Either resolve silently or escalate.
+
+**Silent interface and behavior checklist (agent-side, mirrors heavy
+`plan`'s interview).** `plan-light` cannot ask the user, so walk the
+same checks against the codebase + conventions and resolve in-line.
+Per slice:
+
+- [ ] Name the public interface each `(behavior)` AC implies (signature,
+      inputs, return). If the conventions + analog do not pin a shape,
+      escalate `ROUTE_HEAVY: arch decision needed — <one sentence>`.
+- [ ] Prioritize behaviors to test. **You can't test everything.** The
+      AC list is fixed, but per task you decide which behaviors get
+      RED-first dedicated tests vs. coverage-by-composition. Lead with
+      critical paths and complex logic; record deferred edge cases in
+      `## Assumptions`.
+- [ ] Identify deep-module opportunities for any *new* module the slice
+      introduces (small interface, deep implementation; see
+      [../tdd/deep-modules.md](../tdd/deep-modules.md)). Record the
+      chosen shape in `## Assumptions`. Do NOT propose restructuring
+      existing modules — that is heavy `plan` territory.
+- [ ] Confirm the implied interface satisfies
+      [../tdd/interface-design.md](../tdd/interface-design.md) (deps
+      as params, return-don't-mutate, small surface). Lens violations
+      are caught by ladder rule 6 above.
+
+Resolutions go in `## Assumptions` (non-decisions) per the link rule
+below. Anything that genuinely needs a user becomes `ROUTE_HEAVY`.
 
 Tier-1/tier-2 resolutions are non-decisions — they go in `## Assumptions`,
 never the anchor. See [../../references/decision-anchor-link.md](../../references/decision-anchor-link.md).
@@ -143,6 +205,15 @@ never the anchor. See [../../references/decision-anchor-link.md](../../reference
 ---
 
 ## Phase 3 — Write the artifact
+
+**Ceremony invariant (TDD-as-lens).** This phase MUST NOT (a)
+instruct skipping tests for ACs annotated `(behavior)`, (b) remove
+`tdd` from any SKILLS TO LOAD list, (c) accept `manual check` or
+"rely on existing suite" as completion evidence for a `(behavior)`
+AC, or (d) emit guidance that contradicts `tdd/SKILL.md`. Detection
+of behavior change is the gate; loading `tdd` is the lens; whether
+to write a test follows from the AC tag, not from this skill. See
+[../../references/behavior-change-signal.md](../../references/behavior-change-signal.md).
 
 ```bash
 mkdir -p ".stenswf/$ARGUMENTS"
@@ -152,7 +223,8 @@ Write the three artifacts per
 [artifacts.md](artifacts.md):
 
 1. `plan-light.md` — the readable plan (soft cap 200 lines, hard cap 6 tasks).
-2. `plan-light.json` — 4-field identity stub with `source_signature`.
+2. `plan-light.json` — 5-field identity stub with `source_signature`
+   and `behavior_change_acs`.
 3. `lite-notes.md` — soft-constraint handoff to slice review.
 
 If >6 tasks required, abort with
@@ -202,6 +274,6 @@ with `STENSWF_SKILL=plan-light` and `STENSWF_ISSUE=$ARGUMENTS`.
 
 ## Out of scope (deliberate)
 
-No `manifest.json` beyond the 4-field stub. No `stable-prefix.md`. No
+No `manifest.json` beyond the 5-field stub. No `stable-prefix.md`. No
 separate conventions/house-rules/design-summary files. No `--resume`.
 Re-running overwrites in place.

@@ -29,6 +29,16 @@ Pipeline for slice issue $ARGUMENTS:
 
 ## Phase 0 — Preflight
 
+**Ceremony invariant (TDD-as-lens).** This skill MUST NOT (a)
+instruct skipping tests for ACs annotated `(behavior)`, (b) remove
+`tdd` from any SKILLS TO LOAD list (it appears in every dispatched
+subagent's SKILLS list), (c) accept `manual check` or "rely on
+existing suite" as completion evidence for a `(behavior)` AC, or
+(d) emit guidance that contradicts `tdd/SKILL.md`. Detection of
+behavior change is the gate; loading `tdd` is the lens; whether to
+write a test follows from the AC tag, not from this skill. See
+[../../references/behavior-change-signal.md](../../references/behavior-change-signal.md).
+
 Confirm the target is a slice issue:
 
 ```bash
@@ -96,6 +106,11 @@ Sanity-check the artifact on disk before dispatching Phase 2:
 
 ## Phase 2 — Dispatch `ship-light` subagent
 
+`tdd` is a non-removable member of every dispatched SKILLS TO LOAD
+list. AC tags from the issue body (`(behavior)` / `(structural)`) are
+the gate; the subagent re-validates per
+[../../references/behavior-change-signal.md](../../references/behavior-change-signal.md).
+
 Message template (paste verbatim):
 
 ```
@@ -104,23 +119,42 @@ SKILLS TO LOAD: ship-light, tdd, clean-code, lint-escape, brevity
 Run the ship-light skill for issue #$ARGUMENTS.
 
 A plan-light artifact is on disk at .stenswf/$ARGUMENTS/plan-light.md
-(with identity stub plan-light.json). Consume it as advisory
-implementation guidance per ship-light's Phase 0.5 detection block.
-Issue body acceptance criteria remain authoritative for "done."
+(with identity stub plan-light.json, including `behavior_change_acs`).
+Consume it as advisory implementation guidance per ship-light's
+Phase 0.5 detection block. Issue body acceptance criteria remain
+authoritative for "done." Re-validate every AC tag against the
+heuristic ladder; untagged ACs are a hard contract_violation.
 
 Your FINAL line of output must be exactly one of:
-  MERGED <pr-url>
+  PR_OPENED <pr-url>
   CI_BLOCKER <pr-url>
   ROUTE_HEAVY: <one-sentence reason>
 
 Do not ask the user anything. Either ship or abort.
 ```
 
-Parse the final line the same way. Branch:
+Parse the final line the same way. Then **validate the URL token** via
+host CLI round-trip (contract boundary — producers populate, consumer
+verifies):
 
-- **`MERGED <pr-url>`** → print:
+```bash
+KEYWORD=$(printf '%s' "$FINAL" | awk '{print $1}')
+ARG=$(printf '%s' "$FINAL" | cut -d' ' -f2-)
+case "$KEYWORD" in
+  PR_OPENED|CI_BLOCKER)
+    RESOLVED=$(gh pr view "$ARG" --json url -q .url 2>/dev/null) || {
+      echo "Malformed envelope: $ARG is not a PR URL"; exit 1; }
+    [ "$RESOLVED" = "$ARG" ] || {
+      echo "Malformed envelope: PR URL mismatch ($RESOLVED vs $ARG)"; exit 1; }
+    ;;
+esac
+```
 
-  > Shipped: <pr-url>
+Branch:
+
+- **`PR_OPENED <pr-url>`** → print:
+
+  > Shipped (PR open, awaiting merge): <pr-url>
 
   Exit silently.
 - **`CI_BLOCKER <pr-url>`** → print:

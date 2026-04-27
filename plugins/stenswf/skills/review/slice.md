@@ -1,5 +1,14 @@
 # Slice-mode — per-slice change review
 
+**Ceremony invariant (TDD-as-lens).** This mode MUST NOT (a)
+instruct skipping tests for ACs annotated `(behavior)`, (b) remove
+`tdd` from any SKILLS TO LOAD list, (c) accept `manual check` or
+"rely on existing suite" as completion evidence for a `(behavior)`
+AC, or (d) emit guidance that contradicts `tdd/SKILL.md`. Detection
+of behavior change is the gate; loading `tdd` is the lens; whether
+to write a test follows from the AC tag, not from this skill. See
+[../../references/behavior-change-signal.md](../../references/behavior-change-signal.md).
+
 Review staged changes against issue number $ARGUMENTS.
 
 **Hard constraint — plan-only.** Read-only against the codebase and
@@ -14,7 +23,7 @@ read-only; undocumented decisions surface as findings.
 If `.stenswf/$ARGUMENTS/conventions.md` is absent (common on the lite
 path where `plan`/`plan-light` didn't run or was skipped), synthesize
 `.stenswf/$ARGUMENTS/conventions.synth.md` from available sources
-before the four-perspective pass. Log provenance.
+before the five-perspective pass. Log provenance.
 
 ```bash
 D=".stenswf/$ARGUMENTS"
@@ -52,7 +61,7 @@ fi
 Downstream passes read `$CONV_FILE` — transparent to both real and
 synthesized conventions.
 
-## Step 1 — Change Review (inline four-perspective critique)
+## Step 1 — Change Review (inline five-perspective critique)
 
 Inputs (read ranged, not full):
 
@@ -96,7 +105,7 @@ fi
 echo "Architect gate: $ARCH_GATE"
 ```
 
-### Four perspectives (axis-by-axis; do not collapse)
+### Five perspectives (axis-by-axis; do not collapse)
 
 **Guard:** If a perspective has no significant findings, say so
 explicitly. Do not invent issues.
@@ -127,6 +136,17 @@ padding.
 Structural fit, coupling, abstraction level, doc updates required.
 
 If `ARCH_GATE=off`: one line — `Architect: skipped (diff below structural threshold).`
+
+**Perspective 5 — Test quality (capstone).** Did the slice introduce
+tests that mock internal collaborators, assert on private state,
+re-implement production logic in fixture form, or would break under
+hypothetical refactor of code with no observable behavior change?
+List each as a candidate for `apply` to rewrite to the public
+interface or remove with justification. Behavior coverage MUST NOT
+drop. Per
+[../../references/behavior-change-signal.md](../../references/behavior-change-signal.md).
+Severity: implementation-coupled tests → **Medium** by default,
+**High** when the AC they purportedly cover is `(behavior)`.
 
 ### Severity guide
 

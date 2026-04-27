@@ -1,7 +1,7 @@
 {
   "name": "stenswf",
   "description": "Opinionated SDLC workflow bundle: PRD inception, bug triage, vertical-slice planning, TDD shipping, capstone review, and lite one-shot paths.",
-  "version": "0.10.0",
+  "version": "0.10.1",
   "author": {
     "name": "StEn",
     "url": "https://github.com/stevenengland/sten-agent-skills/plugins/stenswf"

@@ -11,6 +11,15 @@ The PRD document itself is a full-prose artifact (already excluded by
 
 Invoked when the user wants to create a PRD. Skip steps if unnecessary.
 
+**Ceremony invariant (TDD-as-lens).** This skill MUST NOT (a)
+instruct skipping tests for ACs annotated `(behavior)`, (b) remove
+`tdd` from any SKILLS TO LOAD list, (c) accept `manual check` or
+"rely on existing suite" as completion evidence for a `(behavior)`
+AC, or (d) emit guidance that contradicts `tdd/SKILL.md`. Detection
+of behavior change is the gate; loading `tdd` is the lens; whether
+to write a test follows from the AC tag, not from this skill. See
+[../../references/behavior-change-signal.md](../../references/behavior-change-signal.md).
+
 ## Phase 0 — Issue intake (optional)
 
 If `$ARGUMENTS` is a GitHub issue number, treat it as an existing
@@ -134,6 +143,12 @@ If `$ORIG` is empty, behave as before (blank-page interview from Step 1).
     (required) and `## Risks of Not Doing This`. For `class: migration`,
     `## Invariants Preserved` is required (behavior preservation is the
     whole point).
+
+    `## Out of Scope` MAY optionally list invariants-to-preserve as
+    `(structural)` candidates that downstream slices should tag
+    accordingly. Advisory only — `prd-to-issues` re-tags every AC
+    against the heuristic ladder per
+    [../../references/behavior-change-signal.md](../../references/behavior-change-signal.md).
 5. Write the PRD using the template at
    [../../references/prd-template.md](../../references/prd-template.md).
    Create as an issue (CLI when available; otherwise present formatted

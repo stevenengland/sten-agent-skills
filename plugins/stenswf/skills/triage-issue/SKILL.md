@@ -13,6 +13,15 @@ Apply context-hygiene per
 Triage a raw GitHub bug-report issue (issue number `$ARGUMENTS`) into
 one of two outcomes:
 
+**Ceremony invariant (TDD-as-lens).** This skill MUST NOT (a) emit
+untagged ACs on bug-brief or slice ACs (every AC carries
+`(behavior)` or `(structural)`), (b) instruct skipping tests for
+ACs annotated `(behavior)`, (c) remove `tdd` from any SKILLS TO
+LOAD list, (d) accept `manual check` or "rely on existing suite"
+as completion evidence for a `(behavior)` AC, or (e) emit guidance
+that contradicts `tdd/SKILL.md`. See
+[../../references/behavior-change-signal.md](../../references/behavior-change-signal.md).
+
 - **REJECT** — duplicate, out-of-scope (matches persistent rejection
   memory), or needs-info.
 - **CONVERT** — emit a bug-brief issue + one or more slice issues that
@@ -482,8 +491,13 @@ Body sections:
 - `## Conventions (from PRD)` — verbatim copy of the bug-brief's
   `## Conventions` (contents only).
 - `## Acceptance criteria` — derived from `## Invariants Preserved`
-  (one checkbox each: "invariant X holds") plus one or more
-  regression-test ACs that pin the original bug.
+  (one `(structural)` checkbox each: "invariant X holds") plus one
+  or more `(behavior)` regression-test ACs that pin the original
+  bug. Every AC MUST carry a `(behavior)` or `(structural)` tag as
+  its first parenthesised token, per
+  [../../references/behavior-change-signal.md](../../references/behavior-change-signal.md).
+  Untagged ACs are a hard error — log `contract_violation` and
+  refuse to create the slice.
 - `## User stories addressed` — `Restoration: <one-line>`.
 - `## Files (hint)` — Phase 3's `affected_files` (≤15).
 - `## Invariants preserved` — verbatim from the bug-brief.

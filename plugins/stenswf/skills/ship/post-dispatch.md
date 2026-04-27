@@ -1,5 +1,14 @@
 # ship — Phases 2–5 (post-dispatch)
 
+**Ceremony invariant (TDD-as-lens).** These phases MUST NOT (a)
+instruct skipping tests for ACs annotated `(behavior)`, (b) remove
+`tdd` from any SKILLS TO LOAD list, (c) accept `manual check` or
+"rely on existing suite" as completion evidence for a `(behavior)`
+AC, or (d) emit guidance that contradicts `tdd/SKILL.md`. Detection
+of behavior change is the gate; loading `tdd` is the lens; whether
+to write a test follows from the AC tag, not from this skill. See
+[../../references/behavior-change-signal.md](../../references/behavior-change-signal.md).
+
 Runs after Phase 1 reports `all done`. All phases read
 `manifest.json` as the source of truth for `base_sha`, task SHAs, and
 PR state.
@@ -35,6 +44,24 @@ Review every touched file against:
 Focused refactor: eliminate TDD-introduced duplication, clarify naming
 where beneficial. No new scope.
 
+**Bad-test audit (refactor-time diagnostic).** A test that breaks
+during refactor of code with no observable behavior change is the
+single strongest signal that the test is implementation-coupled. For
+each test that failed during this refactor cycle, classify:
+
+- [ ] **Legitimate** — the refactor changed observable behavior. Fix
+      the production code or the test (whichever is wrong).
+- [ ] **Implementation-coupled** — mocked an internal collaborator
+      not named in any AC, asserted on private state, queried internal
+      storage instead of the public interface, or re-implemented
+      production logic in fixture form. Rewrite to use the public
+      interface, or delete with a one-line justification appended to
+      `decisions.md`.
+
+Re-run the suite after the audit. **No green-by-deletion of a
+behavior test** — behavior coverage MUST NOT drop. See
+[../../references/behavior-change-signal.md](../../references/behavior-change-signal.md).
+
 Run lint + tests. Apply `lint-escape` if needed.
 
 ```bash
@@ -67,14 +94,15 @@ if [ ! -s "$RS" ]; then
     echo "# Review Step (synthesized)"
     echo
     echo "## Architectural Invariants"
-    echo "_None declared (lite path). Rely on existing test suite._"
+    echo "_None declared (lite path)._"
     echo
     echo "## Recommended Regression Tests"
     extract_section 'Acceptance criteria' /tmp/slice-$ARGUMENTS.md \
       | sed -n 's/^- \[.\] /- /p'
     echo
     echo "## Self-report Checklist"
-    echo "- [ ] All AC boxes mapped to a test or manual check."
+    echo "- [ ] Every \`(behavior)\` AC has a passing test (no manual-check substitutes)."
+    echo "- [ ] Every \`(structural)\` AC verified via existing suite remaining green."
     echo "- [ ] No new invariants introduced without a test."
   } > "$RS"
   bash plugins/stenswf/scripts/log-issue.sh missing_artifact \

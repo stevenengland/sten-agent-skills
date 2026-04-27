@@ -99,7 +99,7 @@ with its own decision anchor and base SHA. See
                                  driven off the local plan tree; archives
                                  to `.stenswf/.archive/` on merge
 /stenswf:plan-light <issue>    → lightweight plan; single `plan-light.md`
-                                 plus a 4-field identity stub under
+                                 plus a 5-field identity stub under
                                  `.stenswf/<issue>/`; no interview, no
                                  subtree. Escalates via ROUTE_HEAVY.
 /stenswf:ship-light <issue>    → single-session lite path: branch + TDD +
@@ -215,6 +215,40 @@ Conventional Commits formatting is inlined in `plan`, `ship`, and `apply`
 
 ---
 
+## TDD-as-lens
+
+`tdd` runs as a *lens*, not a quota. Loading it = "agent now knows
+behavior-only-test discipline + RED-first." Not loading it = "no
+behavior change here, don't bother." Detection of *behavior change*
+is the gate, not test writing.
+
+**AC tagging.** Every AC checkbox on every issue body MUST carry one
+of two tags as its first parenthesised token:
+
+```markdown
+- [ ] (behavior) Returns 401 on missing token
+- [ ] (structural) Rename `FooFactory` to `FooBuilder`; all call sites updated
+```
+
+`prd-to-issues` and `triage-issue` emit tags from intent. `plan` /
+`plan-light` re-validate against the heuristic ladder. `ship` /
+`ship-light` re-validate at three checkpoints (pre-dispatch,
+pre-test, pre-push rubberduck) — **ship wins on conflict.** Untagged
+ACs are a hard `contract_violation`; no safe-default.
+
+**Refactor-time bad-test audit.** A test that breaks during refactor
+of code with no observable behavior change is implementation-coupled
+and MUST be rewritten to the public interface or deleted with
+justification. Behavior coverage MUST NOT drop. `ship` Phase 2 +
+`ship-light` Phase 3 run this audit inline; `review/slice.md`
+carries it as a capstone Test-quality perspective.
+
+Full contract — heuristic ladder, manifest schema, ceremony
+invariant — at
+[references/behavior-change-signal.md](references/behavior-change-signal.md).
+
+---
+
 ## Repository Structure
 
 ```
@@ -240,6 +274,7 @@ STEN-AGENT-SKILLS/                       ← Repo root
 │       │   ├── out-of-scope-memory.md
 │       │   ├── plan-task-template.md
 │       │   ├── plan-artifact-schemas.md
+│       │   ├── behavior-change-signal.md
 │       │   └── reasoning-effects.md
 │       ├── scripts/                     ← Shared executables
 │       │   └── log-issue.sh
@@ -401,7 +436,7 @@ Claude Code discovers and loads it automatically. Reload if already running:
 │   │   file-structure.md, review-step.md
 │   ├── tasks/T10.md, T20.md …  (heavy-plan: self-contained task fragments)
 │   ├── plan-light.md          (plan-light: single advisory plan, if used)
-│   ├── plan-light.json        (plan-light: 4-field identity stub + source_signature)
+│   ├── plan-light.json        (plan-light: 5-field identity stub + source_signature + behavior_change_acs)
 │   ├── lite-notes.md          (plan-light / ship-light: soft constraints for review)
 │   ├── review/slice.md OR review/prd-review.xml
 │   └── apply-state.json

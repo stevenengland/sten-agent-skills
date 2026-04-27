@@ -15,15 +15,43 @@ Phase 3.
 ## Push and open PR
 
 ```bash
+set -euo pipefail
 DEFAULT=$(gh repo view --json defaultBranchRef -q .defaultBranchRef.name)
-git push -u origin "$(git branch --show-current)"
-gh pr create --base "$DEFAULT" --title "$PR_TITLE" --body-file "$PR_BODY_FILE"
+BR=$(git branch --show-current)
+[ "$BR" != "$DEFAULT" ] || {
+  echo "ROUTE_HEAVY: refusing to push to default branch ($DEFAULT)"
+  exit 1
+}
+git push -u origin "$BR" || {
+  echo "ROUTE_HEAVY: git push failed (network or branch protection rejected)"
+  exit 1
+}
+PR_URL=$(gh pr create --base "$DEFAULT" --title "$PR_TITLE" --body-file "$PR_BODY_FILE") || {
+  echo "ROUTE_HEAVY: gh pr create failed"
+  exit 1
+}
+[ -n "$PR_URL" ] || {
+  echo "ROUTE_HEAVY: gh pr create returned empty url"
+  exit 1
+}
+# Round-trip validate: $PR_URL must resolve to a real PR via the host CLI.
+# Host-agnostic in spirit: swap `gh pr view` when adding glab/gitea adapters.
+RESOLVED=$(gh pr view "$PR_URL" --json url -q .url 2>/dev/null) || {
+  echo "ROUTE_HEAVY: pr url did not resolve to a PR ($PR_URL)"
+  exit 1
+}
+[ "$RESOLVED" = "$PR_URL" ] || {
+  echo "ROUTE_HEAVY: pr url mismatch (got=$RESOLVED expected=$PR_URL)"
+  exit 1
+}
 ```
+
+`$PR_URL` is the canonical variable for downstream envelope emission.
+Never re-derive from stderr or `git` output.
 
 Record the PR URL in manifest when a manifest exists:
 
 ```bash
-PR_URL=$(gh pr view --json url -q .url)
 jq --arg u "$PR_URL" '.pr.status="open" | .pr.url=$u' \
   "$D/manifest.json" > /tmp/m.json && mv /tmp/m.json "$D/manifest.json"
 ```
@@ -98,7 +126,11 @@ merge-wait — user handles merge asynchronously.
 Final line must be exactly one of:
 
 ```
-MERGED <pr-url>
+MERGED <pr-url>          # callers with WAIT_FOR_MERGE=yes (ship, apply PRD-mode)
+PR_OPENED <pr-url>       # callers with WAIT_FOR_MERGE=no (ship-light)
 CI_BLOCKER <pr-url>
 ROUTE_HEAVY: <one-sentence reason>
 ```
+
+`<pr-url>` MUST be the `$PR_URL` validated above via `gh pr view`
+round-trip. Do not emit an envelope if `$PR_URL` is unset.

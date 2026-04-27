@@ -1,6 +1,6 @@
 ---
-name: tdd
-description: Test-driven development with a red-green-refactor loop for features, bug fixes, or integration tests.
+name: tdd-interactive
+description: Test-driven development with a user-facing planning phase plus red-green-refactor loop for features, bug fixes, or integration tests.
 ---
 
 # Test-Driven Development
@@ -42,29 +42,20 @@ RIGHT (vertical):
 
 ## Workflow
 
-### 1. Before the first test (interface-design lens)
+### 1. Planning
 
-Before writing the failing test for a `(behavior)` AC, name the public
-interface in your own working memory — do NOT ask the user, do NOT
-write a planning document. This is a thinking step, not a ceremony.
+Before writing any code:
 
-Apply [interface-design.md](interface-design.md) and
-[deep-modules.md](deep-modules.md):
+- [ ] Confirm with user what interface changes are needed
+- [ ] Confirm with user which behaviors to test (prioritize)
+- [ ] Identify opportunities for [deep modules](deep-modules.md) (small interface, deep implementation)
+- [ ] Design interfaces for [testability](interface-design.md)
+- [ ] List the behaviors to test (not implementation steps)
+- [ ] Get user approval on the plan
 
-- Function/method signature: inputs as parameters (accept dependencies,
-  don't construct them), output as return value (return results, don't
-  mutate hidden state).
-- Smallest surface that satisfies the AC. Prefer one deep function over
-  many shallow ones.
-- The signature you name here is the signature the failing test calls.
+Ask: "What should the public interface look like? Which behaviors are most important to test?"
 
-If two materially different signatures both satisfy the AC and the
-codebase offers no tiebreaker, this is an architectural ambiguity —
-escalate per the caller's ambiguity rules (e.g. `ship-light` emits
-`ROUTE_HEAVY`). Do not silently pick.
-
-For `(structural)` ACs, skip this step — there is no new behavior to
-design an interface for.
+**You can't test everything.** Confirm with the user exactly which behaviors matter most. Focus testing effort on critical paths and complex logic, not every possible edge case.
 
 ### 2. Tracer Bullet
 

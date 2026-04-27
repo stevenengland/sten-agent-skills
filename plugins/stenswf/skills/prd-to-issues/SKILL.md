@@ -7,6 +7,15 @@ description: Break a PRD into independently-grabbable issues using tracer-bullet
 
 # PRD to Issues
 
+**Ceremony invariant (TDD-as-lens).** This skill MUST NOT (a)
+emit untagged ACs (every AC carries `(behavior)` or `(structural)`),
+(b) instruct skipping tests for ACs annotated `(behavior)`, (c)
+remove `tdd` from any SKILLS TO LOAD list, (d) accept `manual
+check` or "rely on existing suite" as completion evidence for a
+`(behavior)` AC, or (e) emit guidance that contradicts
+`tdd/SKILL.md`. See
+[../../references/behavior-change-signal.md](../../references/behavior-change-signal.md).
+
 Break a PRD into independently-grabbable issues using vertical slices
 (tracer bullets).
 
@@ -65,10 +74,49 @@ Exceed only if genuinely irreducible.
 
 Slice types: `HITL` | `AFK` | `spike`. Prefer AFK.
 
+#### Behaviors to test — prioritize before drafting ACs
+
+For each slice, list the candidate behaviors a thin tracer bullet would
+exercise (observable through the public interface, not implementation
+steps). **You can't test everything.** Pick the critical-path and
+complex-logic behaviors; drop or defer pure edge cases. The behaviors
+you keep become the slice's ACs.
+
+#### AC tagging (REQUIRED)
+
+Every AC checkbox emitted into a slice body MUST carry the canonical
+tag as its first parenthesised token: `(behavior)` or `(structural)`.
+Apply the heuristic ladder in
+[../../references/behavior-change-signal.md](../../references/behavior-change-signal.md):
+
+1. Done-when uses observable verbs (`returns | rejects | persists |
+   emits | displays | restores | handles`) → `(behavior)`.
+2. Done-when starts only with `Update docs | Rename | Remove unused
+   | Reformat` → `(structural)`.
+3. AC introduces or modifies a public symbol / endpoint / CLI flag /
+   config key / event payload / persisted shape → `(behavior)`.
+4. Invariant-preservation only ("after refactor, all existing tests
+   pass") → `(structural)`.
+5. Default `(behavior)` on ambiguity.
+
+**Untagged ACs are a hard error.** Refuse to write the issue body and
+log `contract_violation` with `untagged AC: <quote>` as evidence.
+
+#### Migration mode (PRDs with `class: migration`)
+
+Every slice MUST emit a `migration_mode: behavior-preserving |
+contract-changing` front-matter field (per
+[../../references/front-matter-schema.md](../../references/front-matter-schema.md)).
+The mode biases the heuristic ladder; tags are still emitted
+explicitly. **Omit `migration_mode` entirely on slices whose parent
+is not `class: migration`** — the field is rejected anywhere else.
+
 <vertical-slice-rules>
 - Each slice delivers a narrow but COMPLETE path through every layer.
 - Completed slice is demoable or verifiable on its own.
 - Prefer many thin slices over few thick ones.
+- Order ACs within a slice tracer-bullet-first: the AC that proves the
+  end-to-end path comes before edge cases.
 </vertical-slice-rules>
 
 ### 5. Quiz the user
@@ -76,10 +124,13 @@ Slice types: `HITL` | `AFK` | `spike`. Prefer AFK.
 Present as numbered list. For each slice show: Title, Type (HITL/AFK/spike),
 Blocked by, User stories covered, Lite-eligible (true/false + disqualifier
 tag if false). Disqualifier tags: `files>15 | cross-module |
-schema-migration | arch-unknown | hitl-cat3`.
+schema-migration | arch-unknown | hitl-cat3`. Also show the AC list per
+slice (with tags) so the user can confirm AC ordering is
+tracer-bullet-first.
 
 Ask: granularity right? dependencies right? correct HITL/AFK? Lite
-flags and disqualifiers correct? Iterate until approved.
+flags and disqualifiers correct? AC set + ordering right? Iterate
+until approved.
 
 > *Solo-dev assumption. On mid-batch failure, delete partial slice
 > issues manually before re-running, or duplicates appear.*

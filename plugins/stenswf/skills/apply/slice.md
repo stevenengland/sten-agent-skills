@@ -1,5 +1,14 @@
 # Slice-mode — interactive per-suggestion apply
 
+**Ceremony invariant (TDD-as-lens).** This mode MUST NOT (a)
+instruct skipping tests for ACs annotated `(behavior)`, (b) remove
+`tdd` from any SKILLS TO LOAD list, (c) accept `manual check` or
+"rely on existing suite" as completion evidence for a `(behavior)`
+AC, or (d) emit guidance that contradicts `tdd/SKILL.md`. Detection
+of behavior change is the gate; loading `tdd` is the lens; whether
+to write a test follows from the AC tag, not from this skill. See
+[../../references/behavior-change-signal.md](../../references/behavior-change-signal.md).
+
 Work through `.stenswf/$ARGUMENTS/review/slice.md`.
 
 ## YOLO Mode
@@ -42,9 +51,13 @@ _(Skipped entirely in YOLO mode.)_
 
 ## Phase 2 — Implementation
 
+Load `tdd`, `clean-code`, `lint-escape` before any edits.
+
 Implement all approved suggestions in a single pass.
 
-- Use TDD where appropriate.
+- For every change touching a `(behavior)` AC, follow `tdd` RED-first.
+- For `(structural)` changes, run the existing suite and MUST NOT
+  delete tests covering behavior.
 - Apply `clean-code`.
 - Keep changes focused.
 

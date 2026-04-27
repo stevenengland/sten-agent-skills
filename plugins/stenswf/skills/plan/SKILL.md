@@ -78,7 +78,44 @@ Record:
       The extracted content may be `None — slice-local decisions only.`
       verbatim — that is a valid value, not an error.
 - [ ] **Acceptance criteria** — list verbatim. Each must map to at
-  least one task.
+  least one task. Use `extract_acs` from
+  [../../references/extractors.md](../../references/extractors.md)
+  to parse the section into `AC<n>\t<tag>\t<text>` records (IDs are
+  positional). The extractor itself hard-errors and logs
+  `contract_violation` on any untagged AC — stop and surface to
+  the user. Re-validate each parsed tag against the heuristic
+  ladder in
+  [../../references/behavior-change-signal.md](../../references/behavior-change-signal.md);
+  on disagreement with the issue body, **rewrite the issue body via
+  `gh issue edit` so it remains the canonical source** (a comment
+  alone is NOT sufficient — the body must reflect the corrected
+  tags), then log `behavior_change_override` with `<ac> <old>→<new>
+  <reason>` as evidence and proceed.
+
+  **Migration-mode bias.** If the slice front-matter carries
+  `migration_mode` (only present when the parent PRD is
+  `class: migration`; see
+  [../../references/front-matter-schema.md](../../references/front-matter-schema.md)),
+  apply the bias from
+  [../../references/behavior-change-signal.md](../../references/behavior-change-signal.md):
+
+  ```bash
+  MM=$(get_fm migration_mode /tmp/slice-$ARGUMENTS.md)
+  case "$MM" in
+    behavior-preserving) AMBIGUOUS_DEFAULT=structural ;; # rule 4 stronger
+    contract-changing)   AMBIGUOUS_DEFAULT=behavior   ;; # rule 3 stronger
+    "")                  AMBIGUOUS_DEFAULT=behavior   ;; # default rule 5
+  esac
+  ```
+
+  When the heuristic falls through to rule 5 ("default on ambiguity"),
+  use `$AMBIGUOUS_DEFAULT` instead of the bare `behavior` default.
+  Producer tags still win where they are unambiguous — the bias only
+  shifts the rule-5 fallback.
+
+  Mirror every AC into `manifest.json` `tasks[].acs[]` with
+  `behavior_change` set per the (re-validated) tag, per
+  [../../references/plan-artifact-schemas.md](../../references/plan-artifact-schemas.md).
 - [ ] **Blocked by** — for each blocker in `$BLOCKED`, read its local
   plan (`.stenswf/<blocker>/file-structure.md`,
   `acceptance-criteria.md`). If shipped via `ship-light` only, read
@@ -122,6 +159,26 @@ Interview relentlessly about every aspect until shared understanding:
 
 No code in this phase.
 
+### Interface and behavior interview
+
+Before recording Design Decisions, work through the following with the
+user. Lead with your recommendation; iterate.
+
+- [ ] Confirm with user what interface changes are needed.
+- [ ] Confirm with user which behaviors to test (prioritize).
+- [ ] Identify opportunities for [deep modules](../tdd/deep-modules.md)
+      (small interface, deep implementation).
+- [ ] Design interfaces for [testability](../tdd/interface-design.md).
+- [ ] List the behaviors to test (not implementation steps).
+- [ ] Get user approval on the plan.
+
+Ask: "What should the public interface look like? Which behaviors are
+most important to test?"
+
+**You can't test everything.** Confirm with the user exactly which
+behaviors matter most. Focus testing effort on critical paths and
+complex logic, not every possible edge case.
+
 ### Design Decisions Log
 
 Running log at the top of your response:
@@ -140,6 +197,15 @@ append one entry to `.stenswf/$ARGUMENTS/decisions.md` (category
 ---
 
 ## Phase 2 — Write the local plan tree
+
+**Ceremony invariant (TDD-as-lens).** This phase MUST NOT (a)
+instruct skipping tests for ACs annotated `(behavior)`, (b) remove
+`tdd` from any SKILLS TO LOAD list, (c) accept `manual check` or
+"rely on existing suite" as completion evidence for a `(behavior)`
+AC, or (d) emit guidance that contradicts `tdd/SKILL.md`. Detection
+of behavior change is the gate; loading `tdd` is the lens; whether
+to write a test follows from the AC tag, not from this skill. See
+[../../references/behavior-change-signal.md](../../references/behavior-change-signal.md).
 
 Full schema + file bodies: see
 [../../references/plan-artifact-schemas.md](../../references/plan-artifact-schemas.md).

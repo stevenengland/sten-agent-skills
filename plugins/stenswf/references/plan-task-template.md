@@ -23,7 +23,7 @@ file plus `stable-prefix.md` must execute it correctly. Never write
 - Test:   `tests/exact/path/to/test_file.py`
 **Pre-reading (read before editing):**
 - `path/to/analogous_code.py::symbol` — existing pattern to mirror
-- `tdd` skill — if unsure about test shape
+- `tdd` skill — for every `(behavior)` AC
 **Done when:** <crisp criterion — must match one AC>
 
 Per test in this slice, repeat steps 1–4:
@@ -66,6 +66,11 @@ The opening `<task id="..." name="..." commit="...">` tag is required —
 extractors may parse it.
 
 ## Documentation task (always last)
+
+The documentation task is hardcoded `behavior_change: false` in the
+manifest, with `acs: []` (it has no AC of its own). The empty `acs`
+array is REQUIRED — `plan-self-review.sh` validates that every
+`tasks[]` entry carries an `acs` array.
 
 ```
 <task id="T<last>" name="Update documentation" commit="docs(<scope>): update docs for issue $ARGUMENTS">

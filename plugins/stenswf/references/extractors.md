@@ -102,3 +102,65 @@ Resolved exclusively from the PRD issue front-matter:
 PRD_BASE=$(get_fm prd_base_sha /tmp/slice-$ARGUMENTS.md)
 [ -n "$PRD_BASE" ] || { echo "PRD #$ARGUMENTS missing prd_base_sha in front-matter" >&2; exit 1; }
 ```
+
+## AC-tag extractor (TDD-as-lens)
+
+Reads the `## Acceptance criteria` section, assigns positional IDs
+(`AC1`, `AC2`, …), and emits one TSV record per AC with the parsed
+tag. **Untagged ACs trip a hard error inside the function itself** —
+`extract_acs` writes the offending row(s) to stderr, logs
+`contract_violation` via `log-issue.sh`, and exits non-zero. Callers
+need only invoke it; no external guard required. See
+[behavior-change-signal.md](behavior-change-signal.md).
+
+```bash
+extract_acs() {
+  # Usage: extract_acs <issue-body-path> > /tmp/acs.tsv
+  # Output: <id>\t<tag:behavior|structural>\t<text>
+  # Exits 1 (after logging contract_violation) if any AC is untagged.
+  local body="$1"
+  local tsv
+  tsv=$(extract_section 'Acceptance criteria' "$body" \
+    | awk '
+        /^[[:space:]]*-[[:space:]]+\[[ xX]\][[:space:]]+/ {
+          n++
+          line=$0
+          # strip checkbox prefix
+          sub(/^[[:space:]]*-[[:space:]]+\[[ xX]\][[:space:]]+/, "", line)
+          tag="UNTAGGED"
+          rest=line
+          # Portable POSIX awk: match() returns position; RSTART/RLENGTH set.
+          # Alternation inside ERE is portable across mawk/gawk/BWK awk.
+          if (match(line, /^\((behavior|structural)\)[[:space:]]+/)) {
+            span=substr(line, RSTART, RLENGTH)
+            sub(/^\(/, "", span); sub(/\).*$/, "", span)
+            tag=span
+            rest=substr(line, RSTART+RLENGTH)
+          }
+          printf "AC%d\t%s\t%s\n", n, tag, rest
+        }')
+  local untagged
+  untagged=$(printf '%s\n' "$tsv" | awk -F'\t' '$2=="UNTAGGED"')
+  if [ -n "$untagged" ]; then
+    printf '%s\n' "$untagged" >&2
+    bash plugins/stenswf/scripts/log-issue.sh contract_violation \
+      "untagged AC on #${ARGUMENTS:-?}" "$untagged"
+    echo "stenswf: untagged AC(s) — edit the issue body or re-run prd-to-issues / triage-issue" >&2
+    return 1
+  fi
+  printf '%s\n' "$tsv"
+}
+
+# Canonical caller pattern — `extract_acs` itself stops on untagged ACs.
+ACS_TSV=$(extract_acs /tmp/slice-$ARGUMENTS.md) || exit 1
+
+# Convenience: space-separated AC id lists by tag.
+BEHAVIOR_ACS=$(printf '%s\n' "$ACS_TSV" \
+  | awk -F'\t' '$2=="behavior"  {print $1}' | tr '\n' ' ' | sed 's/ *$//')
+STRUCTURAL_ACS=$(printf '%s\n' "$ACS_TSV" \
+  | awk -F'\t' '$2=="structural"{print $1}' | tr '\n' ' ' | sed 's/ *$//')
+```
+
+The documentation task added by `plan` (`T<last>`) is hardcoded
+`behavior_change: false` in the manifest — it has no AC of its own,
+so this extractor does not see it.

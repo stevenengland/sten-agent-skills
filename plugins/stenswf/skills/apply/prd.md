@@ -1,5 +1,14 @@
 # PRD-mode — cleanup PR from capstone findings
 
+**Ceremony invariant (TDD-as-lens).** This mode MUST NOT (a)
+instruct skipping tests for ACs annotated `(behavior)`, (b) remove
+`tdd` from any SKILLS TO LOAD list, (c) accept `manual check` or
+"rely on existing suite" as completion evidence for a `(behavior)`
+AC, or (d) emit guidance that contradicts `tdd/SKILL.md`. Detection
+of behavior change is the gate; loading `tdd` is the lens; whether
+to write a test follows from the AC tag, not from this skill. See
+[../../references/behavior-change-signal.md](../../references/behavior-change-signal.md).
+
 ## Short-circuit: zero findings
 
 Parse `<counts>` from the XML:
@@ -64,8 +73,10 @@ BASE_SHA=$(git rev-parse HEAD)
 
 For each approved axis group (severity order: critical → low):
 
-1. Implement all findings. TDD where it fits. `clean-code`,
-   `lint-escape` as required.
+1. Implement all findings. Load `tdd`, `clean-code`, `lint-escape`
+   first. For every change touching a `(behavior)` AC, follow `tdd`
+   RED-first; for `(structural)` ACs, run the existing suite and MUST
+   NOT delete tests covering behavior. `lint-escape` as required.
 2. Run tests. All must pass.
 3. Commit:
 

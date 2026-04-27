@@ -34,6 +34,7 @@ Excluded per-clone by the `.stenswf/` rule in `.git/info/exclude` (see `bootstra
 | `missing_artifact` | Expected file (concept.md, conventions.md, …) absent. |
 | `tool_failure` | External tool exit != 0 (gh, git, jq, CI). |
 | `user_override` | User chose `(c)ontinue` on drift, or rejected rubberduck. |
+| `behavior_change_override` | Re-detection at `plan`, `ship` pre-dispatch, subagent pre-test, or rubberduck disagreed with the manifest's AC tag. Evidence: `<ac> <old>\u2192<new> <reason>`, where `<old>` and `<new>` are each `behavior` or `structural`. See [behavior-change-signal.md](behavior-change-signal.md). |
 
 ## Write path
 
@@ -77,10 +78,13 @@ The 8 workflow skills: `prd-from-grill-me`, `prd-to-issues`, `plan`,
 ## What qualifies as "notable"
 
 - Front-matter missing or unparseable → `contract_violation`.
+- Untagged AC on a slice / bug-brief body → `contract_violation`.
 - Expected plan artifact absent → `missing_artifact`.
 - `gh`/`git`/`jq` exits non-zero and blocks progress → `tool_failure`.
 - User took the `(c)ontinue` branch on drift → `user_override`.
 - Skill aborted with `ROUTE_HEAVY` → `ambiguous_instruction`.
+- Re-detection re-tagged an AC against the manifest →
+  `behavior_change_override`.
 - CI cap reached → `tool_failure`.
 
 Routine "happy path" operations do not log. Logging on every dispatch
