@@ -2,9 +2,9 @@
 
 ## Purpose
 Catch inconsistencies, broken hand-offs, and unrunnable instructions across the
-stenswf workflow chain from `prd-from-grill-me` through `apply`. Two models run
-the same matrix in parallel so their findings can be cross-checked, then the
-results are stress-tested via `grill-me`.
+stenswf workflow tracks. Two models run the same matrix in parallel so their
+findings can be cross-checked, then the results are stress-tested via
+`grill-me`.
 
 ## Inputs
 - `MODEL_A` — e.g. `gpt-5.4`
@@ -17,17 +17,32 @@ Dispatch two **read-only** subagents in parallel, one on `{{MODEL_A}}` and one o
 `{{MODEL_B}}`. Both must execute the **identical test matrix** below against the
 stenswf plugin at `{{PLUGIN_ROOT}}` so their reports are directly comparable.
 
-### Flow under test (happy path)
-`prd-from-grill-me` → `prd-to-issues` → `triage-issue` → `plan` (or `plan-light`)
-→ `slice-e2e` → `tdd` → `review` → `ship` (or `ship-light`) → `apply`
+### Tracks under test
 
-If the actual chain in the repo differs from the above, treat the discrepancy
-itself as a finding and continue using the chain documented in each SKILL.md.
+stenswf is a parallel-track bundle, not a single linear chain. The
+audit must walk every track end-to-end:
+
+- **Bug intake.** `triage-issue` →
+  - `C-1`: emits a single slice → routes to `plan` (heavy) or
+    `plan-light` (lite, only if `type: slice — AFK`); HITL slices
+    always go heavy.
+  - `C-N`: hands off to `prd-to-issues` (bug-brief mode) which emits
+    fan-out slices.
+- **PRD inception.** `grill-me` → `prd-from-grill-me` → `prd-to-issues`.
+- **Heavy slice.** `plan` → `ship` → `review` (slice-mode) → `apply`
+  (slice-mode).
+- **Lite slice.** `plan-light` → `ship-light` → `review` (slice-mode)
+  → `apply` (slice-mode); or one-shot via `slice-e2e`.
+- **PRD capstone.** `review` (PRD-mode) → `apply` (PRD-mode).
+
+If the actual track shape in the repo differs from the above, treat
+the discrepancy itself as a finding and continue using the layout
+documented in each SKILL.md.
 
 ### Test matrix (each agent must cover every row)
 
-1. **Happy path, full chain.** Walk every skill from `prd-from-grill-me` to
-   `apply`. At each hand-off verify:
+1. **Happy path per track.** Walk every track listed above. At each
+   hand-off verify:
    - The producing skill's declared outputs match the consuming skill's
      declared inputs (file paths, frontmatter fields, artifact names).
    - Referenced files, scripts, and commands actually exist in the repo.

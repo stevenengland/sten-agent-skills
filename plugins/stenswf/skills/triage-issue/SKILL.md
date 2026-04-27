@@ -1,6 +1,6 @@
 ---
 name: triage-issue
-description: Triage a raw GitHub bug-report issue into REJECT or a stenswf-shaped bug-brief + slice. No quick-fix lane.
+description: Triage a raw GitHub bug-report issue into REJECT or a stenswf-shaped bug-brief plus slice without a quick-fix lane.
 disable-model-invocation: true
 ---
 
@@ -479,6 +479,12 @@ bug_ref: <ARGUMENTS>
 `prd-to-issues` step 4: ≤15 files, single top-level module, no schema
 migration, no unresolved arch decisions.
 
+**HITL never routes to lite.** When `type == "slice — HITL"`, force
+`lite_eligible: false` and emit `disqualifier: hitl-cat3` in the
+front-matter regardless of the envelope checks. The lite path is
+structurally unfit for HITL work; both `plan-light` and `ship-light`
+re-enforce this gate (see their Phase 0).
+
 Build the slice body in `/tmp/triage-$ARGUMENTS-slice.md` (mirror
 Phase 5.3's bug-brief body construction). Use
 [../../references/issue-template.md](../../references/issue-template.md)
@@ -546,14 +552,19 @@ Do **not** create slices directly. Instead:
    Any other message → exit; original issue stays untouched (the user
    will close it after slicing).
 
-### 5.7 Cross-link
+### 5.7 Cross-link (`C-1` only)
+
+The fan-out path (`C-N`) does **not** reach 5.7 or 5.8 — Phase 5.6's
+HARD STOP delegates cross-linking and original-closure to
+`prd-to-issues` once real slice numbers exist. The snippets below
+reference `$SLICE_NUM`, which is only set on the single-slice path.
 
 ```bash
 gh issue comment "$BB_NUM"   --body "Slice: #$SLICE_NUM. Original bug report: #$ARGUMENTS."
 gh issue comment "$SLICE_NUM" --body "Bug-brief: #$BB_NUM. Original bug report: #$ARGUMENTS."
 ```
 
-### 5.8 Close the original (LAST)
+### 5.8 Close the original (`C-1` only, LAST)
 
 Only after both derived artifacts exist:
 
@@ -564,10 +575,6 @@ The original report is preserved here as the durable intake record.
 Status updates will appear on the slice."
 gh issue close "$ARGUMENTS" --reason completed
 ```
-
-For the fan-out path, do **not** close the original here — let
-`prd-to-issues` close it after the slices are created (or leave it to
-the user, since fan-out is a multi-step interaction).
 
 ---
 

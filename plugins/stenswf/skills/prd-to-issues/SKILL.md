@@ -155,9 +155,11 @@ before step 6.
 ### 6. Create the issues
 
 Extract the PRD's `## Conventions` section via
-[../../references/extractors.md](../../references/extractors.md):
+[../../references/extractors.md](../../references/extractors.md)
+(canonical source: `plugins/stenswf/scripts/extractors.sh`):
 
 ```bash
+source plugins/stenswf/scripts/extractors.sh
 gh issue view <prd-number> --json body -q .body > /tmp/prd-<prd-number>.md
 extract_section 'Conventions' /tmp/prd-<prd-number>.md \
   > /tmp/prd-<prd-number>-conventions.md

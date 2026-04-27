@@ -43,9 +43,11 @@ splitting via `prd-to-issues`.
 ## Phase 0 — Issue Pre-flight
 
 Fetch the issue and read front-matter via
-[../../references/extractors.md](../../references/extractors.md):
+[../../references/extractors.md](../../references/extractors.md)
+(canonical source: `plugins/stenswf/scripts/extractors.sh`):
 
 ```bash
+source plugins/stenswf/scripts/extractors.sh
 gh issue view $ARGUMENTS --json body -q .body > /tmp/slice-$ARGUMENTS.md
 wc -l /tmp/slice-$ARGUMENTS.md   # confirm; do not cat
 
@@ -60,23 +62,45 @@ Record:
   `slice — spike`. If missing or `PRD`, stop: this is not a slice.
   Log `contract_violation`.
 - [ ] **Parent PRD.** `PRD_REF`.
-- [ ] **Parent PRD body sections this slice needs** — fetch and extract:
+- [ ] **Parent PRD body sections this slice needs** — fetch and extract.
+      The section set depends on the parent's `class:` front-matter
+      (`prd` vs `bug-brief`):
 
       ```bash
       gh issue view $PRD_REF --json body -q .body > /tmp/prd-$PRD_REF.md
-      extract_section 'User Stories'            /tmp/prd-$PRD_REF.md
-      extract_section 'Implementation Decisions' /tmp/prd-$PRD_REF.md
-      extract_section 'Out of Scope'             /tmp/prd-$PRD_REF.md
+      PARENT_CLASS=$(get_fm class /tmp/prd-$PRD_REF.md)
+      case "$PARENT_CLASS" in
+        bug-brief)
+          extract_section 'Problem Statement'        /tmp/prd-$PRD_REF.md
+          extract_section 'Root Cause'               /tmp/prd-$PRD_REF.md
+          extract_section 'Implementation Decisions' /tmp/prd-$PRD_REF.md
+          extract_section 'Invariants Preserved'     /tmp/prd-$PRD_REF.md
+          ;;
+        *)
+          extract_section 'User Stories'             /tmp/prd-$PRD_REF.md
+          extract_section 'Implementation Decisions' /tmp/prd-$PRD_REF.md
+          extract_section 'Out of Scope'             /tmp/prd-$PRD_REF.md
+          ;;
+      esac
       ```
 - [ ] **Slice type.** `HITL | AFK | spike` — derived from `TYPE`.
 - [ ] **Conventions (from PRD).**
 
       ```bash
-      extract_section 'Conventions \(from PRD\)' /tmp/slice-$ARGUMENTS.md \
-        > /tmp/slice-$ARGUMENTS-conventions.md
+      CONV_SRC=$(get_fm conventions_source /tmp/slice-$ARGUMENTS.md)
+      if [ "$CONV_SRC" = "none" ]; then
+        : > /tmp/slice-$ARGUMENTS-conventions.md
+      else
+        extract_section 'Conventions \(from PRD\)' /tmp/slice-$ARGUMENTS.md \
+          > /tmp/slice-$ARGUMENTS-conventions.md
+      fi
       ```
       The extracted content may be `None — slice-local decisions only.`
-      verbatim — that is a valid value, not an error.
+      verbatim — that is a valid value, not an error. When
+      `conventions_source: none` is set in the slice front-matter
+      (emitted by `prd-to-issues` when the PRD has no cross-cutting
+      conventions), the section is skipped and the conventions file
+      is left empty.
 - [ ] **Acceptance criteria** — list verbatim. Each must map to at
   least one task. Use `extract_acs` from
   [../../references/extractors.md](../../references/extractors.md)

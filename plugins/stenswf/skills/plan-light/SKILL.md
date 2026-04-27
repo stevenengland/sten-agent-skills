@@ -33,9 +33,11 @@ ABORT_NOT_SLICE: route to prd-to-issues
 ## Phase 0 — Preflight
 
 Fetch the issue body and read front-matter via
-[../../references/extractors.md](../../references/extractors.md):
+[../../references/extractors.md](../../references/extractors.md)
+(canonical source: `plugins/stenswf/scripts/extractors.sh`):
 
 ```bash
+source plugins/stenswf/scripts/extractors.sh
 gh issue view $ARGUMENTS --json body -q .body > /tmp/slice-$ARGUMENTS.md
 # Version guard + key reads per extractors.md
 TYPE=$(get_fm type /tmp/slice-$ARGUMENTS.md)
@@ -55,13 +57,22 @@ Gate:
   because the user does NOT need heavy `plan` + `ship` here — they
   need a different stage entirely. `slice-e2e` recognises this
   envelope and routes accordingly.)
-- `TYPE` starts with `slice` → continue.
+- `TYPE == "slice — HITL"` → emit
+  `ROUTE_HEAVY: HITL slice not eligible for lite path` as FINAL line
+  and exit. HITL slices are structurally unfit for the lite path;
+  the `lite_override` escape hatch below does not apply.
+- `TYPE` starts with `slice` (and is not HITL) → continue.
 
 Extract envelope-check inputs (body sections):
 
 ```bash
+CONV_SRC=$(get_fm conventions_source /tmp/slice-$ARGUMENTS.md)
 extract_section 'What to build'            /tmp/slice-$ARGUMENTS.md > /tmp/slice-$ARGUMENTS-what.md
-extract_section 'Conventions \(from PRD\)' /tmp/slice-$ARGUMENTS.md > /tmp/slice-$ARGUMENTS-conv.md
+if [ "$CONV_SRC" = "none" ]; then
+  : > /tmp/slice-$ARGUMENTS-conv.md
+else
+  extract_section 'Conventions \(from PRD\)' /tmp/slice-$ARGUMENTS.md > /tmp/slice-$ARGUMENTS-conv.md
+fi
 extract_section 'Acceptance criteria'      /tmp/slice-$ARGUMENTS.md > /tmp/slice-$ARGUMENTS-acs.md
 extract_section 'Files \(hint\)'           /tmp/slice-$ARGUMENTS.md > /tmp/slice-$ARGUMENTS-files.md
 ```

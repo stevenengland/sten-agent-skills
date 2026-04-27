@@ -46,6 +46,7 @@ NOT scrape body sections (issues encode `type` only inside the
 `<!-- stenswf:v1 -->` HTML-comment block):
 
 ```bash
+source plugins/stenswf/scripts/extractors.sh
 gh issue view $ARGUMENTS --json body -q .body > /tmp/slice-$ARGUMENTS.md
 # Version guard + key read per extractors.md
 if ! head -5 /tmp/slice-$ARGUMENTS.md | grep -q '^<!-- stenswf:v1'; then
@@ -74,9 +75,10 @@ Run the plan-light skill for issue #$ARGUMENTS.
 Your FINAL line of output must be exactly one of:
   READY
   ROUTE_HEAVY: <one-sentence reason>
+  ABORT_NOT_SLICE: route to prd-to-issues
 
 Do not ask the user anything. Either write the plan and return READY,
-or abort with ROUTE_HEAVY.
+abort with ROUTE_HEAVY, or abort with ABORT_NOT_SLICE.
 ```
 
 Capture the subagent's final non-empty line:

@@ -1,8 +1,6 @@
 ---
 name: clean-code
-description: >
-  Apply clean code principles when writing, reviewing, or refactoring code.
-  Focus on readability, simplicity, and ease of change for other developers.
+description: Apply clean code principles for readability, simplicity, and ease of change when writing, reviewing, or refactoring code.
 disable-model-invocation: true
 ---
 

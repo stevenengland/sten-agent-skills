@@ -1,8 +1,9 @@
 # Test fixtures — manual verification
 
 These fixtures are small, hand-authored issue bodies that exercise the
-front-matter parser (`references/extractors.md`) and the route-selection
-gates in `plan-light`, `ship-light`, `plan`, `review`, `apply`.
+front-matter parser (`scripts/extractors.sh`, documented in
+`references/extractors.md`) and the route-selection gates in
+`plan-light`, `ship-light`, `plan`, `review`, `apply`.
 
 ## How to re-run manually
 
@@ -10,7 +11,7 @@ No automated runner — these are pasted into a scratch issue or piped
 into `get_fm` / `extract_section` during development:
 
 ```bash
-. plugins/stenswf/references/extractors.md   # (copy the functions into a shell)
+source plugins/stenswf/scripts/extractors.sh
 
 F=plugins/stenswf/tests/fixtures/issue-slice-heavy.md
 get_fm type               "$F"

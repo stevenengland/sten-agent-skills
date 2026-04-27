@@ -5,11 +5,13 @@ Shared front-matter `type:` dispatch. Consumed by `review` and `apply`.
 ## Detect
 
 ```bash
+source plugins/stenswf/scripts/extractors.sh
 gh issue view $ARGUMENTS --json body -q .body > /tmp/slice-$ARGUMENTS.md
 TYPE=$(get_fm type /tmp/slice-$ARGUMENTS.md)
 ```
 
-(See `get_fm` in [extractors.md](extractors.md).)
+(See `get_fm` in [extractors.md](extractors.md); canonical source is
+[`../scripts/extractors.sh`](../scripts/extractors.sh).)
 
 ## Dispatch
 

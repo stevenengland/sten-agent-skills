@@ -350,7 +350,7 @@ copilot plugin install stenswf@sten-agent-skills-marketplace
 
 ```bash
 copilot plugin list
-# → stenswf  0.5.0
+# → stenswf  <version>
 
 /stenswf:plan 123
 ```

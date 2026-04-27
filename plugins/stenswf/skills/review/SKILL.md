@@ -12,16 +12,30 @@ Apply context-hygiene per
 
 ---
 
-You are in **plan-only mode**. Do not apply edits, create files outside
-`.stenswf/<issue>/` or `/tmp/`, or run state-modifying git commands.
-Output is a structured review artifact on disk.
+You are in **plan-only mode**. Do not apply edits to source/test files
+or run state-modifying git commands.
+
+The only writes this skill performs are:
+
+- the review artifact tree under `.stenswf/<issue>/review/`,
+- a drift-accepted `decision` meta-entry appended to
+  `.stenswf/<issue>/decisions.md` (only on the `(c)ontinue` drift
+  branch, per
+  [../../references/decision-anchor-link.md](../../references/decision-anchor-link.md)),
+- a feedback record under `.stenswf/_feedback/<date>.jsonl` (per
+  [../../references/feedback-log.md](../../references/feedback-log.md)),
+- scratch files under `/tmp/`.
+
+No other writes; no `git add/commit/push/reset/rebase/merge`, no
+`gh issue comment`.
 
 **Constraint reminder before loading mode-specific logic.** The mode
-files (`slice.md`, `prd.md`) are long; the no-edits invariant must
-survive that read. Restate before proceeding: **plan-only — no
-edits, no file creation outside `.stenswf/<issue>/` or `/tmp/`, no
-state-modifying git, no `git commit/push/reset/rebase/merge`. Output
-is a review artifact on disk and nothing else.**
+files (`slice.md`, `prd.md`) are long; the no-source-edits invariant
+must survive that read. Restate before proceeding: **plan-only — no
+edits to source/test files, no state-modifying git, no
+`gh issue comment`. Permitted writes: `.stenswf/<issue>/review/`,
+the drift-continue append to `.stenswf/<issue>/decisions.md`,
+`.stenswf/_feedback/`, and `/tmp/`.**
 
 ## Mode Detection
 
@@ -60,6 +74,7 @@ On `r`e-plan after user acceptance: overwrite `concept.md`, recompute
 For PRDs or bug-briefs created before the seeding step existed:
 
 ```bash
+source plugins/stenswf/scripts/extractors.sh
 if { [ "$TYPE" = "PRD" ] || [ "$TYPE" = "bug-brief" ]; } \
    && [ ! -f ".stenswf/$ARGUMENTS/manifest.json" ]; then
   mkdir -p ".stenswf/$ARGUMENTS"

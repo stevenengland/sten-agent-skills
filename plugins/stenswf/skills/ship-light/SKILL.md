@@ -28,9 +28,11 @@ Apply context-hygiene per
 [../../references/context-hygiene.md](../../references/context-hygiene.md).
 
 Fetch and read front-matter via
-[../../references/extractors.md](../../references/extractors.md):
+[../../references/extractors.md](../../references/extractors.md)
+(canonical source: `plugins/stenswf/scripts/extractors.sh`):
 
 ```bash
+source plugins/stenswf/scripts/extractors.sh
 gh issue view $ARGUMENTS --json body -q .body > /tmp/slice-$ARGUMENTS.md
 TYPE=$(get_fm type /tmp/slice-$ARGUMENTS.md)
 LITE=$(get_fm lite_eligible /tmp/slice-$ARGUMENTS.md)
@@ -44,6 +46,9 @@ nothing posted to issue) if any:
 
 - Body lacks an `Acceptance criteria` section with ≥1 checkbox. Log `contract_violation`.
 - `BLOCKED` non-empty.
+- `TYPE == "slice — HITL"`. HITL slices are structurally unfit for the
+  lite path; reroute regardless of `lite_eligible` or `lite_override`.
+  Echo: `aborting — HITL slice not eligible for lite path`.
 - `LITE == "false"`. Echo the disqualifier: `aborting — $DISQ`.
   Exception: `TYPE == "slice — spike"` ignores `arch-unknown`.
   Exception: `lite_override` is non-empty AND `DISQ` is `files>15` or
@@ -115,11 +120,18 @@ fires `behavior_change_override`.
 ## Phase 1 — Setup
 
 - Read `CLAUDE.md` (or `AGENTS.md`) once. **Honour throughout.**
-- Extract the slice's `## Conventions (from PRD)`:
+- Extract the slice's `## Conventions (from PRD)`. When the slice
+  front-matter sets `conventions_source: none`, skip the extraction
+  and leave the conventions file empty:
 
   ```bash
-  extract_section 'Conventions \(from PRD\)' /tmp/slice-$ARGUMENTS.md \
-    > /tmp/slice-$ARGUMENTS-conventions.md
+  CONV_SRC=$(get_fm conventions_source /tmp/slice-$ARGUMENTS.md)
+  if [ "$CONV_SRC" = "none" ]; then
+    : > /tmp/slice-$ARGUMENTS-conventions.md
+  else
+    extract_section 'Conventions \(from PRD\)' /tmp/slice-$ARGUMENTS.md \
+      > /tmp/slice-$ARGUMENTS-conventions.md
+  fi
   wc -l /tmp/slice-$ARGUMENTS-conventions.md
   ```
 

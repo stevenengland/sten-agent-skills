@@ -86,6 +86,7 @@ one from the issue body's `Acceptance criteria` section and any
 `plan-light.json` hints on disk:
 
 ```bash
+source plugins/stenswf/scripts/extractors.sh
 RS=".stenswf/$ARGUMENTS/review-step.md"
 if [ ! -s "$RS" ]; then
   gh issue view $ARGUMENTS --json body -q .body > /tmp/slice-$ARGUMENTS.md

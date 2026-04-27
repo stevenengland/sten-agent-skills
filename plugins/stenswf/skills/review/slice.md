@@ -12,11 +12,13 @@ to write a test follows from the AC tag, not from this skill. See
 Review staged changes against issue number $ARGUMENTS.
 
 **Hard constraint — plan-only.** Read-only against the codebase and
-plan artifacts. The only files this mode may create or modify are
-under `.stenswf/$ARGUMENTS/review/` and `/tmp/`. No `git add`, no
-`git commit`, no `gh issue comment`, no edits to source/test files,
-no edits to plan fragments outside `review/`. `decisions.md` is
-read-only; undocumented decisions surface as findings.
+plan artifacts. Permitted writes are limited to `.stenswf/$ARGUMENTS/review/`,
+`/tmp/`, the `.stenswf/_feedback/` log, and the drift-continue append
+to `.stenswf/$ARGUMENTS/decisions.md` documented in the parent
+[SKILL.md](SKILL.md). No `git add`, no `git commit`, no
+`gh issue comment`, no edits to source/test files, no edits to plan
+fragments outside `review/`. Undocumented decisions surface as
+findings.
 
 ## Step 0 — Synthesize conventions if missing (lite-path support)
 
@@ -26,6 +28,7 @@ path where `plan`/`plan-light` didn't run or was skipped), synthesize
 sources before the five-perspective pass. Log provenance.
 
 ```bash
+source plugins/stenswf/scripts/extractors.sh
 D=".stenswf/$ARGUMENTS"
 mkdir -p "$D/review"
 
