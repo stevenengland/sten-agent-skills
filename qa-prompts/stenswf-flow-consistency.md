@@ -1,0 +1,96 @@
+# QA: stenswf End-to-End Flow Consistency
+
+## Purpose
+Catch inconsistencies, broken hand-offs, and unrunnable instructions across the
+stenswf workflow chain from `prd-from-grill-me` through `apply`. Two models run
+the same matrix in parallel so their findings can be cross-checked, then the
+results are stress-tested via `grill-me`.
+
+## Inputs
+- `MODEL_A` — e.g. `gpt-5.4`
+- `MODEL_B` — e.g. `opus-4.6`
+- `PLUGIN_ROOT` — `plugins/stenswf/skills`
+
+## Prompt
+
+Dispatch two **read-only** subagents in parallel, one on `{{MODEL_A}}` and one on
+`{{MODEL_B}}`. Both must execute the **identical test matrix** below against the
+stenswf plugin at `{{PLUGIN_ROOT}}` so their reports are directly comparable.
+
+### Flow under test (happy path)
+`prd-from-grill-me` → `prd-to-issues` → `triage-issue` → `plan` (or `plan-light`)
+→ `slice-e2e` → `tdd` → `review` → `ship` (or `ship-light`) → `apply`
+
+If the actual chain in the repo differs from the above, treat the discrepancy
+itself as a finding and continue using the chain documented in each SKILL.md.
+
+### Test matrix (each agent must cover every row)
+
+1. **Happy path, full chain.** Walk every skill from `prd-from-grill-me` to
+   `apply`. At each hand-off verify:
+   - The producing skill's declared outputs match the consuming skill's
+     declared inputs (file paths, frontmatter fields, artifact names).
+   - Referenced files, scripts, and commands actually exist in the repo.
+   - Code/CLI snippets are syntactically valid and runnable as written
+     (no undefined vars, no stale paths, no missing flags).
+
+2. **Branch coverage.** For every conditional branch a skill exposes (e.g.
+   `plan` vs `plan-light`, `ship` vs `ship-light`, triage outcomes,
+   PRD-skip conditions), trace the branch end-to-end and confirm downstream
+   skills handle the branch's artifact shape.
+
+3. **Mid-workflow entry points.** Start the workflow at each of these skills
+   *without* running prior skills, using only what their SKILL.md says is
+   required as input:
+   - `triage-issue`
+   - `plan` and `plan-light`
+   - `slice-e2e`
+   - `tdd`
+   - `review`
+   - `ship` and `ship-light`
+   - `apply`
+   For each entry point, confirm the skill's stated preconditions are
+   sufficient — i.e. it does not silently assume artifacts only produced by
+   upstream skills.
+
+4. **Cross-skill consistency.** Check for:
+   - Conflicting terminology (same concept, different names) across SKILL.md files.
+   - Conflicting file/path conventions (e.g. `tmp/` vs `docs/stenswf/decisions/`).
+   - Frontmatter schema drift between skills.
+   - Tool/permission assumptions that contradict each other.
+
+### Output format (both agents must use this exact shape)
+
+```
+## Summary
+<one paragraph>
+
+## Findings
+### F1 — <short title>
+- Severity: blocker | major | minor | nit
+- Skills involved: <skill-a> -> <skill-b>
+- Branch / entry point: <happy | branch:X | mid-entry:Y>
+- Evidence: path/to/SKILL.md#Lx (quote the exact lines)
+- Why it breaks: <one paragraph>
+- Suggested fix: <one paragraph, no code edits applied>
+
+### F2 ...
+```
+
+Constraints for both agents:
+- **Do not modify any file.** Read-only audit.
+- Cite every claim with `path#Lx` line references.
+- If a snippet is claimed broken, include the minimal repro (command + expected
+  vs actual).
+- Do not invent skills, paths, or branches that are not in the repo.
+
+### Reviewer step (after both agents return)
+
+1. Diff the two reports. Produce a merged table:
+   `Finding | A says | B says | Agreement (yes/partial/no)`.
+2. Promote agreed-blockers to the top; quarantine disagreements as "needs
+   adjudication".
+3. Then invoke the `grill-me` skill on **me** (the user) using the merged
+   findings as the topic. Grill until every blocker has either:
+   - a confirmed root cause and a chosen fix direction, or
+   - an explicit decision to defer with rationale.
