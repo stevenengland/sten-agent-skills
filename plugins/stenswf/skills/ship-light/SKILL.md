@@ -29,10 +29,10 @@ Apply context-hygiene per
 
 Fetch and read front-matter via
 [../../references/extractors.md](../../references/extractors.md)
-(canonical source: `plugins/stenswf/scripts/extractors.sh`):
+(canonical source: `../../scripts/extractors.sh`):
 
 ```bash
-source plugins/stenswf/scripts/extractors.sh
+source ../../scripts/extractors.sh
 gh issue view $ARGUMENTS --json body -q .body > /tmp/slice-$ARGUMENTS.md
 TYPE=$(get_fm type /tmp/slice-$ARGUMENTS.md)
 LITE=$(get_fm lite_eligible /tmp/slice-$ARGUMENTS.md)
@@ -58,7 +58,7 @@ nothing posted to issue) if any:
   if [ "$LITE" = "false" ] && [ -n "$OVERRIDE" ]; then
     case "$DISQ" in
       files\>15|cross-module)
-        bash plugins/stenswf/scripts/log-issue.sh user_override \
+        bash ../../scripts/log-issue.sh user_override \
           "lite_override honored on #$ARGUMENTS ($DISQ)" "$OVERRIDE"
         LITE=true
         ;;

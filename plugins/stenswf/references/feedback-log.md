@@ -41,13 +41,7 @@ Excluded per-clone by the `.stenswf/` rule in `.git/info/exclude` (see `bootstra
 Via the canonical wrapper:
 
 ```bash
-bash plugins/stenswf/scripts/log-issue.sh <category> "<summary>" [evidence]
-```
-
-Or with relative path from inside a skill that runs in the plugin:
-
-```bash
-bash "$STENSWF_ROOT/scripts/log-issue.sh" tool_failure "gh rate-limited" "$PWD/gh.log"
+bash ../../scripts/log-issue.sh <category> "<summary>" [evidence]
 ```
 
 See [../scripts/log-issue.sh](../scripts/log-issue.sh).

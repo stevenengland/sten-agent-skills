@@ -74,7 +74,7 @@ On `r`e-plan after user acceptance: overwrite `concept.md`, recompute
 For PRDs or bug-briefs created before the seeding step existed:
 
 ```bash
-source plugins/stenswf/scripts/extractors.sh
+source ../../scripts/extractors.sh
 if { [ "$TYPE" = "PRD" ] || [ "$TYPE" = "bug-brief" ]; } \
    && [ ! -f ".stenswf/$ARGUMENTS/manifest.json" ]; then
   mkdir -p ".stenswf/$ARGUMENTS"

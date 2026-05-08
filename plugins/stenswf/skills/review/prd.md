@@ -34,7 +34,7 @@ Abandoned slices should be manually closed
 Resolved exclusively from the PRD issue front-matter `prd_base_sha`:
 
 ```bash
-source plugins/stenswf/scripts/extractors.sh
+source ../../scripts/extractors.sh
 PRD_BASE=$(get_fm prd_base_sha "/tmp/slice-$ARGUMENTS.md")
 [ -n "$PRD_BASE" ] || { echo "PRD #$ARGUMENTS missing prd_base_sha in front-matter" >&2; exit 1; }
 ```

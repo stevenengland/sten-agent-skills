@@ -13,7 +13,7 @@ Schema: [front-matter-schema.md](front-matter-schema.md).
 ## Sourcing in a skill
 
 ```bash
-source plugins/stenswf/scripts/extractors.sh
+source ../../scripts/extractors.sh
 ```
 
 After sourcing, the helpers below are available.

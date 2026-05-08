@@ -84,7 +84,7 @@ export SESSION_START_N
 
 ```bash
 command -v gh >/dev/null 2>&1 || {
-  bash plugins/stenswf/scripts/log-issue.sh tool_failure "gh CLI missing"
+  bash ../../scripts/log-issue.sh tool_failure "gh CLI missing"
   echo "stenswf: gh CLI not available — present formatted bodies for manual creation; write nothing." >&2
   exit 1
 }
@@ -107,7 +107,7 @@ is a contract violation.
 
 ```bash
 if head -5 /tmp/triage-$ARGUMENTS-body.md | grep -q '^<!-- stenswf:v1'; then
-  bash plugins/stenswf/scripts/log-issue.sh contract_violation \
+  bash ../../scripts/log-issue.sh contract_violation \
     "issue already has stenswf:v1 front-matter"
   echo "Issue #$ARGUMENTS is already triaged. Use /stenswf:plan-light or /stenswf:plan." >&2
   exit 1
@@ -351,7 +351,7 @@ PRD_BASE=$(git rev-parse --verify '@{upstream}' 2>/dev/null || {
   [ -n "$D" ] && git rev-parse "origin/$D"
 })
 [ -n "$PRD_BASE" ] || {
-  bash plugins/stenswf/scripts/log-issue.sh tool_failure "cannot resolve base SHA"
+  bash ../../scripts/log-issue.sh tool_failure "cannot resolve base SHA"
   echo "stenswf: cannot resolve base SHA — set upstream or pass explicitly" >&2
   exit 1
 }

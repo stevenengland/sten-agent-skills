@@ -28,7 +28,7 @@ path where `plan`/`plan-light` didn't run or was skipped), synthesize
 sources before the five-perspective pass. Log provenance.
 
 ```bash
-source plugins/stenswf/scripts/extractors.sh
+source ../../scripts/extractors.sh
 D=".stenswf/$ARGUMENTS"
 mkdir -p "$D/review"
 
@@ -55,7 +55,7 @@ else
   } > "$SYNTH"
 
   CONV_FILE="$SYNTH"
-  bash plugins/stenswf/scripts/log-issue.sh missing_artifact \
+  bash ../../scripts/log-issue.sh missing_artifact \
     "synthesized conventions for lite-path review" \
     "$SYNTH" || true
 fi

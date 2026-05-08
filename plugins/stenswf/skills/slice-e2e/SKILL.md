@@ -46,7 +46,7 @@ NOT scrape body sections (issues encode `type` only inside the
 `<!-- stenswf:v1 -->` HTML-comment block):
 
 ```bash
-source plugins/stenswf/scripts/extractors.sh
+source ../../scripts/extractors.sh
 gh issue view $ARGUMENTS --json body -q .body > /tmp/slice-$ARGUMENTS.md
 # Version guard + key read per extractors.md
 if ! head -5 /tmp/slice-$ARGUMENTS.md | grep -q '^<!-- stenswf:v1'; then

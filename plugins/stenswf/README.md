@@ -327,6 +327,8 @@ Skill folder: tdd      →  /stenswf:tdd
 
 Skill-to-skill references inside a SKILL.md body use bare names too (e.g. `` `brevity` ``, `` `tdd` ``, `` `clean-code` ``). The loader resolves them within the plugin — do not treat them as filesystem paths.
 
+When a skill sources a shared helper or points to a companion reference file, use a path relative to the skill directory (for example `../../scripts/extractors.sh` or [references/extractors.md](references/extractors.md) via `../../references/extractors.md`). Do not hardcode `plugins/stenswf/...` or depend on ad hoc env vars for plugin-root discovery; installed plugins are relocated out of the repository layout.
+
 ---
 
 ## Install — GitHub Copilot CLI

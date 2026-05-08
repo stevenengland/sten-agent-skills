@@ -18,7 +18,7 @@ export SESSION_START_N
 ```bash
 export STENSWF_SKILL=<skill-name>
 export STENSWF_ISSUE=$ARGUMENTS
-bash plugins/stenswf/scripts/log-issue.sh <category> "<summary>" [evidence]
+bash ../../scripts/log-issue.sh <category> "<summary>" [evidence]
 ```
 
 Categories: `contract_violation`, `ambiguous_instruction`,

@@ -26,7 +26,7 @@ REVIEWED_DIFF=$(grep -oE 'diff-sha256: [0-9a-f]+' "$ART" | awk '{print $2}' | he
 # Fall back to legacy reviews missing the trailer (one-time leniency).
 if [ -z "$REVIEWED_SHA" ] || [ -z "$REVIEWED_DIFF" ]; then
   echo "warn: review artifact predates freshness stamp; proceeding without check" >&2
-  bash plugins/stenswf/scripts/log-issue.sh missing_artifact \
+  bash ../../scripts/log-issue.sh missing_artifact \
     "review/slice.md missing reviewed-at/diff-sha256 trailer" "$ART"
 else
   CUR_SHA=$(git rev-parse HEAD)
@@ -34,7 +34,7 @@ else
   if [ "$REVIEWED_DIFF" != "$CUR_DIFF" ]; then
     echo "review/slice.md is stale (reviewed at $REVIEWED_SHA / $REVIEWED_DIFF; current $CUR_SHA / $CUR_DIFF)" >&2
     echo "Re-run /stenswf:review $ARGUMENTS before applying." >&2
-    bash plugins/stenswf/scripts/log-issue.sh contract_violation \
+    bash ../../scripts/log-issue.sh contract_violation \
       "slice review artifact stale" "reviewed=$REVIEWED_DIFF current=$CUR_DIFF"
     exit 1
   fi
@@ -77,7 +77,7 @@ For each numbered suggestion:
    case "$CUR" in
      applied|skipped)
        echo "refusing to overwrite $ID (status=$CUR); inspect $STATE manually" >&2
-       bash plugins/stenswf/scripts/log-issue.sh contract_violation \
+       bash ../../scripts/log-issue.sh contract_violation \
          "apply-state overwrite refused for $ID" "current=$CUR target=$STATUS"
        exit 1
        ;;

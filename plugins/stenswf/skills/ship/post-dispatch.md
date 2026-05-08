@@ -86,7 +86,7 @@ one from the issue body's `Acceptance criteria` section and any
 `plan-light.json` hints on disk:
 
 ```bash
-source plugins/stenswf/scripts/extractors.sh
+source ../../scripts/extractors.sh
 RS=".stenswf/$ARGUMENTS/review-step.md"
 if [ ! -s "$RS" ]; then
   gh issue view $ARGUMENTS --json body -q .body > /tmp/slice-$ARGUMENTS.md
@@ -106,7 +106,7 @@ if [ ! -s "$RS" ]; then
     echo "- [ ] Every \`(structural)\` AC verified via existing suite remaining green."
     echo "- [ ] No new invariants introduced without a test."
   } > "$RS"
-  bash plugins/stenswf/scripts/log-issue.sh missing_artifact \
+  bash ../../scripts/log-issue.sh missing_artifact \
     "review-step.md synthesised on plan-light pivot" "$RS"
 fi
 ```

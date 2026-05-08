@@ -156,10 +156,10 @@ before step 6.
 
 Extract the PRD's `## Conventions` section via
 [../../references/extractors.md](../../references/extractors.md)
-(canonical source: `plugins/stenswf/scripts/extractors.sh`):
+(canonical source: `../../scripts/extractors.sh`):
 
 ```bash
-source plugins/stenswf/scripts/extractors.sh
+source ../../scripts/extractors.sh
 gh issue view <prd-number> --json body -q .body > /tmp/prd-<prd-number>.md
 extract_section 'Conventions' /tmp/prd-<prd-number>.md \
   > /tmp/prd-<prd-number>-conventions.md
@@ -211,7 +211,7 @@ fi
 Run the shared script:
 
 ```bash
-bash plugins/stenswf/scripts/inherit-decisions.sh <prd-number> <slice-numbers...>
+bash ../../scripts/inherit-decisions.sh <prd-number> <slice-numbers...>
 ```
 
 The script walks `.stenswf/<prd-number>/decisions.md`, copies active

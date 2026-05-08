@@ -124,7 +124,7 @@ For each approved axis group (severity order: critical → low):
    case "$CUR" in
      applied|skipped)
        echo "refusing to overwrite $ID (status=$CUR); inspect $STATE manually" >&2
-       bash plugins/stenswf/scripts/log-issue.sh contract_violation \
+       bash ../../scripts/log-issue.sh contract_violation \
          "apply-state overwrite refused for $ID" "current=$CUR target=applied"
        exit 1
        ;;

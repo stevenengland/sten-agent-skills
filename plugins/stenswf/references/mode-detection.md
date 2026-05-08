@@ -5,7 +5,7 @@ Shared front-matter `type:` dispatch. Consumed by `review` and `apply`.
 ## Detect
 
 ```bash
-source plugins/stenswf/scripts/extractors.sh
+source ../../scripts/extractors.sh
 gh issue view $ARGUMENTS --json body -q .body > /tmp/slice-$ARGUMENTS.md
 TYPE=$(get_fm type /tmp/slice-$ARGUMENTS.md)
 ```

@@ -1,7 +1,8 @@
 # Front-matter extractors — canonical shell library for stenswf skills.
 #
-# This file is intended to be sourced, not executed:
-#   source plugins/stenswf/scripts/extractors.sh
+# This file is intended to be sourced, not executed. From a skill
+# directory, use:
+#   source ../../scripts/extractors.sh
 #
 # Documentation lives in ../references/extractors.md. Function bodies
 # below are the single source of truth — do not duplicate them
@@ -52,8 +53,10 @@ extract_acs() {
   local untagged
   untagged=$(printf '%s\n' "$tsv" | awk -F'\t' '$2=="UNTAGGED"')
   if [ -n "$untagged" ]; then
+    local script_dir
+    script_dir=$(CDPATH= cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
     printf '%s\n' "$untagged" >&2
-    bash plugins/stenswf/scripts/log-issue.sh contract_violation \
+    bash "$script_dir/log-issue.sh" contract_violation \
       "untagged AC on #${ARGUMENTS:-?}" "$untagged"
     echo "stenswf: untagged AC(s) — edit the issue body or re-run prd-to-issues / triage-issue" >&2
     return 1

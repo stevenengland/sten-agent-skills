@@ -11,9 +11,10 @@ No automated runner — these are pasted into a scratch issue or piped
 into `get_fm` / `extract_section` during development:
 
 ```bash
-source plugins/stenswf/scripts/extractors.sh
+cd plugins/stenswf/tests/fixtures
+source ../../scripts/extractors.sh
 
-F=plugins/stenswf/tests/fixtures/issue-slice-heavy.md
+F=issue-slice-heavy.md
 get_fm type               "$F"
 get_fm lite_eligible      "$F"
 get_fm disqualifier       "$F"
