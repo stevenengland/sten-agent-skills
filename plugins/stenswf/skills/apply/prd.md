@@ -156,7 +156,7 @@ With these substitutions:
 
 - **Issue number:** `$ARGUMENTS` (PRD).
 - **Branch:** `prd/$ARGUMENTS-cleanup`.
-- **PR title:** `PRD #$ARGUMENTS cleanup — capstone findings`.
+- **PR title:** `fix(PRD): #$ARGUMENTS cleanup — capstone findings`.
 - **PR body:**
   ```
   Addresses capstone findings from the local `<prd-review>`.
@@ -164,10 +164,16 @@ With these substitutions:
   `docs/stenswf/decisions/prd-$ARGUMENTS.md` (committed as
   `docs(stenswf): curated decisions for PRD #$ARGUMENTS`).
 
-  Finding IDs addressed: F1, F2, F5, F6, F7, F9
+  Finding IDs addressed: 
+    - F1 title
+    - F2 title
+    - F5 title
+    - F6 title
+    - F7 title
+    - F9 title
   Finding IDs skipped (with reason):
-    - F3: low severity, out of scope
-    - F8: already addressed in slice #<N>
+    - F3 title: low severity, out of scope
+    - F8 title: already addressed in slice #<N>
 
   Closes #$ARGUMENTS (capstone cleanup).
   ```
