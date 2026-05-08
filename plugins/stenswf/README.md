@@ -681,14 +681,14 @@ semantics make it inherently stable under concurrent writes.
 ### Two-tier model (local vs committed excerpt)
 
 - **Local:** `.stenswf/<N>/decisions.md` (full, per-developer; excluded via `.git/info/exclude`, see `bootstrap`).
-- **Committed excerpt:** `docs/stenswf/decisions/prd-<N>.md`, written
+- **Committed excerpt:** `docs/decisions/prd-<N>.md`, written
   silently by `apply` PRD-mode at PRD close. Curation filter:
   `Category ∈ {arch, decision}` ∧ not-superseded ∧ `Refs:` contains a
   concrete file path. Staged with message
   `docs(stenswf): curated decisions for PRD #<N>`.
 
 Solo-slice flows (no PRD) skip the excerpt by default. Manual recipe
-in [docs/stenswf/decisions/README.md](../../docs/stenswf/decisions/README.md).
+in [docs/decisions/README.md](../../docs/decisions/README.md).
 
 ### Consuming decisions from outside stenswf
 

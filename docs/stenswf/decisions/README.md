@@ -30,7 +30,7 @@ want one, run:
 N=<slice-issue>
 awk '/^### D[0-9]+/,/^### /' .stenswf/$N/decisions.md \
   | grep -B1 -A5 -E 'Category: (arch|decision)' \
-  > docs/stenswf/decisions/slice-$N.md
+  > docs/decisions/slice-$N.md
 ```
 
 Review the output before committing.

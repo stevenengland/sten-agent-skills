@@ -70,7 +70,7 @@ documented in each SKILL.md.
 
 4. **Cross-skill consistency.** Check for:
    - Conflicting terminology (same concept, different names) across SKILL.md files.
-   - Conflicting file/path conventions (e.g. `tmp/` vs `docs/stenswf/decisions/`).
+   - Conflicting file/path conventions (e.g. `tmp/` vs `docs/decisions/`).
    - Frontmatter schema drift between skills.
    - Tool/permission assumptions that contradict each other.
 

@@ -161,7 +161,7 @@ With these substitutions:
   ```
   Addresses capstone findings from the local `<prd-review>`.
   Includes the curated decisions excerpt at
-  `docs/stenswf/decisions/prd-$ARGUMENTS.md` (committed as
+  `docs/decisions/prd-$ARGUMENTS.md` (committed as
   `docs(stenswf): curated decisions for PRD #$ARGUMENTS`).
 
   Finding IDs addressed: 

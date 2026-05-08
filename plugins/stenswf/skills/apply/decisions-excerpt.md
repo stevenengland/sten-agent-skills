@@ -6,8 +6,8 @@ stage it into the cleanup PR. Silent; no user prompt. See
 for the curation filter (active ∩ {arch, decision} ∩ has file-path Refs).
 
 ```bash
-mkdir -p docs/stenswf/decisions
-EXCERPT="docs/stenswf/decisions/prd-$ARGUMENTS.md"
+mkdir -p docs/decisions
+EXCERPT="docs/decisions/prd-$ARGUMENTS.md"
 TITLE=$(gh issue view $ARGUMENTS --json title -q .title)
 DATE=$(date -u +%Y-%m-%d)
 

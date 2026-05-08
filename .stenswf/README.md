@@ -46,7 +46,7 @@ Schema, write contract, and severity rules live in
 (the canonical spec).
 
 Curated cross-issue excerpts are committed to
-[../docs/stenswf/decisions/](../docs/stenswf/decisions/) at PRD close.
+[../docs/decisions/](../docs/decisions/) at PRD close.
 
 ### Reading anchors (recipes)
 
@@ -77,5 +77,5 @@ no staleness risk.
 ## When in doubt
 
 - Full schema + write contract → [plugins/stenswf/README.md](../plugins/stenswf/README.md#decision-anchor-contract).
-- Committed curated excerpts → [docs/stenswf/decisions/](../docs/stenswf/decisions/).
+- Committed curated excerpts → [docs/decisions/](../docs/decisions/).
 - Plugin commands and workflows → [plugins/stenswf/README.md](../plugins/stenswf/README.md).
