@@ -145,8 +145,9 @@ stop. Log `tool_failure`.
 
 ## Phase 3 — Ship the cleanup PR
 
-Stage the committed decisions excerpt first per
-[decisions-excerpt.md](decisions-excerpt.md).
+Generate and confirm the decisions excerpt per
+[decisions-excerpt.md](decisions-excerpt.md) (user chooses whether to
+persist).
 
 Then run the shared PR+CI+merge procedure with `CI_MAX_CYCLES=3` and
 `WAIT_FOR_MERGE=yes`:
