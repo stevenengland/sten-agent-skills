@@ -72,6 +72,13 @@ SKILLS TO LOAD: plan-light, brevity
 
 Run the plan-light skill for issue #$ARGUMENTS.
 
+ARTIFACT CONTRACT — you MUST create exactly three files per artifacts.md:
+  .stenswf/$ARGUMENTS/plan-light.md   (NOT plan.md — filename matters)
+  .stenswf/$ARGUMENTS/plan-light.json (5-field identity stub)
+  .stenswf/$ARGUMENTS/lite-notes.md   (review handoff)
+Before returning READY, verify all three exist and are non-empty.
+If any file is missing, you have not completed the skill.
+
 Your FINAL line of output must be exactly one of:
   READY
   ROUTE_HEAVY: <one-sentence reason>
@@ -119,6 +126,7 @@ Sanity-check the artifact on disk before dispatching Phase 2:
 ```bash
 [ -s ".stenswf/$ARGUMENTS/plan-light.md" ]   || { echo "plan-light.md missing"; exit 1; }
 [ -s ".stenswf/$ARGUMENTS/plan-light.json" ] || { echo "plan-light.json missing"; exit 1; }
+[ -s ".stenswf/$ARGUMENTS/lite-notes.md" ]   || { echo "lite-notes.md missing"; exit 1; }
 ```
 
 ---
