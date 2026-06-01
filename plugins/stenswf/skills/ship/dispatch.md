@@ -35,6 +35,10 @@ STRUCTURAL_ACS:      <space-separated AC ids whose tag is (structural)>
 RULE: For each (behavior) AC, load tdd and follow RED-first.
       For each (structural) AC, skip RED; run existing tests;
       MUST NOT delete tests covering behavior.
+LOCAL-ID RULE: Never write AC<n>/F<n>/D<n> codes into source, comments,
+      test names, or the commit subject — they are local-only and
+      unresolvable to a later reader. Describe the behavior in plain
+      language. Codes are allowed only in commit trailers (Refs:, etc.).
 RE-VALIDATE: Before writing any test, re-evaluate AC tags against
       the Done-when text and the files you have read. The current
       tag for each AC is derivable from the lists above

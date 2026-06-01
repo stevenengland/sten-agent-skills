@@ -121,7 +121,10 @@ is not `class: migration`** — the field is rejected anywhere else.
 
 ### 5. Quiz the user
 
-Present as numbered list. For each slice show: Title, Type (HITL/AFK/spike),
+Present as numbered list. The list position is the slice's **ordinal** —
+show each slice's final title in the form `<PRD-N>/<ordinal>: <title>`
+(e.g. `123/1: add auth middleware`) so the user confirms the exact titles.
+For each slice show: Title, Type (HITL/AFK/spike),
 Blocked by, User stories covered, Lite-eligible (true/false + disqualifier
 tag if false). Disqualifier tags: `files>15 | cross-module |
 schema-migration | arch-unknown | hitl-cat3`. Also show the AC list per
@@ -173,7 +176,33 @@ Inline the Conventions file where indicated.
 Create in dependency order (blockers first) so real issue numbers can
 be referenced in `blocked_by` front-matter.
 
-No labels. No modifications to the parent PRD issue.
+**Title format.** Each slice title is `<PRD-N>/<ordinal>: <title>`, where
+`<ordinal>` is the slice's 1-based position in the approved Step-5 list.
+
+**Sub-issue linkage (default).** By default each slice is created as a
+**sub-issue of the PRD**. `gh` has no native sub-issue command, so use the
+REST sub-issues endpoint — two lines after `gh issue create`:
+
+```bash
+PRD=<prd-number>
+ORD=<1-based position in the approved Step-5 list>
+SLICE_URL=$(gh issue create --title "$PRD/$ORD: <slice title>" \
+  --body-file /tmp/slice-body.md)
+SLICE_NUM=$(basename "$SLICE_URL")
+
+# Link as a sub-issue. sub_issue_id is the child's DB id, NOT its number.
+CHILD_ID=$(gh api "repos/{owner}/{repo}/issues/$SLICE_NUM" --jq '.id')
+gh api --method POST "repos/{owner}/{repo}/issues/$PRD/sub_issues" \
+  -F sub_issue_id="$CHILD_ID" \
+  || echo "note: sub-issue link skipped (tracker lacks sub-issue support); parent recorded in body"
+```
+
+`{owner}/{repo}` is auto-filled by `gh`. The `||` fallback keeps `glab`/`tea`
+runs working — they skip the link and rely on the `## Parent PRD` body line,
+which the template already emits.
+
+No labels. No modifications to the parent PRD issue body (the sub-issue link
+is GitHub's native parent/child relation, not a body edit).
 
 Slice front-matter shape (canonical — emit exactly this block at the
 top of every slice body):

@@ -8,6 +8,10 @@ Templates for the three files `plan-light` writes to
 Soft cap: ≤200 lines. Hard cap: ≤6 tasks. If >6 tasks, abort with
 `ROUTE_HEAVY: scope >6 tasks — needs heavy plan`.
 
+Write this file with the **`Write` tool** (its body is composed markdown, not
+a shell heredoc). Issuing the tool call is what creates the file — SKILL.md
+Phase 4 verifies it landed on disk.
+
 ```markdown
 # Plan-Light — #$ARGUMENTS — <one-line title>
 

@@ -220,6 +220,10 @@ git commit -m "<type>(<scope>): <imperative subject>" -m "Refs: #$ARGUMENTS"
 `type`: `feat|fix|refactor|perf|docs|test|chore|build|ci`. Subject
 lower-case, no period, ≤72 chars. Apply `lint-escape` if blocked. No squash.
 
+**Local-ID hygiene.** Never write `AC<n>` into source, comments, test
+names, or commit subjects — describe the behavior in plain language. See
+[../../references/local-id-hygiene.md](../../references/local-id-hygiene.md).
+
 **Ambiguity handling (silent-or-escalate).** Two materially different
 implementations, no codebase tiebreaker → stop, emit
 `ROUTE_HEAVY: <reason>` as FINAL line. Log `ambiguous_instruction`.

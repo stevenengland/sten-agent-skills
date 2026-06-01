@@ -112,6 +112,11 @@ For each approved axis group (severity order: critical → low):
    Types by axis: `test(...)`, `refactor(...)`, `fix(...)`,
    `chore(ops):`, `feat(ops):`.
 
+   **Local-ID hygiene.** `F<n>` codes belong in the `Addresses:` trailer and
+   the PR body only — never in the commit subject, source, comments, or test
+   names. See
+   [../../references/local-id-hygiene.md](../../references/local-id-hygiene.md).
+
 4. Update `apply-state.json`. **Resume-safe write:** abort if the row
    was already `applied` or `skipped` (the resume contract from
    [SKILL.md](SKILL.md) forbids overwriting terminal states):

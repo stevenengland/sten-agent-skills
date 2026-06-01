@@ -243,12 +243,46 @@ Write the three artifacts per
    and `behavior_change_acs`.
 3. `lite-notes.md` — soft-constraint handoff to slice review.
 
+**Each artifact MUST be created with a real file-write tool call** — the
+`Write` tool for `plan-light.md`, the `cat <<EOF` heredocs shown in
+[artifacts.md](artifacts.md) for `plan-light.json` and `lite-notes.md`.
+Composing the content in prose is NOT writing the file; if you did not issue
+the tool call, the file does not exist. Phase 4 verifies this on disk.
+
 If >6 tasks required, abort with
 `ROUTE_HEAVY: scope >6 tasks — needs heavy plan`.
 
 ---
 
 ## Phase 4 — Self-check and final line
+
+**Artifact-existence gate (FIRST — before any other check).** A `READY`
+contract is a lie unless all three artifacts are on disk. Verify, and
+self-heal up to twice:
+
+```bash
+D=".stenswf/$ARGUMENTS"
+for attempt in 1 2 3; do
+  MISSING=""
+  for f in plan-light.md plan-light.json lite-notes.md; do
+    [ -s "$D/$f" ] || MISSING="$MISSING $f"
+  done
+  [ -z "$MISSING" ] && break
+  echo "attempt $attempt: missing/empty:$MISSING"
+  # If $attempt <= 2: write the missing file(s) NOW (Write tool for
+  # plan-light.md; heredocs per artifacts.md for the others), then loop.
+done
+```
+
+- All three present and non-empty → continue to the checks below.
+- Still missing after the loop (3rd pass) → do NOT print `READY`. Print
+  `ROUTE_HEAVY: plan-light artifact write failed — <which files>` as the
+  FINAL line and log `tool_failure` via `bash ../../scripts/log-issue.sh`.
+
+The loop body is an instruction to *you*: on each iteration where a file is
+reported missing, issue the actual write tool call for that file before the
+next pass. Never satisfy the gate by editing the check — only by writing the
+files.
 
 - [ ] **AC ↔ task coverage.** Every AC maps to exactly one task's `Done when`.
 - [ ] **No placeholders.** No `TODO`, `FIXME`, unreplaced `<...>`.
