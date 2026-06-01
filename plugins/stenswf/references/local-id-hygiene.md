@@ -1,6 +1,6 @@
 # Local-ID hygiene — shared rule
 
-`AC<n>` (acceptance criteria), `F<n>` (review findings), and `D<n>`
+`AC<n>` (acceptance criteria), `F<n>` and `S<n>` (review findings), and `D<n>`
 (decision-anchor entries) are **local positional identifiers** scoped to the
 `.stenswf/` working state. They are recomputed per run and mean nothing to a
 reader who does not have that local state in front of them.
