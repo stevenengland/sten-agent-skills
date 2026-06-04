@@ -97,7 +97,19 @@ without a `mkdir -p` surprise. `.stenswf/.out-of-scope/` is the
 persistent rejection memory used by `/stenswf:triage-issue` Phase 1
 (dedup) — see [../../references/out-of-scope-memory.md](../../references/out-of-scope-memory.md).
 
-### 3. Confirm
+### 3. Check bc availability
+
+```bash
+if ! command -v bc >/dev/null 2>&1; then
+  echo "stenswf: warning: bc command not found; some features may not work"
+else
+  echo "stenswf: bc command found"
+fi
+```
+
+If `bc` is missing, ask the user to install it for best results.
+
+### 4. Confirm
 
 ```bash
 ls -la .stenswf/
