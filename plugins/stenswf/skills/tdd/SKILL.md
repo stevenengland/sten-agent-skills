@@ -56,7 +56,8 @@ Apply [interface-design.md](interface-design.md) and
   mutate hidden state).
 - Smallest surface that satisfies the AC. Prefer one deep function over
   many shallow ones.
-- The signature you name here is the signature the failing test calls.
+- The signature you name here is the signature the failing test calls —
+  it is the single action in the test's `When` block (see [tests.md](tests.md)).
 
 If two materially different signatures both satisfy the AC and the
 codebase offers no tiebreaker, this is an architectural ambiguity —
@@ -68,7 +69,8 @@ design an interface for.
 
 ### 2. Tracer Bullet
 
-Write ONE test that confirms ONE thing about the system:
+Write ONE test that confirms ONE thing about the system, in Given/When/Then
+shape (see [tests.md](tests.md)):
 
 ```
 RED:   Write test for first behavior → test fails
@@ -109,6 +111,7 @@ After all tests pass, look for [refactor candidates](refactoring.md):
 
 ```
 [ ] Test describes behavior, not implementation
+[ ] Test shaped Given/When/Then — one action (When), one logical outcome (Then)
 [ ] Test uses public interface only
 [ ] Test would survive internal refactor
 [ ] Code is minimal for this test
