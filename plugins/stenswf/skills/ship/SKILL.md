@@ -52,14 +52,50 @@ If `.stenswf/$ARGUMENTS/` missing, stop and ask the user to run
   On `(c)ontinue`, append a drift-accepted meta-entry to
   `decisions.md` and log `user_override`.
 
-- [ ] Record `BASE_SHA`:
+- [ ] **Establish the feature branch** (adopt-or-create, resume-safe). On a
+  non-default branch, adopt it; on the default branch, create
+  `impl/$ARGUMENTS-$SLUG` off `origin/$DEFAULT`. Never dispatch tasks onto
+  the default branch:
 
   ```bash
-  BASE_SHA=$(git rev-parse HEAD)
-  BRANCH=$(git branch --show-current)
-  jq --arg b "$BRANCH" --arg s "$BASE_SHA" \
-    '.branch=$b | .base_sha=$s' "$D/manifest.json" \
-    > "$D/manifest.json.tmp" && mv "$D/manifest.json.tmp" "$D/manifest.json"
+  set -euo pipefail
+  D=.stenswf/$ARGUMENTS
+  DEFAULT=$(gh repo view --json defaultBranchRef -q .defaultBranchRef.name)
+  [ -n "$DEFAULT" ] || { echo "ERROR: could not resolve default branch"; exit 1; }
+
+  # Resume-safe: branch + base_sha persist in the manifest after the first run.
+  SAVED_BR=$(jq -r '.branch // ""' "$D/manifest.json")
+  CUR=$(git branch --show-current)
+
+  if [ -n "$SAVED_BR" ]; then
+    # Resume — ensure we are on the recorded branch; never re-create or
+    # clobber base_sha (Phase 2 refactor diff reads the original .base_sha).
+    [ "$CUR" = "$SAVED_BR" ] || git checkout "$SAVED_BR" || {
+      echo "ERROR: cannot resume on recorded branch $SAVED_BR"; exit 1; }
+  else
+    # First run — adopt-or-create.
+    if [ -n "$CUR" ] && [ "$CUR" != "$DEFAULT" ]; then
+      # Adopt the current branch — but refuse a stale branch from another
+      # issue (e.g. left on impl/42-* after shipping #42, now shipping #43).
+      case "$CUR" in
+        "impl/$ARGUMENTS"|"impl/$ARGUMENTS-"*) BR="$CUR" ;;  # our own — adopt
+        impl/*) echo "ERROR: on $CUR — looks like another issue's branch; switch to $DEFAULT and re-run"; exit 1 ;;
+        *) BR="$CUR" ;;                                      # user's own named branch — adopt
+      esac
+    else
+      git fetch origin "$DEFAULT"
+      SLUG=$(gh issue view $ARGUMENTS --json title -q .title \
+        | tr '[:upper:] ' '[:lower:]-' | tr -cd 'a-z0-9-' | cut -c1-40)
+      BR="impl/$ARGUMENTS-$SLUG"
+      git checkout -b "$BR" "origin/$DEFAULT" || {
+        echo "ERROR: branch creation failed (stale $BR from a prior run? delete or check it out, then re-run)"
+        exit 1; }
+    fi
+    BASE_SHA=$(git rev-parse HEAD)
+    jq --arg b "$BR" --arg s "$BASE_SHA" \
+      '.branch=$b | .base_sha=$s' "$D/manifest.json" \
+      > "$D/manifest.json.tmp" && mv "$D/manifest.json.tmp" "$D/manifest.json"
+  fi
   ```
 
 - [ ] **Resume detection** — find first `manifest.tasks[].status != "done"`.
@@ -68,6 +104,21 @@ If `.stenswf/$ARGUMENTS/` missing, stop and ask the user to run
 ---
 
 ## Phase 1 — Task Execution (Orchestrator Loop)
+
+**Branch gate — HARD INVARIANT (before the first dispatch).** No task may be
+dispatched while HEAD is on the default branch:
+
+```bash
+CUR=$(git branch --show-current)
+DEFAULT=$(gh repo view --json defaultBranchRef -q .defaultBranchRef.name)
+BR=$(jq -r '.branch // ""' .stenswf/$ARGUMENTS/manifest.json)
+[ -n "$BR" ] && [ "$CUR" = "$BR" ] && [ "$CUR" != "$DEFAULT" ] || {
+  echo "ERROR: branch gate failed (on=$CUR expected=$BR default=$DEFAULT) — refusing to dispatch onto the default branch"
+  exit 1; }
+```
+
+Do NOT recover a gate violation by retroactively branching off a dirty HEAD —
+abort and let the user recover.
 
 **Pre-dispatch behavior-change re-validation (per task).** Before
 dispatching each task, re-fetch the issue body and re-evaluate the

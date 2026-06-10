@@ -237,8 +237,9 @@ Full schema + file bodies: see
 Task fragment template: see
 [../../references/plan-task-template.md](../../references/plan-task-template.md).
 
-Compute SHAs with `sha256sum <file> | cut -d' ' -f1`. `branch` and
-`base_sha` are filled by `ship` at dispatch time.
+Compute SHAs with `sha256sum <file> | cut -d' ' -f1`. Leave `branch` and
+`base_sha` empty — `ship` **establishes** the feature branch (adopt-or-create)
+and records both at dispatch time.
 
 Brevity Rules apply to `house-rules.md`, `design-summary.md`. They do
 NOT apply to `conventions.md` (verbatim copy), `decisions.md` (cross-skill
