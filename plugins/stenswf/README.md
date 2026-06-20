@@ -252,6 +252,25 @@ invariant — at
 
 ---
 
+## Subtractive pass (ponytail-lens)
+
+A subtractive (YAGNI / laziest-that-works) lens runs as a self-review
+pass on seams stenswf already has — it **adds to** `clean-code` and
+`tdd`, never overrides them. `plan` / `plan-light` apply it to the plan
+(cut speculative tasks before code exists); `ship` Phase 2 and
+`ship-light` Phase 3 apply it to the diff after green; `apply` carries
+an anti-balloon guard. It deliberately does **not** run inside `review`,
+keeping it out of the same pass as the opposite-pole `thermo-nuclear`
+maintainability lens — `review` and the thermo subagent only honor the
+`// ponytail:` marker, they never run the ladder.
+
+The precedence rule (never override a recorded decision), the
+safe/contentious classifier, the slice-`TYPE` reachability gate, and the
+marker contract all live in the full contract:
+[references/ponytail-pass.md](references/ponytail-pass.md).
+
+---
+
 ## Repository Structure
 
 ```
@@ -279,6 +298,7 @@ STEN-AGENT-SKILLS/                       ← Repo root
 │       │   ├── plan-artifact-schemas.md
 │       │   ├── conventional-commits.md
 │       │   ├── behavior-change-signal.md
+│       │   ├── ponytail-pass.md
 │       │   └── reasoning-effects.md
 │       ├── scripts/                     ← Shared executables
 │       │   ├── log-issue.sh

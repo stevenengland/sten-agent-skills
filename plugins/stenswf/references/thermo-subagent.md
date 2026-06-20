@@ -43,6 +43,10 @@ Severity rule:
 There is NO critical severity and NO security/correctness scope here. Prefer a
 small number of high-conviction findings over a long list of cosmetic notes.
 
+Do NOT flag a `// ponytail:`-marked simplification as under-engineering or
+recommend re-adding the abstraction it removed — the marker is the author's
+recorded decision.
+
 End with exactly one line:
   THERMO_SUMMARY: <H> high | <M> medium | <L> low
 
