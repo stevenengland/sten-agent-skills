@@ -237,8 +237,9 @@ Full schema + file bodies: see
 Task fragment template: see
 [../../references/plan-task-template.md](../../references/plan-task-template.md).
 
-Compute SHAs with `sha256sum <file> | cut -d' ' -f1`. `branch` and
-`base_sha` are filled by `ship` at dispatch time.
+Compute SHAs with `sha256sum <file> | cut -d' ' -f1`. Leave `branch` and
+`base_sha` empty — `ship` **establishes** the feature branch (adopt-or-create)
+and records both at dispatch time.
 
 Brevity Rules apply to `house-rules.md`, `design-summary.md`. They do
 NOT apply to `conventions.md` (verbatim copy), `decisions.md` (cross-skill
@@ -290,6 +291,12 @@ artifact shape, not reasoning quality. Pause and step back:
   certainly need?
 - Are any inter-task dependencies implicit (shared types, config
   keys, schema fields) but not declared in `blocked_by`?
+- **Ponytail (subtractive lens).** Run the plan — not code — through
+  [../../references/ponytail-pass.md](../../references/ponytail-pass.md).
+  This seam is interactive (user reachable): safe leanings simplify the
+  plan in place, contentious ones become interview points. The reference
+  owns the ladder, the safe/contentious test, and the never-override
+  precedence rule.
 
 If the answer changes the plan, revise and re-run the validator.
 

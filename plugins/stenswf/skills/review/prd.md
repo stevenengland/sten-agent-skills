@@ -106,6 +106,15 @@ Scope-creep or scope-cuts?
 Slices form a coherent architecture? Duplicated abstractions, mixed
 paradigms, dead code?
 
+**Thermo subagent pass.** Dispatch a **read-only** thermo subagent on the
+delivered diff per
+[../../references/thermo-subagent.md](../../references/thermo-subagent.md),
+with `DIFF_PATH=/tmp/prd-$ARGUMENTS-diff.patch` (the delta patch on idempotent
+re-review) and `<N>=$ARGUMENTS`. Dedup its findings against this axis's native
+findings per that reference; survivors are emitted into this axis's
+`<finding>` list at Step 5 (continuing the `F`-number sequence). Thermo is
+code-quality only — no `critical`.
+
 ### Axis 4 — Test strategy
 
 Coverage matches PRD risk surface? Critical stories without E2E? Gaps?
@@ -156,6 +165,12 @@ Write `.stenswf/$ARGUMENTS/review/prd-review.xml`:
 <counts>critical: 0 | high: 2 | medium: 3 | low: 4</counts>
 </prd-review>
 ```
+
+Deduped thermo survivors (from the Axis-3 pass) are emitted as ordinary
+`<finding id="F<n>" severity="high|medium|low">` elements **inside
+`<axis name="architectural-coherence">`**, continuing the `F`-number sequence
+so IDs stay unique, and counted in `<counts>`. Thermo contributes no
+`critical`.
 
 ### Schema validation (self-check)
 

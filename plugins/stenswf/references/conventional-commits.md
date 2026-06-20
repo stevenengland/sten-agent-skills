@@ -68,3 +68,6 @@ prefers; the commit-per-AC discipline is for the working branch.
 - ≤72 chars (hard cap; tools wrap at 72).
 - Scope is optional but encouraged. Drop it for cross-cutting commits
   rather than inventing a fake scope.
+- No local `AC/F/D` codes in the subject — describe the change in plain
+  language. Trailers may carry `Addresses: F…`. See
+  [local-id-hygiene.md](local-id-hygiene.md).

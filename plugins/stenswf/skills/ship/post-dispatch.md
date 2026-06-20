@@ -44,6 +44,15 @@ Review every touched file against:
 Focused refactor: eliminate TDD-introduced duplication, clarify naming
 where beneficial. No new scope.
 
+**Ponytail pass (subtractive).** Run the subtractive self-review over
+the combined diff (`$BASE_SHA..HEAD`) per
+[../../references/ponytail-pass.md](../../references/ponytail-pass.md).
+This fresh session — not the implementer subagents — is the fresh lens
+over their work. Reachability comes from the slice TYPE (HITL → ask the
+user; AFK → flag into the PR body). Any test that breaks from a cut
+feeds the bad-test audit below — never green-by-deletion. The reference
+owns the safe/contentious test and the never-override precedence rule.
+
 **Bad-test audit (refactor-time diagnostic).** A test that breaks
 during refactor of code with no observable behavior change is the
 single strongest signal that the test is implementation-coupled. For

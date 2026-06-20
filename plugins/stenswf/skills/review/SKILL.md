@@ -29,6 +29,11 @@ The only writes this skill performs are:
 No other writes; no `git add/commit/push/reset/rebase/merge`, no
 `gh issue comment`.
 
+`review` MAY dispatch a **read-only** maintainability subagent (per
+[../../references/thermo-subagent.md](../../references/thermo-subagent.md));
+this does not relax the plan-only invariant — the subagent makes no edits and
+the orchestrator's only writes remain those listed above.
+
 **Constraint reminder before loading mode-specific logic.** The mode
 files (`slice.md`, `prd.md`) are long; the no-source-edits invariant
 must survive that read. Restate before proceeding: **plan-only — no

@@ -113,6 +113,13 @@ echo "Architect gate: $ARCH_GATE"
 **Guard:** If a perspective has no significant findings, say so
 explicitly. Do not invent issues.
 
+**Ponytail-marker guard.** A `// ponytail:` comment marks a deliberate,
+recorded simplification with its known ceiling and upgrade path. Do NOT
+flag a `ponytail:`-marked shortcut as under-engineering, and do NOT
+recommend re-adding the abstraction it removed — the marker is the
+author's recorded decision (per
+[../../references/ponytail-pass.md](../../references/ponytail-pass.md)).
+
 **Perspective 1 — DevOps / SRE.** Deployment complexity, operability
 (logging, observability, rollback, config), what breaks first in prod,
 silent assumptions about external services.
@@ -151,12 +158,29 @@ drop. Per
 Severity: implementation-coupled tests → **Medium** by default,
 **High** when the AC they purportedly cover is `(behavior)`.
 
+### Thermo subagent pass (aggressive maintainability)
+
+After the five perspectives, dispatch a **read-only** thermo subagent on the
+staged diff per
+[../../references/thermo-subagent.md](../../references/thermo-subagent.md),
+with `DIFF_PATH=/tmp/review-$ARGUMENTS-staged.patch` and `<N>=$ARGUMENTS`.
+This pass is always-on and additive — it does not replace any perspective.
+
+Parse the returned finding blocks and apply the merge/dedup rules from that
+reference: dedup against the five-perspective findings (most overlap is with
+Perspective 4 — Architect), then carry survivors into the `## Suggestions`
+list below. Thermo `severity` maps 1:1 to `**Priority:**`. If
+`THERMO_SUMMARY` is all-zero, add nothing and say so.
+
 ### Severity guide
 
 - **Critical** — data loss, security breach, or crash on happy path.
 - **High** — incorrect behavior, runtime bug, or plan deviation.
 - **Medium** — maintainability, clarity, coverage gap with real cost.
 - **Low** — nit, style.
+
+Thermo findings are code-quality only (no Critical); they enter as ordinary
+suggestions at their mapped Priority.
 
 ## Slice-mode Output
 

@@ -108,6 +108,15 @@ Implement all approved suggestions in a single pass.
   delete tests covering behavior.
 - Apply `clean-code`.
 - Keep changes focused.
+- **Ponytail guard (anti-balloon).** Before applying a suggestion,
+  check it does not grow into an unrequested abstraction — prefer the
+  one-line / stdlib / native form per
+  [../../references/ponytail-pass.md](../../references/ponytail-pass.md).
+  Apply the suggestion's intent, not a heavier version of it.
+- **Local-ID hygiene.** Never write `S<n>`/`AC<n>`/`F<n>`/`D<n>` codes into
+  source, comments, test names, or commit subjects — describe the change in
+  plain language. See
+  [../../references/local-id-hygiene.md](../../references/local-id-hygiene.md).
 
 If the review artifact contains an AC coverage matrix, any approved
 `not covered` / `partially covered` row must be addressed. Re-check

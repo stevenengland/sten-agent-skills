@@ -121,13 +121,38 @@ Branch on the envelope:
   print the last ~10 lines of subagent output verbatim to the user
   and exit.
 
-Sanity-check the artifact on disk before dispatching Phase 2:
+**Artifact sanity-check + one retry (suspenders).** `plan-light` self-verifies
+its artifacts before returning `READY`, but a subagent can still return `READY`
+without the files landing. Check disk; on a miss, re-dispatch `plan-light`
+**once** before giving up:
 
 ```bash
-[ -s ".stenswf/$ARGUMENTS/plan-light.md" ]   || { echo "plan-light.md missing"; exit 1; }
-[ -s ".stenswf/$ARGUMENTS/plan-light.json" ] || { echo "plan-light.json missing"; exit 1; }
-[ -s ".stenswf/$ARGUMENTS/lite-notes.md" ]   || { echo "lite-notes.md missing"; exit 1; }
+artifacts_ok() {
+  [ -s ".stenswf/$ARGUMENTS/plan-light.md" ]   && \
+  [ -s ".stenswf/$ARGUMENTS/plan-light.json" ] && \
+  [ -s ".stenswf/$ARGUMENTS/lite-notes.md" ]
+}
 ```
+
+- `artifacts_ok` → continue to Phase 2.
+- Missing/empty → re-dispatch the `plan-light` subagent **exactly once** with
+  the Phase-1 template plus this prepended note (paste verbatim):
+
+  ```
+  NOTE: A previous run returned READY but the artifacts were not on disk.
+  Write .stenswf/$ARGUMENTS/plan-light.md and plan-light.json (and
+  lite-notes.md) NOW via the Write tool / heredocs, verify each exists with
+  a real file-read, then return READY.
+  ```
+
+  Re-check `artifacts_ok` after the retry.
+- Still missing after the one retry → surface to the user and route heavy;
+  do NOT proceed to Phase 2:
+
+  > `plan-light` returned READY but did not write its artifacts (twice). Run:
+  >
+  >     /stenswf:plan $ARGUMENTS
+  >     /stenswf:ship $ARGUMENTS
 
 ---
 

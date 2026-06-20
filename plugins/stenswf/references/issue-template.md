@@ -3,6 +3,10 @@
 Used by `prd-to-issues` at Step 6. Emits front-matter + body. Schema:
 [front-matter-schema.md](front-matter-schema.md).
 
+The issue **title** is not part of this body template — the
+`<PRD-N>/<ordinal>: <title>` convention and sub-issue linkage live in
+`prd-to-issues` Step 6.
+
 ```markdown
 <!-- stenswf:v1
 type: slice — AFK
