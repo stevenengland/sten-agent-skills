@@ -304,6 +304,12 @@ back:
 - Did any AC remain partially covered (e.g., happy-path only, error
   path implicit)?
 - Would emitting `ROUTE_HEAVY` actually be more honest here?
+- **Ponytail (subtractive lens, AFK).** Run the plan — not code —
+  through
+  [../../references/ponytail-pass.md](../../references/ponytail-pass.md).
+  Not reachable: apply safe leanings silently; a genuine build-vs-skip
+  fork goes to `## Assumptions` or trips `ROUTE_HEAVY`. The reference
+  owns classification and the never-override rule.
 
 If the answer changes the plan, revise. Only then print the final line.
 

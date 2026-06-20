@@ -291,6 +291,12 @@ artifact shape, not reasoning quality. Pause and step back:
   certainly need?
 - Are any inter-task dependencies implicit (shared types, config
   keys, schema fields) but not declared in `blocked_by`?
+- **Ponytail (subtractive lens).** Run the plan — not code — through
+  [../../references/ponytail-pass.md](../../references/ponytail-pass.md).
+  This seam is interactive (user reachable): safe leanings simplify the
+  plan in place, contentious ones become interview points. The reference
+  owns the ladder, the safe/contentious test, and the never-override
+  precedence rule.
 
 If the answer changes the plan, revise and re-run the validator.
 

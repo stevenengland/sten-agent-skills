@@ -113,6 +113,13 @@ echo "Architect gate: $ARCH_GATE"
 **Guard:** If a perspective has no significant findings, say so
 explicitly. Do not invent issues.
 
+**Ponytail-marker guard.** A `// ponytail:` comment marks a deliberate,
+recorded simplification with its known ceiling and upgrade path. Do NOT
+flag a `ponytail:`-marked shortcut as under-engineering, and do NOT
+recommend re-adding the abstraction it removed — the marker is the
+author's recorded decision (per
+[../../references/ponytail-pass.md](../../references/ponytail-pass.md)).
+
 **Perspective 1 — DevOps / SRE.** Deployment complexity, operability
 (logging, observability, rollback, config), what breaks first in prod,
 silent assumptions about external services.

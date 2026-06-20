@@ -244,8 +244,14 @@ Same session, no subagent. Orthogonal to `clean-code`:
 - **Convention drift.** Grep diff for new symbols; confirm every new
   module path, function name, class name, and field set matches
   `## Conventions (from PRD)` verbatim. Drift → fix or hand off.
-- **Scope drift.** `git diff $BASE_SHA..HEAD` — anything not required
-  by an AC → delete or justify in one sentence.
+- **Scope drift + ponytail (subtractive).** `git diff $BASE_SHA..HEAD`
+  — anything not required by an AC → delete or justify in one sentence.
+  Then run the subtractive ladder per
+  [../../references/ponytail-pass.md](../../references/ponytail-pass.md).
+  Reachability: invoked directly = user reachable (stop and ask);
+  dispatched under `slice-e2e` = AFK (flag into the PR body). Broken
+  tests feed the bad-test audit below. The reference owns the
+  safe/contentious test and the never-override rule.
 - **Untested behavior change (irrefutable backstop).** Diff-grep for
   new/changed exported symbols, signatures, error exits
   (`raise|throw|return Err|return nil|panic(`), public endpoints,
