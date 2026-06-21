@@ -11,6 +11,12 @@ remain verbatim.
 Implement issue $ARGUMENTS end-to-end in this single session. No
 subagents, no plan comment, no XML extraction. The issue body IS the spec.
 
+**Decisions.** On a **heavy** decision (per
+[../../references/decision-escalation.md](../../references/decision-escalation.md))
+ASK the user when available, PARK when run unattended
+(`STENSWF_UNATTENDED`); **easy** decisions resolve in-line. `slice-e2e`
+dispatches this skill unattended.
+
 ## Phase 0 — Preflight gate
 
 **Ceremony invariant (TDD-as-lens).** This skill MUST NOT (a)
@@ -224,11 +230,13 @@ lower-case, no period, ≤72 chars. Apply `lint-escape` if blocked. No squash.
 names, or commit subjects — describe the behavior in plain language. See
 [../../references/local-id-hygiene.md](../../references/local-id-hygiene.md).
 
-**Ambiguity handling (silent-or-escalate).** Two materially different
-implementations, no codebase tiebreaker → stop, emit
-`ROUTE_HEAVY: <reason>` as FINAL line. Log `ambiguous_instruction`.
-Minor implementation choices (naming within conventions, local
-helpers, test shape) are educated guesses — record in PR body's
+**Ambiguity handling (easy decide, heavy ASK/PARK).** Two materially
+different implementations, no codebase tiebreaker → **heavy decision** per
+[../../references/decision-escalation.md](../../references/decision-escalation.md):
+ASK (alternatives + recommendation) when available; PARK (`PARKED: <decision>`
+as FINAL line) when unattended. Reserve `ROUTE_HEAVY` for a genuine full
+re-plan. Log `ambiguous_instruction`. Minor implementation choices (naming
+within conventions, local helpers, test shape) are easy — record in PR body's
 `## Notable assumptions` and proceed.
 
 `## Notable assumptions` is NOT the decision anchor — the anchor
@@ -248,9 +256,10 @@ Same session, no subagent. Orthogonal to `clean-code`:
   — anything not required by an AC → delete or justify in one sentence.
   Then run the subtractive ladder per
   [../../references/ponytail-pass.md](../../references/ponytail-pass.md).
-  Reachability: invoked directly = user reachable (stop and ask);
-  dispatched under `slice-e2e` = AFK (flag into the PR body). Broken
-  tests feed the bad-test audit below. The reference owns the
+  A contentious cut is a heavy decision: ASK when available, PARK when
+  unattended (`slice-e2e` runs ship-light unattended) — per
+  [../../references/decision-escalation.md](../../references/decision-escalation.md).
+  Broken tests feed the bad-test audit below. The reference owns the
   safe/contentious test and the never-override rule.
 - **Untested behavior change (irrefutable backstop).** Diff-grep for
   new/changed exported symbols, signatures, error exits
@@ -363,8 +372,13 @@ Final line must be exactly one of:
 ```
 PR_OPENED <pr-url>
 CI_BLOCKER <pr-url>
+PARKED: <one-sentence decision>
 ROUTE_HEAVY: <one-sentence reason>
 ```
+
+`PARKED` — a heavy decision was hit while unattended; the tension is in
+the PR body / issue and a pending `parked` anchor in `decisions.md` (per
+[../../references/decision-escalation.md](../../references/decision-escalation.md)).
 
 `PR_OPENED` (not `MERGED`) — `ship-light` runs with `WAIT_FOR_MERGE=no`,
 so "merged" would be a lie. `<pr-url>` is the canonical `$PR_URL`

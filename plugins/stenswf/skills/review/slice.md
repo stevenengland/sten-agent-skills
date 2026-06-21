@@ -130,7 +130,11 @@ and **Plan / AC / decision deviation** — does staged diff match issue
 body + `$CONV_FILE` + `acceptance-criteria.md` + active `decisions.md`?
 Plan deviations tagged **High** by default. Decision-anchor contradictions:
 `arch` → **High**, `decision` → **Medium** (→ **High** if `Refs:`
-contains `AC#`). Superseded entries are not findings.
+contains `AC#`). A `decisions.md` anchor carrying `status: parked` is an
+unresolved heavy decision → **High / blocking**: surface it as a finding; the
+slice is not done until it is resolved (per
+[../../references/decision-escalation.md](../../references/decision-escalation.md)).
+Superseded entries are not findings.
 
 **Peer must produce an AC coverage matrix** — one row per AC, tagged
 `covered | partially covered | not covered` with `file:line` citation.

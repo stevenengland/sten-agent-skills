@@ -17,6 +17,11 @@ subagents. The orchestrator parses one-line envelopes and passes
 control through. Zero judgment calls — run on the cheapest available
 model.
 
+slice-e2e is the **unattended batch entry**: it runs both phases unattended
+(each dispatch prompt tells the subagent it cannot prompt), so a heavy decision
+PARKs rather than blocking the batch on a question nobody is there to answer (per
+[../../references/decision-escalation.md](../../references/decision-escalation.md)).
+
 Pipeline for slice issue $ARGUMENTS:
 
 1. Dispatch subagent → `plan-light` → writes artifact, returns envelope.
@@ -24,6 +29,9 @@ Pipeline for slice issue $ARGUMENTS:
    watches CI, returns terminal state.
 3. On `ROUTE_HEAVY` from either phase: surface reason, recommend heavy
    `plan` + `ship`, exit.
+4. On `PARKED` from either phase: surface the parked decision and where the
+   tension lives (PR body / issue + a pending `parked` anchor in
+   `decisions.md`), tell the user to resume when available, exit.
 
 ---
 
@@ -70,7 +78,9 @@ Message template (paste verbatim):
 ```
 SKILLS TO LOAD: plan-light, brevity
 
-Run the plan-light skill for issue #$ARGUMENTS.
+Run the plan-light skill for issue #$ARGUMENTS in unattended mode. You are a
+subagent and cannot prompt the user: a heavy decision must PARK, never block
+on a question.
 
 ARTIFACT CONTRACT — you MUST create exactly three files per artifacts.md:
   .stenswf/$ARGUMENTS/plan-light.md   (NOT plan.md — filename matters)
@@ -81,11 +91,14 @@ If any file is missing, you have not completed the skill.
 
 Your FINAL line of output must be exactly one of:
   READY
+  PARKED: <one-sentence decision>
   ROUTE_HEAVY: <one-sentence reason>
   ABORT_NOT_SLICE: route to prd-to-issues
 
-Do not ask the user anything. Either write the plan and return READY,
-abort with ROUTE_HEAVY, or abort with ABORT_NOT_SLICE.
+Do not ask the user anything. Either write the plan and return READY; PARK a
+heavy decision (write the tension to the issue + a pending parked anchor in
+decisions.md, return PARKED); abort with ROUTE_HEAVY; or abort with
+ABORT_NOT_SLICE.
 ```
 
 Capture the subagent's final non-empty line:
@@ -117,6 +130,17 @@ Branch on the envelope:
   >     /stenswf:ship $ARGUMENTS
 
   Exit. Do not post anything on the issue.
+- **`PARKED: <decision>`** → print to the user:
+
+  > `plan-light` parked a heavy decision: <decision>
+  >
+  > The alternatives + recommendation are on issue #$ARGUMENTS and a pending
+  > `parked` anchor is in `.stenswf/$ARGUMENTS/decisions.md`. Resume when
+  > available:
+  >
+  >     /stenswf:plan-light $ARGUMENTS
+
+  Exit.
 - **Anything else** (malformed output, subagent harness failure) →
   print the last ~10 lines of subagent output verbatim to the user
   and exit.
@@ -168,7 +192,9 @@ Message template (paste verbatim):
 ```
 SKILLS TO LOAD: ship-light, tdd, clean-code, lint-escape, brevity
 
-Run the ship-light skill for issue #$ARGUMENTS.
+Run the ship-light skill for issue #$ARGUMENTS in unattended mode. You are a
+subagent and cannot prompt the user: a heavy decision must PARK, never block
+on a question.
 
 A plan-light artifact is on disk at .stenswf/$ARGUMENTS/plan-light.md
 (with identity stub plan-light.json, including `behavior_change_acs`).
@@ -180,9 +206,12 @@ heuristic ladder; untagged ACs are a hard contract_violation.
 Your FINAL line of output must be exactly one of:
   PR_OPENED <pr-url>
   CI_BLOCKER <pr-url>
+  PARKED: <one-sentence decision>
   ROUTE_HEAVY: <one-sentence reason>
 
-Do not ask the user anything. Either ship or abort.
+Do not ask the user anything. Either ship, PARK a heavy decision (write the
+tension to the PR body / issue + a pending parked anchor in decisions.md,
+return PARKED), or abort.
 ```
 
 Parse the final line the same way. Then **validate the URL token** via
@@ -225,6 +254,17 @@ Branch:
   >
   >     /stenswf:plan $ARGUMENTS
   >     /stenswf:ship $ARGUMENTS
+
+  Exit.
+- **`PARKED: <decision>`** → print:
+
+  > `ship-light` parked a heavy decision: <decision>
+  >
+  > Partial commits are on the branch. The alternatives + recommendation are
+  > on the PR / issue and a pending `parked` anchor is in
+  > `.stenswf/$ARGUMENTS/decisions.md`. Resume when available:
+  >
+  >     /stenswf:ship-light $ARGUMENTS
 
   Exit.
 - **Malformed output** → print the last ~10 lines verbatim and exit.

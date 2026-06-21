@@ -16,14 +16,19 @@ Unlike heavy `plan`, `plan-light` assumes the same model class will
 ship. Do **not** over-document. One markdown file, one JSON stub, no
 subtree.
 
-This skill never interrupts the user. It either writes a plan and
-returns `READY`, or aborts to heavy `plan` + `ship` by returning
-`ROUTE_HEAVY: <one-sentence reason>`. No interviews.
+On a **heavy** decision (per
+[../../references/decision-escalation.md](../../references/decision-escalation.md))
+this skill ASKs the user when available and PARKs when run unattended
+(`STENSWF_UNATTENDED`); **easy** decisions it resolves silently. It aborts to
+heavy `plan` + `ship` with `ROUTE_HEAVY` only for a genuine full re-plan
+(coupled/architectural decisions, scope past the lite envelope) — not a single
+fork the user can answer in one question.
 
 Final line of output must be exactly one of:
 
 ```
 READY
+PARKED: <one-sentence decision>
 ROUTE_HEAVY: <one-sentence reason>
 ABORT_NOT_SLICE: route to prd-to-issues
 ```
@@ -138,7 +143,7 @@ Otherwise dispatch ONE `Explore` subagent (thoroughness: quick, ≤300 words):
 
 ---
 
-## Phase 2 — Self-resolve decisions (silent)
+## Phase 2 — Resolve decisions (easy silently, heavy via ASK/PARK)
 
 **AC-tag validation.** Use `extract_acs` from
 [../../references/extractors.md](../../references/extractors.md) to
@@ -167,6 +172,14 @@ apply the bias when the heuristic ladder falls through to rule 5
 Producer tags still win where they are unambiguous; the bias only
 shifts the rule-5 fallback.
 
+**Disposition (applies to every tier below and the checklist).** An *easy*
+resolution — a convention or codebase analog picks the answer — is applied
+silently. A *heavy* fork escalates per
+[../../references/decision-escalation.md](../../references/decision-escalation.md):
+**ASK** with alternatives + a recommendation when available, **PARK**
+(`PARKED: <one-sentence decision>`) when unattended (`STENSWF_UNATTENDED`).
+`ROUTE_HEAVY` is reserved for a genuine full re-plan, not a single fork.
+
 Walk each AC. For every ambiguity:
 
 1. Covered by `## Conventions (from PRD)` → use silently.
@@ -174,29 +187,26 @@ Walk each AC. For every ambiguity:
    When two analogs are equally supported, prefer the one that better
    matches [../tdd/interface-design.md](../tdd/interface-design.md)
    (deps as params, return-don't-mutate, small surface).
-3. Two materially different paths, no tiebreaker → abort:
-   `ROUTE_HEAVY: arch decision needed — <one sentence>`. Log `ambiguous_instruction`.
-4. AC wording ambiguous enough for two behaviors → abort:
-   `ROUTE_HEAVY: AC ambiguity — <quote AC, propose two reads>`. Log `ambiguous_instruction`.
+3. Two materially different paths, no tiebreaker → **heavy fork**
+   (`PARKED: arch decision needed — <one sentence>`). Log `ambiguous_instruction`.
+4. AC wording ambiguous enough for two behaviors → **heavy fork**
+   (`PARKED: AC ambiguity — <one sentence>`). Log `ambiguous_instruction`.
 5. Convention conflicts with codebase → abort:
    `ROUTE_HEAVY: convention conflicts with <path> — <one sentence>`. Log `contract_violation`.
 6. Implied interface violates the testability lens (no params,
    hidden mutation, sprawling surface; see
    [../tdd/interface-design.md](../tdd/interface-design.md)) and no
-   analog supports a sane shape → abort:
-   `ROUTE_HEAVY: testability conflict — <one sentence>`. Log
-   `ambiguous_instruction`.
+   analog supports a sane shape → **heavy fork**
+   (`PARKED: testability conflict — <one sentence>`). Log `ambiguous_instruction`.
 
-No interview. Either resolve silently or escalate.
-
-**Silent interface and behavior checklist (agent-side, mirrors heavy
-`plan`'s interview).** `plan-light` cannot ask the user, so walk the
-same checks against the codebase + conventions and resolve in-line.
+**Interface and behavior checklist (agent-side, mirrors heavy `plan`'s
+interview).** Walk the same checks against the codebase + conventions;
+resolve easy ones in-line, escalate heavy forks per the disposition above.
 Per slice:
 
 - [ ] Name the public interface each `(behavior)` AC implies (signature,
-      inputs, return). If the conventions + analog do not pin a shape,
-      escalate `ROUTE_HEAVY: arch decision needed — <one sentence>`.
+      inputs, return). If the conventions + analog do not pin a shape, it is a
+      heavy fork (escalate per the disposition above).
 - [ ] Prioritize behaviors to test. **You can't test everything.** The
       AC list is fixed, but per task you decide which behaviors get
       RED-first dedicated tests vs. coverage-by-composition. Lead with
@@ -212,8 +222,8 @@ Per slice:
       as params, return-don't-mutate, small surface). Lens violations
       are caught by ladder rule 6 above.
 
-Resolutions go in `## Assumptions` (non-decisions) per the link rule
-below. Anything that genuinely needs a user becomes `ROUTE_HEAVY`.
+Resolutions go in `## Assumptions` (non-decisions) per the link rule below; a
+fork that genuinely needs a user escalates per the disposition above.
 
 Tier-1/tier-2 resolutions are non-decisions — they go in `## Assumptions`,
 never the anchor. See [../../references/decision-anchor-link.md](../../references/decision-anchor-link.md).
@@ -303,12 +313,12 @@ back:
   it as an assumption or `decision` entry?
 - Did any AC remain partially covered (e.g., happy-path only, error
   path implicit)?
-- Would emitting `ROUTE_HEAVY` actually be more honest here?
-- **Ponytail (subtractive lens, AFK).** Run the plan — not code —
-  through
+- Would this fork actually need the user (ASK/PARK), or a genuine full
+  re-plan (`ROUTE_HEAVY`)?
+- **Ponytail (subtractive lens).** Run the plan — not code — through
   [../../references/ponytail-pass.md](../../references/ponytail-pass.md).
-  Not reachable: apply safe leanings silently; a genuine build-vs-skip
-  fork goes to `## Assumptions` or trips `ROUTE_HEAVY`. The reference
+  Apply safe leanings silently; a contentious build-vs-skip fork is a heavy
+  decision — ASK when available, PARK when unattended. The reference
   owns classification and the never-override rule.
 
 If the answer changes the plan, revise. Only then print the final line.
@@ -318,7 +328,8 @@ Then tell the user:
 > Plan written to `.stenswf/$ARGUMENTS/plan-light.md`. Run
 > `/stenswf:ship-light $ARGUMENTS` or `/stenswf:slice-e2e $ARGUMENTS`.
 
-Print exactly one final line: `READY` (or `ROUTE_HEAVY: <reason>`).
+Print exactly one final line: `READY` (or `PARKED: <decision>` /
+`ROUTE_HEAVY: <reason>`).
 
 ---
 

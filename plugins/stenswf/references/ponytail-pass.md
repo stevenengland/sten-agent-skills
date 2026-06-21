@@ -92,32 +92,27 @@ ANY of:
 
 ---
 
-## Cut-handling by slice TYPE
+## Cut-handling — safe applies, contentious escalates
 
-Reachability comes from the slice TYPE front-matter, the existing
-is-user-available signal:
-
-- **HITL** (`slice — HITL`, or `ship-light` invoked directly by a user) →
-  user reachable.
-- **AFK** (`slice — AFK`, or any pass dispatched under `slice-e2e`) → not
-  reachable.
-
-Then:
+A safe finding is applied autonomously. A **contentious finding is a heavy
+decision** — hand it to [decision-escalation.md](decision-escalation.md),
+which owns reachability (available unless unattended), the ASK/PARK
+outcome, and recording. Reachability is **not** derived from the slice TYPE.
 
 - **Safe finding** → apply it, mark it (below). No decision entry.
-- **Contentious finding, user reachable** → stop. Present `what / why /
-  net lines / what it touches`. Wait for a decision. Apply nothing without
-  sign-off.
-- **Contentious finding, not reachable** → flag-only: write it to the PR
-  body and as a pending note in `decisions.md`. Apply nothing.
+- **Contentious finding** → route through `decision-escalation.md`:
+  - **available** → ASK: present `what / why / net lines / what it touches`
+    as the alternatives plus a recommendation. Apply nothing without sign-off.
+  - **unavailable** (unattended) → PARK: write it to the PR body (or an
+    issue comment) and a pending note in `decisions.md`. Apply nothing.
 
 ---
 
 ## Recording
 
-- A **contentious** cut — applied after sign-off (reachable) or left as a
-  pending note (not reachable) — writes one `decision` entry under the
-  **host seam's** source (`plan` / `plan-light` / `ship` / `ship-light`)
+- A **contentious** cut — applied after sign-off (available) or left as a
+  pending `parked` note (unattended) — writes one `decision` entry under
+  the **host seam's** source (`plan` / `plan-light` / `ship` / `ship-light`)
   per [decision-anchor-link.md](decision-anchor-link.md). There is no
   `ponytail` source; provenance stays with the seam that ran the pass.
 - A **safe** cut writes no decision entry — it gets only the marker below
@@ -153,28 +148,28 @@ recorded decision.
 
 - Safe cuts → one summary line in the self-critique / refactor commit body
   and the PR body: `ponytail: -<N> lines — <tag> <thing>, …`.
-- Contentious → presented to the user (reachable) or written to the PR body
-  (not reachable).
+- Contentious → presented to the user (available) or parked to the PR body /
+  issue (unattended), per [decision-escalation.md](decision-escalation.md).
 - Nothing to cut → `ponytail: lean already` and move on.
 
 ---
 
 ## Per-seam behavior
 
-- **`plan`** (interactive interview — user reachable) — apply the ladder to
+- **`plan`** (interactive interview — available) — apply the ladder to
   the *plan itself*: a task
   that builds a one-consumer abstraction, a dependency for what
   stdlib/native covers, speculative file-structure. Contentious leanings
-  become interview points; safe leanings simplify the plan in place.
-- **`plan-light`** (AFK / silent) — same target; safe leanings applied
-  silently; a genuine build-vs-skip fork → `## Assumptions` or the existing
-  `ROUTE_HEAVY`.
+  become ASK interview points; safe leanings simplify the plan in place.
+- **`plan-light`** — same target; safe leanings applied silently; a genuine
+  build-vs-skip fork is a contentious finding → `decision-escalation.md`
+  (ASK when available, PARK when unattended).
 - **`ship` Phase-2 refactor pass** — run over the combined subagent diff
   (`$BASE_SHA..HEAD`). The orchestrator (a fresh session, not the
-  implementer) is the fresh lens. TYPE drives reachability.
+  implementer) is the fresh lens. Availability drives ASK/PARK.
 - **`ship-light` Phase-3 rubberduck** — extend the Scope-drift bullet into
-  the full ladder over `$BASE_SHA..HEAD`. Direct invocation = reachable;
-  under `slice-e2e` = not.
+  the full ladder over `$BASE_SHA..HEAD`. Available unless unattended;
+  `slice-e2e` runs it unattended.
 - **`apply`** — anti-balloon guard only. Before applying a suggestion, check
   it does not grow into an unrequested abstraction; prefer the one-line /
   stdlib / native form. Does **not** run the full ladder.
