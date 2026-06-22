@@ -27,6 +27,13 @@ to write a test follows from the AC tag, not from this skill. See
 If `.stenswf/$ARGUMENTS/` missing, stop and ask the user to run
 `/stenswf:plan $ARGUMENTS` first. Log `missing_artifact`.
 
+**Decisions.** On a **heavy** decision (per
+[../../references/decision-escalation.md](../../references/decision-escalation.md))
+the orchestrator ASKs the user when available and PARKs when run
+unattended (`STENSWF_UNATTENDED`); dispatched subagents emit
+`DECISION_NEEDED` for the orchestrator to resolve (see [dispatch.md](dispatch.md)).
+Easy decisions are made in-line.
+
 ---
 
 ## Prerequisites

@@ -91,6 +91,24 @@ On failure (BLOCKED) use the verbose form:
     A) <concrete fix>
     B) <alternative>
   ─────────────────────────────────────────────
+
+On a HEAVY decision (one-way door, no tiebreaker, a contract/behavior change
+not already pinned by the task ACs, plan, or an active decision, or an
+architectural choice the task fragment did not pin) do NOT guess and do
+NOT decide. Stop before committing the affected change and emit:
+
+  TASK_REPORT T<id> DECISION_NEEDED
+  ─────────────────────────────────────────────
+  Decision:       <one sentence>
+  Reversible:     yes | no
+  Alternatives:
+    A) <option> — <one-line trade-off>
+    B) <option> — <one-line trade-off>
+  Recommendation: <A|B> — <one-line rationale>
+  ─────────────────────────────────────────────
+
+DECISION_NEEDED is NOT a failure (unlike BLOCKED) — it is a healthy stop at a
+fork the orchestrator must resolve with the user.
 ```
 
 Never tell the subagent to "read the plan" in prose. The explicit `cat`
@@ -98,17 +116,26 @@ above is the only way it should touch the plan.
 
 ## 1b. Verify the subagent report
 
-- [ ] First line matches `TASK_REPORT T<id> DONE <sha>`.
-- [ ] Commit was made:
+- [ ] First line is one of `TASK_REPORT T<id> DONE <sha>`,
+  `TASK_REPORT T<id> BLOCKED`, or `TASK_REPORT T<id> DECISION_NEEDED`.
+- [ ] **On `DONE`** — a commit was made and the reported SHA matches `HEAD_SHA`:
 
   ```bash
   HEAD_SHA=$(git rev-parse HEAD)
   [ "$HEAD_SHA" != "$BASE_SHA" ] || { echo "FAIL — no commit"; }
   ```
 
-- [ ] Reported SHA matches `HEAD_SHA`.
 - [ ] On `BLOCKED` or no new commit: post `TASK_BLOCKER` (template
   below) and stop. Log `tool_failure`.
+- [ ] On `DECISION_NEEDED`: the subagent hit a heavy fork (no commit
+  expected). Route per
+  [../../references/decision-escalation.md](../../references/decision-escalation.md):
+  **available** → ASK the user with the reported alternatives + recommendation,
+  then re-dispatch the task with the chosen alternative appended to the tail,
+  and record the choice as a `decision` anchor (source `ship`). **unattended**
+  → PARK: write the `DECISION_NEEDED` block to the PR body (or an issue comment
+  if no PR exists yet) + a pending
+  `parked` anchor in `decisions.md`, and stop with `PARKED: <decision>`.
 - [ ] **Behavior-change override.** Scan the report tail for
   `BEHAVIOR_CHANGE_OVERRIDE: <ac> <old>→<new> <reason>` lines, where
   `<old>` and `<new>` are each `behavior` or `structural`. For each:

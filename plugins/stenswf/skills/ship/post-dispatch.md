@@ -48,10 +48,12 @@ where beneficial. No new scope.
 the combined diff (`$BASE_SHA..HEAD`) per
 [../../references/ponytail-pass.md](../../references/ponytail-pass.md).
 This fresh session — not the implementer subagents — is the fresh lens
-over their work. Reachability comes from the slice TYPE (HITL → ask the
-user; AFK → flag into the PR body). Any test that breaks from a cut
-feeds the bad-test audit below — never green-by-deletion. The reference
-owns the safe/contentious test and the never-override precedence rule.
+over their work. A contentious cut is a heavy decision: ASK when available,
+PARK when unattended, per
+[../../references/decision-escalation.md](../../references/decision-escalation.md).
+Any test that breaks from a cut feeds the bad-test audit below — never
+green-by-deletion. The reference owns the safe/contentious test and the
+never-override precedence rule.
 
 **Bad-test audit (refactor-time diagnostic).** A test that breaks
 during refactor of code with no observable behavior change is the

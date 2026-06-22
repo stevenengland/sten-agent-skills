@@ -6,6 +6,11 @@ disable-model-invocation: true
 
 **Load and apply `brevity` now.** See [../../references/brevity-load.md](../../references/brevity-load.md).
 
+**Decisions.** Overriding a recorded decision (Phase 2) is a **heavy**
+decision — ASK the user when available, PARK when run unattended
+(`STENSWF_UNATTENDED`), per
+[../../references/decision-escalation.md](../../references/decision-escalation.md).
+
 ---
 
 ## Mode Detection

@@ -60,9 +60,11 @@ Apply [interface-design.md](interface-design.md) and
   it is the single action in the test's `When` block (see [tests.md](tests.md)).
 
 If two materially different signatures both satisfy the AC and the
-codebase offers no tiebreaker, this is an architectural ambiguity —
-escalate per the caller's ambiguity rules (e.g. `ship-light` emits
-`ROUTE_HEAVY`). Do not silently pick.
+codebase offers no tiebreaker, this is a heavy decision — escalate per
+the caller's decision-escalation rules (ASK when available, PARK when
+unattended; `ROUTE_HEAVY` only for a full re-plan) per
+[../../references/decision-escalation.md](../../references/decision-escalation.md).
+Do not silently pick.
 
 For `(structural)` ACs, skip this step — there is no new behavior to
 design an interface for.

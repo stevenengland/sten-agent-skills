@@ -124,8 +124,12 @@ the matrix after; if still uncovered, stop and report. Log
 `contract_violation`.
 
 If an applied suggestion contradicts an active entry in
-`.stenswf/$ARGUMENTS/decisions.md`, append a superseding entry (same
-category, source `apply`) and strikethrough the old header per
+`.stenswf/$ARGUMENTS/decisions.md`, overriding that recorded decision is a
+**heavy decision** — ASK the user (alternatives + recommendation) when
+available, PARK when unattended, per
+[../../references/decision-escalation.md](../../references/decision-escalation.md).
+On sign-off, append a superseding entry (same category, source `apply`) and
+strikethrough the old header per
 [../../references/decision-anchor-link.md](../../references/decision-anchor-link.md).
 
 ## Phase 3 — Wrap-up (Slice-mode)

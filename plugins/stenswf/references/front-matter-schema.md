@@ -26,7 +26,7 @@ Rules:
 
 | Key | Values | Notes |
 |---|---|---|
-| `type` | `PRD` \| `bug-brief` \| `slice — HITL` \| `slice — AFK` \| `slice — spike` | Mode + slice-type marker. `bug-brief` is a narrow PRD-shaped artifact emitted by `triage-issue`. |
+| `type` | `PRD` \| `bug-brief` \| `slice — HITL` \| `slice — AFK` \| `slice — spike` | Mode + slice-type marker. `bug-brief` is a narrow PRD-shaped artifact emitted by `triage-issue`. The slice-type marker (`HITL`/`AFK`/`spike`) governs plan **interview depth only** — NOT run reachability. Whether a skill may ask the user is the `STENSWF_UNATTENDED` run mode, per [decision-escalation.md](decision-escalation.md). |
 
 ## Required keys (PRD + bug-brief issues)
 
