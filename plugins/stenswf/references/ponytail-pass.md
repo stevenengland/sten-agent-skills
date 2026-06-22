@@ -76,7 +76,7 @@ AND the finding is one of:
 - `yagni:` inline a single-caller / single-implementation wrapper that
   exists only as speculative indirection.
 
-### Contentious — gate by slice TYPE
+### Contentious — escalate through decision-escalation
 
 ANY of:
 

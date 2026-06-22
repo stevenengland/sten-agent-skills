@@ -30,8 +30,9 @@ Pipeline for slice issue $ARGUMENTS:
 3. On `ROUTE_HEAVY` from either phase: surface reason, recommend heavy
    `plan` + `ship`, exit.
 4. On `PARKED` from either phase: surface the parked decision and where the
-   tension lives (PR body / issue + a pending `parked` anchor in
-   `decisions.md`), tell the user to resume when available, exit.
+   tension lives (PR body, or an issue comment if no PR exists, plus a pending
+   `parked` anchor in `decisions.md`), tell the user to resume when available,
+   exit.
 
 ---
 
@@ -95,10 +96,10 @@ Your FINAL line of output must be exactly one of:
   ROUTE_HEAVY: <one-sentence reason>
   ABORT_NOT_SLICE: route to prd-to-issues
 
-Do not ask the user anything. Either write the plan and return READY; PARK a
-heavy decision (write the tension to the issue + a pending parked anchor in
-decisions.md, return PARKED); abort with ROUTE_HEAVY; or abort with
-ABORT_NOT_SLICE.
+Do not ask the user anything. On a heavy decision, PARK: write the tension to an
+issue comment (or the PR body if one exists) plus a pending `parked` anchor in
+`decisions.md`, then return `PARKED`. Otherwise return `READY`, `ROUTE_HEAVY`,
+or `ABORT_NOT_SLICE`.
 ```
 
 Capture the subagent's final non-empty line:
@@ -209,9 +210,9 @@ Your FINAL line of output must be exactly one of:
   PARKED: <one-sentence decision>
   ROUTE_HEAVY: <one-sentence reason>
 
-Do not ask the user anything. Either ship, PARK a heavy decision (write the
-tension to the PR body / issue + a pending parked anchor in decisions.md,
-return PARKED), or abort.
+Do not ask the user anything. On a heavy decision, PARK: write the tension to
+the PR body (or an issue comment if none exists) plus a pending `parked` anchor
+in `decisions.md`, then return `PARKED`. Otherwise ship, or abort.
 ```
 
 Parse the final line the same way. Then **validate the URL token** via

@@ -13,7 +13,8 @@ Plan the implementation of issue number $ARGUMENTS.
 
 **Decisions.** The Phase 1 interview already consults the user — that IS the
 ASK path for heavy decisions. When run unattended (`STENSWF_UNATTENDED`) a
-heavy decision PARKs instead (write the tension to the issue + a pending
+heavy decision PARKs instead (write the tension to an issue comment, or the PR
+body if one exists, plus a pending
 `parked` anchor in `decisions.md`), per
 [../../references/decision-escalation.md](../../references/decision-escalation.md).
 

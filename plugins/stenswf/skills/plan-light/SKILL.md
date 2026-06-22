@@ -187,17 +187,20 @@ Walk each AC. For every ambiguity:
    When two analogs are equally supported, prefer the one that better
    matches [../tdd/interface-design.md](../tdd/interface-design.md)
    (deps as params, return-don't-mutate, small surface).
-3. Two materially different paths, no tiebreaker → **heavy fork**
-   (`PARKED: arch decision needed — <one sentence>`). Log `ambiguous_instruction`.
-4. AC wording ambiguous enough for two behaviors → **heavy fork**
-   (`PARKED: AC ambiguity — <one sentence>`). Log `ambiguous_instruction`.
+3. Two materially different paths, no tiebreaker → **heavy fork** — ASK when
+   available; `PARKED: arch decision needed — <one sentence>` when unattended.
+   Log `ambiguous_instruction`.
+4. AC wording ambiguous enough for two behaviors → **heavy fork** — ASK when
+   available; `PARKED: AC ambiguity — <one sentence>` when unattended. Log
+   `ambiguous_instruction`.
 5. Convention conflicts with codebase → abort:
    `ROUTE_HEAVY: convention conflicts with <path> — <one sentence>`. Log `contract_violation`.
 6. Implied interface violates the testability lens (no params,
    hidden mutation, sprawling surface; see
    [../tdd/interface-design.md](../tdd/interface-design.md)) and no
-   analog supports a sane shape → **heavy fork**
-   (`PARKED: testability conflict — <one sentence>`). Log `ambiguous_instruction`.
+   analog supports a sane shape → **heavy fork** — ASK when available;
+   `PARKED: testability conflict — <one sentence>` when unattended. Log
+   `ambiguous_instruction`.
 
 **Interface and behavior checklist (agent-side, mirrors heavy `plan`'s
 interview).** Walk the same checks against the codebase + conventions;

@@ -92,8 +92,9 @@ On failure (BLOCKED) use the verbose form:
     B) <alternative>
   ─────────────────────────────────────────────
 
-On a HEAVY decision (one-way door, no tiebreaker, contract/behavior change,
-or an architectural choice the task fragment did not pin) do NOT guess and do
+On a HEAVY decision (one-way door, no tiebreaker, a contract/behavior change
+not already pinned by the task ACs, plan, or an active decision, or an
+architectural choice the task fragment did not pin) do NOT guess and do
 NOT decide. Stop before committing the affected change and emit:
 
   TASK_REPORT T<id> DECISION_NEEDED
@@ -115,15 +116,15 @@ above is the only way it should touch the plan.
 
 ## 1b. Verify the subagent report
 
-- [ ] First line matches `TASK_REPORT T<id> DONE <sha>`.
-- [ ] Commit was made:
+- [ ] First line is one of `TASK_REPORT T<id> DONE <sha>`,
+  `TASK_REPORT T<id> BLOCKED`, or `TASK_REPORT T<id> DECISION_NEEDED`.
+- [ ] **On `DONE`** — a commit was made and the reported SHA matches `HEAD_SHA`:
 
   ```bash
   HEAD_SHA=$(git rev-parse HEAD)
   [ "$HEAD_SHA" != "$BASE_SHA" ] || { echo "FAIL — no commit"; }
   ```
 
-- [ ] Reported SHA matches `HEAD_SHA`.
 - [ ] On `BLOCKED` or no new commit: post `TASK_BLOCKER` (template
   below) and stop. Log `tool_failure`.
 - [ ] On `DECISION_NEEDED`: the subagent hit a heavy fork (no commit
@@ -132,7 +133,8 @@ above is the only way it should touch the plan.
   **available** → ASK the user with the reported alternatives + recommendation,
   then re-dispatch the task with the chosen alternative appended to the tail,
   and record the choice as a `decision` anchor (source `ship`). **unattended**
-  → PARK: write the `DECISION_NEEDED` block to the PR body / issue + a pending
+  → PARK: write the `DECISION_NEEDED` block to the PR body (or an issue comment
+  if no PR exists yet) + a pending
   `parked` anchor in `decisions.md`, and stop with `PARKED: <decision>`.
 - [ ] **Behavior-change override.** Scan the report tail for
   `BEHAVIOR_CHANGE_OVERRIDE: <ac> <old>→<new> <reason>` lines, where

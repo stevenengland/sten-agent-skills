@@ -106,12 +106,20 @@ heavy ASK in that case blocks until answered (Ctrl-C to park manually). Setting
 
 ### Subagents bubble up
 
-A subagent (a dispatched `Task`) can never prompt the user. On a heavy
-decision it does **not** decide and does **not** park on its own — it emits a
-`DECISION_NEEDED` envelope as its result and stops. The orchestrator (the
-top-level session) then ASKs (available) or PARKs (unattended) and
-re-dispatches with the answer. So a subagent under an available orchestrator is
-*reachable*; the subagent boundary is not an unavailability boundary.
+A subagent (a dispatched `Task`) can never prompt the user. How it handles a
+heavy decision depends on *what it was dispatched to run*:
+
+- **A task-fragment worker** (e.g. a `ship` per-task subagent) does **not**
+  decide and does **not** park on its own — it emits a `DECISION_NEEDED`
+  envelope as its result and stops. The orchestrator (the top-level session)
+  then ASKs (available) or PARKs (unattended) and re-dispatches with the answer.
+  So a worker under an available orchestrator is *reachable*; the worker
+  boundary is not an unavailability boundary.
+- **A full skill dispatched in unattended mode** (e.g. `slice-e2e` running
+  `plan-light` / `ship-light`) *is its own unattended orchestrator*: it owns the
+  whole slice, has no available human above it, and therefore **PARKs directly**
+  rather than bubbling `DECISION_NEEDED`. It returns a `PARKED` envelope to its
+  caller, which relays it.
 
 ---
 

@@ -377,7 +377,8 @@ ROUTE_HEAVY: <one-sentence reason>
 ```
 
 `PARKED` — a heavy decision was hit while unattended; the tension is in
-the PR body / issue and a pending `parked` anchor in `decisions.md` (per
+the PR body (or an issue comment if no PR exists) and a pending `parked` anchor
+in `decisions.md` (per
 [../../references/decision-escalation.md](../../references/decision-escalation.md)).
 
 `PR_OPENED` (not `MERGED`) — `ship-light` runs with `WAIT_FOR_MERGE=no`,
