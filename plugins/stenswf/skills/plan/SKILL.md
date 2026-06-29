@@ -184,7 +184,10 @@ Interview relentlessly about every aspect until shared understanding:
 
 - Recommended answer + reasoning per question.
 - Codebase questions → targeted Explore subagents.
-- Propose 2–3 approaches with trade-offs. Lead with recommendation.
+- Propose 2–3 approaches with trade-offs. Lead with recommendation. Weigh
+  them per [../../references/decision-weighting.md](../../references/decision-weighting.md)
+  — quality, simplicity, robustness, scalability, and maintainability over
+  build cost.
 - Clarify when something doesn't make sense.
 - Industry practice citations only when they distinguish options in play.
 

@@ -19,7 +19,10 @@ dependencies between decisions one-by-one.
 - If a question can be answered by exploring the codebase, explore the codebase
 instead.
 - Propose 2-3 different approaches with trade-offs.
-- Lead with your recommended option and explain why.
+- Lead with your recommended option and explain why. Weigh options per
+  [../../references/decision-weighting.md](../../references/decision-weighting.md)
+  — prefer quality, simplicity, robustness, scalability, and maintainability
+  over build cost.
 - Go back and clarify when something doesn't make sense
 
 When a recommendation touches a problem that well-known companies

@@ -54,6 +54,11 @@ shape) are easy and need no record.
 **Default to heavy on any uncertainty.** (Mirrors the behavior-change ladder's
 "default true" and ponytail's "default contentious".)
 
+**Cost/effort is not a severity factor** — a high-effort, robust solution is
+not heavier than a cheap, shallow one. Severity is reversibility + impact, not
+expense. (How to *weigh* the options once classified is a separate concern:
+see [decision-weighting.md](decision-weighting.md).)
+
 ---
 
 ## Outcomes

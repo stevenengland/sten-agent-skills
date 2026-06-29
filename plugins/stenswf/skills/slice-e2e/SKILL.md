@@ -21,6 +21,10 @@ slice-e2e is the **unattended batch entry**: it runs both phases unattended
 (each dispatch prompt tells the subagent it cannot prompt), so a heavy decision
 PARKs rather than blocking the batch on a question nobody is there to answer (per
 [../../references/decision-escalation.md](../../references/decision-escalation.md)).
+slice-e2e makes no technical calls itself; the dispatched `plan-light` /
+`ship-light` subagents weigh competing options per
+[../../references/decision-weighting.md](../../references/decision-weighting.md)
+(quality over build cost).
 
 Pipeline for slice issue $ARGUMENTS:
 
