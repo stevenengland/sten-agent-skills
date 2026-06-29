@@ -43,6 +43,8 @@ Before choosing any pattern, identify what the system must achieve *beyond* its 
 
 **Output:** A ranked shortlist of the 2–4 quality attributes that matter most *for this system*. Everything else flows from this prioritization.
 
+**Development cost is not a quality attribute.** Build effort and time-to-build do not enter this ranking — when options differ, prefer the one that best serves the attributes above, per [../../references/decision-weighting.md](../../references/decision-weighting.md). (Operational/runtime/infrastructure cost is different: it stays in, as an input to Scalability and Reliability.)
+
 If the quality attributes are unclear, surface them before proceeding by interviewing me relentlessly about every aspect of this plan until we reach a shared understanding. Walk down each branch of the design tree, resolving dependencies between decisions one-by-one. For each question, provide your recommended answer. If a question can be answered by exploring the codebase, explore the codebase instead.
 
 ---

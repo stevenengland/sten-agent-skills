@@ -55,7 +55,10 @@ Apply [interface-design.md](interface-design.md) and
   don't construct them), output as return value (return results, don't
   mutate hidden state).
 - Smallest surface that satisfies the AC. Prefer one deep function over
-  many shallow ones.
+  many shallow ones — weigh competing signatures per
+  [../../references/decision-weighting.md](../../references/decision-weighting.md)
+  (quality and maintainability over build cost), not by which is quickest to
+  write.
 - The signature you name here is the signature the failing test calls —
   it is the single action in the test's `When` block (see [tests.md](tests.md)).
 

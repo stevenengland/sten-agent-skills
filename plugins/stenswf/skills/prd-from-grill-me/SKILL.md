@@ -97,6 +97,10 @@ If `$ORIG` is empty, behave as before (blank-page interview from Step 1).
    - Provide a recommended answer and reasoning for each question.
    - Delegate codebase questions to targeted Explore subagents.
    - Propose 2–3 approaches with trade-offs. Lead with recommendation.
+     Weigh them per
+     [../../references/decision-weighting.md](../../references/decision-weighting.md)
+     — quality, simplicity, robustness, scalability, and maintainability over
+     build cost.
    - Go back and clarify when something doesn't make sense.
    - Cite industry practice (Stripe, Spotify, GitHub, AWS, Shopify)
      only when genuinely relevant to a decision currently in play.

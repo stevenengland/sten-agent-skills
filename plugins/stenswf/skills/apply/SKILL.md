@@ -10,6 +10,9 @@ disable-model-invocation: true
 decision — ASK the user when available, PARK when run unattended
 (`STENSWF_UNATTENDED`), per
 [../../references/decision-escalation.md](../../references/decision-escalation.md).
+When a suggestion offers competing ways to apply it, weigh them per
+[../../references/decision-weighting.md](../../references/decision-weighting.md)
+— quality and maintainability over build cost.
 
 ---
 

@@ -1,7 +1,6 @@
 ---
 name: lint-escape
 description: Tiered escape protocol for lint and type errors that cannot be resolved with clean code alone.
-disable-model-invocation: true
 ---
 
 ## Purpose
@@ -115,6 +114,7 @@ Log the action:
 ### Tier 4 — Dead End (stop)
 
 Reached when Tier 3 is also ineligible or fails. This means:
+
 - The error cannot be fixed with clean code.
 - Inline suppression is forbidden or insufficient.
 - A scoped config exception cannot resolve it (e.g. the rule cannot be

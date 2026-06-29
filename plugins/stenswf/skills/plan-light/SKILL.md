@@ -172,7 +172,10 @@ apply the bias when the heuristic ladder falls through to rule 5
 Producer tags still win where they are unambiguous; the bias only
 shifts the rule-5 fallback.
 
-**Disposition (applies to every tier below and the checklist).** An *easy*
+**Disposition (applies to every tier below and the checklist).** Weigh
+competing options per
+[../../references/decision-weighting.md](../../references/decision-weighting.md)
+(quality over build cost). An *easy*
 resolution — a convention or codebase analog picks the answer — is applied
 silently. A *heavy* fork escalates per
 [../../references/decision-escalation.md](../../references/decision-escalation.md):

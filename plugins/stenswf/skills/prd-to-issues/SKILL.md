@@ -72,6 +72,11 @@ end-to-end. Default to the Lite envelope:
 
 Exceed only if genuinely irreducible.
 
+When slicing or sequencing choices compete, weigh them per
+[../../references/decision-weighting.md](../../references/decision-weighting.md)
+— prefer the boundary that best serves quality and maintainability over the
+one that is merely cheapest to cut.
+
 Slice types: `HITL` | `AFK` | `spike`. Prefer AFK.
 
 #### Behaviors to test — prioritize before drafting ACs

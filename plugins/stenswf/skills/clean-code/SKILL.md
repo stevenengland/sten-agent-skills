@@ -26,6 +26,11 @@ When this skill is active, optimize for:
 - Simple, direct solutions over over-engineered designs.
 - Code that is easy to understand and modify by someone who did not write it.
 
+When refactor or structure choices compete, weigh them per
+[../../references/decision-weighting.md](../../references/decision-weighting.md)
+— prefer quality, simplicity, and maintainability over build cost (refactor
+effort is not a cost to avoid).
+
 ## 1. Names
 
 - Use intention-revealing names for variables, functions, classes, and modules.

@@ -259,6 +259,11 @@ Dispatch ONE `Explore` subagent (thoroughness: thorough, ≤500 words):
 > Do not write code. Do not paste file contents beyond cited line numbers.
 > Thoroughness: thorough.
 
+Where the `judgment_calls` expose competing fix shapes, weigh them per
+[../../references/decision-weighting.md](../../references/decision-weighting.md)
+— prefer the fix that best serves quality and long-term maintainability, not
+the cheapest patch.
+
 Persist to `/tmp/triage-$ARGUMENTS-rca.md` for Phase 5.
 
 ---
