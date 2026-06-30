@@ -1,7 +1,6 @@
 ---
 name: clean-code
 description: Apply clean code principles for readability, simplicity, and ease of change when writing, reviewing, or refactoring code.
-disable-model-invocation: true
 ---
 
 # Clean Code Skill
