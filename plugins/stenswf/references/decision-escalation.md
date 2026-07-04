@@ -134,8 +134,9 @@ Every ASK — without exception — presents:
 
 1. **The decision** in one sentence.
 2. **2–3 researched alternatives.** Research is proportional to severity:
-   always check conventions + the codebase; reach for industry practice only
-   when it distinguishes options in play. Each alternative carries a one-line
+   always check conventions + the codebase; reach for winning practices from
+   well-known companies whenever one informs the options — not only when it
+   breaks a tie. Each alternative carries a one-line
    trade-off.
 3. **A recommendation** — lead with it, with its rationale.
 4. **The rejected-alternative rationale** when the answer is taken.

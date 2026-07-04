@@ -102,8 +102,9 @@ If `$ORIG` is empty, behave as before (blank-page interview from Step 1).
      — quality, simplicity, robustness, scalability, and maintainability over
      build cost.
    - Go back and clarify when something doesn't make sense.
-   - Cite industry practice (Stripe, Spotify, GitHub, AWS, Shopify)
-     only when genuinely relevant to a decision currently in play.
+   - Cite winning practices from well-known companies (Stripe, Spotify,
+     GitHub, AWS, Shopify) whenever one informs a decision in play — not only
+     to break a tie; skip only when none genuinely applies.
 
    No code in this phase.
 
