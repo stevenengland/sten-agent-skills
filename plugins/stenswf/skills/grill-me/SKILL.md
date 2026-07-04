@@ -26,10 +26,11 @@ instead.
 - Go back and clarify when something doesn't make sense
 
 When a recommendation touches a problem that well-known companies
-(e.g. Stripe, Spotify, GitHub, AWS, Shopify) have solved publicly, research
-how those industry leaders approach it and briefly weave the relevant patterns
-or practices into your recommendation. Cite the company and the specific
-practice so I can evaluate the reasoning. Do not force-fit references —
-only include them when genuinely relevant.
+(e.g. Stripe, Spotify, GitHub, AWS, Shopify) have solved publicly, research how
+those leaders approach it and weave the winning practice into your
+recommendation. Cite the company and the specific practice so I can evaluate
+the reasoning. Reach for these whenever a leader's approach informs the
+decision — not only to break a tie — but don't force-fit them; skip only when
+none genuinely applies.
 
 Do not write any code in this phase.

@@ -189,7 +189,9 @@ Interview relentlessly about every aspect until shared understanding:
   — quality, simplicity, robustness, scalability, and maintainability over
   build cost.
 - Clarify when something doesn't make sense.
-- Industry practice citations only when they distinguish options in play.
+- Cite winning practices from well-known companies (e.g. Stripe, Spotify,
+  GitHub, AWS, Shopify) whenever one informs an option in play — not only when
+  it breaks a tie.
 
 No code in this phase.
 
