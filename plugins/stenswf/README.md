@@ -11,6 +11,12 @@ Contains three coordinated workflows plus always-on craft skills.
 ## Four tracks at a glance
 
 ```
+        (optional) fog-wrapped mega-idea — too big for one grill/PRD session
+                             │
+                    /stenswf:wayfinder  → shared map of investigation tickets,
+                             │             resolved one-at-a-time; the cleared
+                             │             decisions feed prd-from-grill-me
+                             ▼
              Raw GitHub issue (bug | feature | refactor request)
                              │
              ┌───────────────┴────────────────┐
@@ -48,6 +54,7 @@ Contains three coordinated workflows plus always-on craft skills.
 
 | Track | Entry command | Planner | Shipper | Typical slice |
 |---|---|---|---|---|
+| Fog-wrapped inception | `/stenswf:wayfinder` | `wayfinder` (shared map of tickets) | → `prd-from-grill-me` | idea too big for one grill/PRD session |
 | Heavy slice | `/stenswf:plan N` | `plan` (interview + local tree) | `/stenswf:ship N` | multi-subsystem, HITL, schema migration |
 | Lite slice, plan-ahead | `/stenswf:plan-light N` | `plan-light` (single advisory md) | `/stenswf:ship-light N` | borderline-lite, plan helps |
 | Lite slice, one-shot | `/stenswf:slice-e2e N` | chains both above | — | lite-eligible, walk away |
@@ -79,6 +86,14 @@ with its own decision anchor and base SHA. See
 ### Feature inception (idea → PRD → issues)
 
 ```
+/stenswf:wayfinder                 → (optional, upstream) chart a fog-wrapped
+                                     mega-idea — too big for one grill/PRD
+                                     session — as a shared MAP of investigation
+                                     tickets (type: wayfinder). Resolve them
+                                     one-at-a-time until the way is clear, then
+                                     hand the cleared decisions to
+                                     prd-from-grill-me (via map_ref provenance +
+                                     the map's decisions.md anchor)
 /stenswf:grill-me                  → stress-test the idea, resolve decision tree
 /stenswf:prd-from-grill-me         → produce a PRD and file it as an issue
 /stenswf:prd-from-grill-me <N>     → from an existing feature/refactor
@@ -88,6 +103,13 @@ with its own decision anchor and base SHA. See
                                      closes the original on PRD create)
 /stenswf:prd-to-issues             → split the PRD into vertical-slice issues
 ```
+
+Reach for `wayfinder` **before** `grill-me` / `prd-from-grill-me` when the idea
+is wrapped in fog — more than one agent session can hold, and the way to a
+writable PRD isn't visible yet. It charts the fog as tracker issues (a map plus
+child `wayfinder-ticket` issues), resolving them one per session — plan, don't
+do. When the frontier empties, `prd-from-grill-me` takes over. Skip it when the
+idea already fits one PRD interview.
 
 ### Issue lifecycle (plan → ship → review → apply)
 
@@ -184,6 +206,7 @@ your harness (or manually invoke) accordingly.
 
 | Skill | Recommended model | Rationale |
 |---|---|---|
+| `/stenswf:wayfinder` | Opus | Breadth-first fog-mapping + destination naming across a large, unclear space |
 | `/stenswf:triage-issue` | Opus | Backward tracing + root-cause analysis on unfamiliar code |
 | `/stenswf:grill-me` | Sonnet | Fast interactive Q&A; relentlessness over depth |
 | `/stenswf:prd-from-grill-me` | Opus | Long-context design synthesis; industry-pattern research |
@@ -299,7 +322,8 @@ STEN-AGENT-SKILLS/                       ← Repo root
 │       │   ├── conventional-commits.md
 │       │   ├── behavior-change-signal.md
 │       │   ├── ponytail-pass.md
-│       │   └── reasoning-effects.md
+│       │   ├── reasoning-effects.md
+│       │   └── wayfinder-map.md
 │       ├── scripts/                     ← Shared executables
 │       │   ├── log-issue.sh
 │       │   └── inherit-decisions.sh
@@ -313,6 +337,7 @@ STEN-AGENT-SKILLS/                       ← Repo root
 │       │   ├── slice-e2e/
 │       │   ├── review/
 │       │   ├── apply/
+│       │   ├── wayfinder/
 │       │   ├── grill-me/
 │       │   ├── prd-from-grill-me/
 │       │   ├── prd-to-issues/
@@ -409,6 +434,10 @@ Claude Code discovers and loads it automatically. Reload if already running:
 
 ## Typical end-to-end flow
 
+0. **(Optional) Chart the fog.** `/stenswf:wayfinder` → when the idea is too big
+   for one `grill-me` / `prd-from-grill-me` session, chart it as a shared map of
+   investigation tickets and resolve them one at a time until the way is clear.
+   Skip when the idea already fits a single PRD interview.
 1. **Capture the idea.** `/stenswf:grill-me` → shared understanding.
 2. **Write the PRD.** `/stenswf:prd-from-grill-me` → issue filed with
    `type: PRD` front-matter; PRD base SHA recorded in front-matter

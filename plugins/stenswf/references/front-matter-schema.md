@@ -26,7 +26,7 @@ Rules:
 
 | Key | Values | Notes |
 |---|---|---|
-| `type` | `PRD` \| `bug-brief` \| `slice — HITL` \| `slice — AFK` \| `slice — spike` | Mode + slice-type marker. `bug-brief` is a narrow PRD-shaped artifact emitted by `triage-issue`. The slice-type marker (`HITL`/`AFK`/`spike`) governs plan **interview depth only** — NOT run reachability. Whether a skill may ask the user is the `STENSWF_UNATTENDED` run mode, per [decision-escalation.md](decision-escalation.md). |
+| `type` | `PRD` \| `bug-brief` \| `slice — HITL` \| `slice — AFK` \| `slice — spike` \| `wayfinder` \| `wayfinder-ticket` | Mode + slice-type marker. `bug-brief` is a narrow PRD-shaped artifact emitted by `triage-issue`. `wayfinder` (a shared map) and `wayfinder-ticket` (a map's child investigation issue) are emitted by `wayfinder`; they are planning artifacts, not `review`/`apply` targets. The slice-type marker (`HITL`/`AFK`/`spike`) governs plan **interview depth only** — NOT run reachability. Whether a skill may ask the user is the `STENSWF_UNATTENDED` run mode, per [decision-escalation.md](decision-escalation.md). |
 
 ## Required keys (PRD + bug-brief issues)
 
@@ -43,6 +43,13 @@ Rules:
 | `conventions_source` | `prd#<N>` \| `bug-brief#<N>` \| `none` | Where slice conventions come from. `none` = slice-local only. |
 | `prd_ref` | issue number (int) | Parent PRD or bug-brief. Used by `review/slice` to synthesize lite-path conventions. |
 
+## Required keys (wayfinder-ticket issues only)
+
+| Key | Values | Notes |
+|---|---|---|
+| `ticket_type` | `research` \| `prototype` \| `grilling` \| `task` | Investigation kind. Governs which skill/flow resolves the ticket and whether it is HITL (`prototype`, `grilling`) or AFK-capable (`research`, `task`). Set by `wayfinder`. |
+| `map_ref` | issue number (int) | Parent map. Also written as a `Parent map: #<N>` body line for the frontier query. |
+
 ## Optional keys
 
 | Key | Values | Notes |
@@ -51,6 +58,7 @@ Rules:
 | `lite_override` | free-text, non-empty | Slices only. Manual attestation that forces the lite path despite `lite_eligible: false`. Honored ONLY when `disqualifier` is `files>15` or `cross-module`; ignored for `schema-migration` / `arch-unknown` / `hitl-cat3`. Consumers (`plan-light`, `ship-light`) log `user_override` with the reason as evidence. Not emitted by `prd-to-issues` / `triage-issue` — added manually post-triage. |
 | `blocked_by` | space-separated issue numbers | E.g. `123 456`. Absence = no blockers. |
 | `bug_ref` | issue number (int) | Slices only. Original raw bug-report issue this slice descends from. Informational; not a routing gate. |
+| `map_ref` | issue number (int) | On a **PRD/bug-brief**: the `wayfinder` map this artifact was born from (provenance). **Required** on `wayfinder-ticket` issues (see above); optional/informational elsewhere. |
 | `affects_prd` | issue number (int) | Bug-brief only. Linked feature PRD (defect discovered against its scope). Informational. |
 | `migration_mode` | `behavior-preserving` \| `contract-changing` | **Required** on slices whose parent has `class: migration`; absent everywhere else. Biases the behavior-change heuristic; see [behavior-change-signal.md](behavior-change-signal.md). |
 

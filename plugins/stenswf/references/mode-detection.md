@@ -24,6 +24,9 @@ TYPE=$(get_fm type /tmp/slice-$ARGUMENTS.md)
   have one child; capstone semantics are intentionally skipped because a
   single-defect retrospective is not the same as a feature retrospective.
 - `TYPE` starts with `slice` → Slice-mode → read `slice.md` and execute.
+- `TYPE == "wayfinder"` or `"wayfinder-ticket"` → **not a review/apply target**.
+  Refuse with: *"#N is a wayfinder map/ticket, not a review/apply target. Use
+  `/stenswf:wayfinder` to work the map; review its resulting PRD(s) instead."*
 - Unrecognised or missing → fall back to `.stenswf/$ARGUMENTS/manifest.json:.kind`
   (`prd` | `bug-brief` | `slice`). If still undetermined, ask the user
   and log `contract_violation`.
