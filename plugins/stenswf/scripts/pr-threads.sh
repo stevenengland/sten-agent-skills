@@ -1,5 +1,5 @@
 # PR review-thread plumbing — canonical shell library for the stenswf
-# reviewer loop (`review-loop`).
+# PR conversation loop (`review-loop` reviewer + `apply-loop` implementer).
 #
 # Sourced, not executed. From a skill directory:
 #   source ../../scripts/pr-threads.sh
@@ -8,9 +8,10 @@
 # functions wrap live in ../references/pr-conversation-loop.md. Function
 # bodies below are the single source of truth — do not duplicate them.
 #
-# Reviewer-side only: these functions fetch, read, post threads, and
-# approve. They NEVER commit, push, or resolve — the implementer
-# (`apply-loop`) is the sole git writer (PRD #12, D4).
+# The file hosts both sides, but the sole-writer rule still binds by
+# caller (PRD #12, D4): the reviewer-side functions (fetch, read, post
+# threads, approve) NEVER commit, push, or resolve; only the implementer
+# (`apply-loop`) calls the implementer-side functions (reply, resolve).
 #
 # All GitHub access goes through the `gh` CLI so the host is swappable
 # and the functions are testable by injecting a fake `gh` on PATH.
@@ -94,4 +95,32 @@ submit_approval() {
 # REVIEW_REQUIRED | empty).
 read_review_decision() {
   gh pr view "$1" --json reviewDecision -q .reviewDecision
+}
+
+# --- Implementer-side (apply-loop) ---------------------------------------
+# The implementer is the sole git writer (PRD #12, D4): only apply-loop
+# calls the two functions below. The reviewer never replies or resolves.
+
+# Post a reply to an existing review thread, keyed on its node id. The
+# body may reference the fixing commit SHA (a verified-valid finding that
+# was fixed) or carry a `<!-- stenswf-left-open: <reason> -->` marker (a
+# finding left open after verification). Prints the new comment's id.
+#   add_reply <thread-id> <body>
+add_reply() {
+  local thread_id="$1" body="$2"
+  gh api graphql \
+    -f query='mutation($threadId:ID!,$body:String!){addPullRequestReviewThreadReply(input:{pullRequestReviewThreadId:$threadId,body:$body}){comment{id}}}' \
+    -f threadId="$thread_id" -f body="$body" \
+    | jq -r '.data.addPullRequestReviewThreadReply.comment.id'
+}
+
+# Mark a review thread resolved, once its finding is fixed and pushed.
+# Prints the thread's post-resolution isResolved flag (`true`).
+#   resolve_thread <thread-id>
+resolve_thread() {
+  local thread_id="$1"
+  gh api graphql \
+    -f query='mutation($threadId:ID!){resolveReviewThread(input:{threadId:$threadId}){thread{id isResolved}}}' \
+    -f threadId="$thread_id" \
+    | jq -r '.data.resolveReviewThread.thread.isResolved'
 }
