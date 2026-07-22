@@ -133,3 +133,28 @@ gh pr review "$pr" --approve ${body:+--body "$body"}
 gh pr view "$pr" --json reviewDecision -q .reviewDecision
 # => APPROVED | CHANGES_REQUESTED | REVIEW_REQUIRED | (empty)
 ```
+
+The next two are **implementer-side** (`apply-loop`) — the sole writer.
+The reviewer never calls them.
+
+**Reply to a thread** — `add_reply <thread-id> <body>` (keyed on the
+thread node id, so it survives a moving diff). The body references the
+fixing commit SHA, or carries a `<!-- stenswf-left-open: <reason> -->`
+marker when the finding is left open:
+
+```graphql
+mutation($threadId:ID!,$body:String!){
+  addPullRequestReviewThreadReply(input:{
+    pullRequestReviewThreadId:$threadId, body:$body
+  }){ comment{ id } }
+}
+```
+
+**Resolve a thread** — `resolve_thread <thread-id>` (after the fix is
+committed and pushed). Prints the post-resolution `isResolved` flag:
+
+```graphql
+mutation($threadId:ID!){
+  resolveReviewThread(input:{threadId:$threadId}){ thread{ id isResolved } }
+}
+```

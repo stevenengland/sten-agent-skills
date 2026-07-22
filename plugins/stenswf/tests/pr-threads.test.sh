@@ -30,6 +30,8 @@ WORK=$(mktemp -d)
 trap 'rm -rf "$WORK"' EXIT
 STATE="$WORK/review-decision"     # holds the PR reviewDecision
 POSTED="$WORK/posted-body"        # captures the body add_thread sends
+REPLIED="$WORK/reply-body"        # captures the body add_reply sends
+RESOLVED="$WORK/resolved-flag"    # touched when resolve_thread runs
 printf 'REVIEW_REQUIRED' > "$STATE"
 
 cat > "$WORK/gh" <<GHEOF
@@ -37,6 +39,8 @@ cat > "$WORK/gh" <<GHEOF
 # Minimal fake gh. Branches on the sub-command and flags the plumbing uses.
 STATE="$STATE"
 POSTED="$POSTED"
+REPLIED="$REPLIED"
+RESOLVED="$RESOLVED"
 args="\$*"
 case "\$1 \$2" in
   "repo view")
@@ -52,14 +56,21 @@ case "\$1 \$2" in
   "pr review")
     printf 'APPROVED' > "\$STATE" ;;                   # submit_approval
   "api graphql")
-    if printf '%s' "\$args" | grep -q 'addPullRequestReviewThread'; then
+    if printf '%s' "\$args" | grep -q 'addPullRequestReviewThreadReply'; then
+      for a in "\$@"; do case "\$a" in body=*) printf '%s' "\${a#body=}" > "\$REPLIED";; esac; done
+      echo '{"data":{"addPullRequestReviewThreadReply":{"comment":{"id":"RC_new"}}}}'
+    elif printf '%s' "\$args" | grep -q 'resolveReviewThread'; then
+      printf 'RESOLVED' > "\$RESOLVED"                  # resolve_thread
+      echo '{"data":{"resolveReviewThread":{"thread":{"id":"RT_open","isResolved":true}}}}'
+    elif printf '%s' "\$args" | grep -q 'addPullRequestReviewThread'; then
       for a in "\$@"; do case "\$a" in body=*) printf '%s' "\${a#body=}" > "\$POSTED";; esac; done
       echo '{"data":{"addPullRequestReviewThread":{"thread":{"id":"RT_new"}}}}'
     else
-      # list reviewThreads: one open, one resolved
+      # list reviewThreads: reviewer-open, human-open, one resolved
       cat <<'JSON'
 {"data":{"repository":{"pullRequest":{"reviewThreads":{"nodes":[
   {"id":"RT_open","isResolved":false,"comments":{"nodes":[{"author":{"login":"reviewer-bot"},"body":"null deref here\n\n<!-- stenswf-fp: deadbeef0001 -->"}]}},
+  {"id":"RT_human","isResolved":false,"comments":{"nodes":[{"author":{"login":"human-dev"},"body":"prefer a guard clause\n\n<!-- stenswf-fp: deadbeef0002 -->"}]}},
   {"id":"RT_done","isResolved":true,"comments":{"nodes":[{"author":{"login":"human"},"body":"already fixed"}]}}
 ]}}}}}
 JSON
@@ -109,6 +120,26 @@ TYPE=$(get_fm type "$prd_body"); parse_type; assert_eq "PRD front-matter selects
 slice_body="$WORK/issue-slice.md"
 printf '<!-- stenswf:v1\ntype: slice — AFK\n-->\n' > "$slice_body"
 TYPE=$(get_fm type "$slice_body"); parse_type; assert_eq "slice front-matter selects slice mode" "$MODE" "slice"
+
+# --- list surfaces open threads regardless of author ----------------------
+# The implementer must act on every open thread, including human-authored
+# ones — not just the paired reviewer's (PRD #12, D3/D7).
+listing=$(list_open_threads 77)
+assert_match "list_open_threads surfaces a human-authored open thread" "$listing" "human-dev"
+
+# --- add_reply posts a reply body (e.g. the fixing commit SHA) ------------
+add_reply RT_open "fixed in abc1234" >/dev/null
+assert_match "add_reply posts the given reply body" "$(cat "$REPLIED")" "fixed in abc1234"
+
+# --- add_reply can carry a left-open disposition marker -------------------
+add_reply RT_human "verified: intended behavior
+
+<!-- stenswf-left-open: intended-behavior -->" >/dev/null
+assert_match "add_reply carries a left-open marker" "$(cat "$REPLIED")" "<!-- stenswf-left-open: intended-behavior -->"
+
+# --- resolve_thread marks the thread resolved -----------------------------
+assert_eq "resolve_thread reports the thread resolved" "$(resolve_thread RT_open)" "true"
+[ -f "$RESOLVED" ] && ok "resolve_thread invoked resolveReviewThread" || fail "resolve_thread invoked resolveReviewThread"
 
 # --- summary ---------------------------------------------------------------
 printf '\n1..%d\n# pass %d fail %d\n' "$((PASS + FAIL))" "$PASS" "$FAIL"
