@@ -59,7 +59,7 @@ case "\$1 \$2" in
       # list reviewThreads: one open, one resolved
       cat <<'JSON'
 {"data":{"repository":{"pullRequest":{"reviewThreads":{"nodes":[
-  {"id":"RT_open","isResolved":false,"comments":{"nodes":[{"author":{"login":"reviewer-bot"},"body":"null deref here\n\n<!-- stenswf-fp:deadbeef0001 -->"}]}},
+  {"id":"RT_open","isResolved":false,"comments":{"nodes":[{"author":{"login":"reviewer-bot"},"body":"null deref here\n\n<!-- stenswf-fp: deadbeef0001 -->"}]}},
   {"id":"RT_done","isResolved":true,"comments":{"nodes":[{"author":{"login":"human"},"body":"already fixed"}]}}
 ]}}}}}
 JSON
@@ -83,14 +83,14 @@ assert_ne "fingerprint discriminates distinct findings" "$fp_line10" "$fp_other"
 # --- add_thread embeds the fingerprint marker -----------------------------
 fp=$(fingerprint "src/foo.js" "function bar" "unchecked null deref")
 add_thread 77 "src/foo.js" 10 "$fp" "unchecked null deref" >/dev/null
-assert_match "add_thread posts a body carrying the stenswf-fp marker" "$(cat "$POSTED")" "<!-- stenswf-fp:$fp -->"
+assert_match "add_thread posts a body carrying the stenswf-fp marker" "$(cat "$POSTED")" "<!-- stenswf-fp: $fp -->"
 assert_match "add_thread body keeps the finding text" "$(cat "$POSTED")" "unchecked null deref"
 
 # --- list_open_threads returns node-id + author + body --------------------
 listing=$(list_open_threads 77)
 assert_match "list_open_threads returns the open thread node-id" "$listing" "RT_open"
 assert_match "list_open_threads returns the thread author"       "$listing" "reviewer-bot"
-assert_match "list_open_threads surfaces the fingerprint body"   "$listing" "stenswf-fp:deadbeef0001"
+assert_match "list_open_threads surfaces the fingerprint body"   "$listing" "stenswf-fp: deadbeef0001"
 printf '%s' "$listing" | grep -q "RT_done" && fail "list_open_threads excludes resolved threads" || ok "list_open_threads excludes resolved threads"
 
 # --- submit_approval / read_review_decision -------------------------------

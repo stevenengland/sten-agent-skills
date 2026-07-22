@@ -49,7 +49,7 @@ _pr_node_id() {
 
 # List open (unresolved) review threads on a PR as TSV:
 #   <node-id>\t<author-login>\t<first-comment-body>
-# The body carries the `<!-- stenswf-fp:<hash> -->` marker used for
+# The body carries the `<!-- stenswf-fp: <hash> -->` marker used for
 # dedup. Resolved threads are omitted.
 list_open_threads() {
   local pr="$1" owner name
@@ -72,7 +72,7 @@ add_thread() {
   pr_id=$(_pr_node_id "$pr")
   local full="$body
 
-<!-- stenswf-fp:$fp -->"
+<!-- stenswf-fp: $fp -->"
   gh api graphql \
     -f query='mutation($prId:ID!,$body:String!,$path:String!,$line:Int!){addPullRequestReviewThread(input:{pullRequestId:$prId,body:$body,path:$path,line:$line,subjectType:LINE}){thread{id}}}' \
     -f prId="$pr_id" -f body="$full" -f path="$path" -F line="$line" \
