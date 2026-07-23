@@ -326,8 +326,13 @@ STEN-AGENT-SKILLS/                       ← Repo root
 │       │   └── wayfinder-map.md
 │       ├── scripts/                     ← Shared executables
 │       │   ├── log-issue.sh
-│       │   └── inherit-decisions.sh
-│       ├── tests/                       ← Fixtures for manual verification
+│       │   ├── inherit-decisions.sh
+│       │   ├── extractors.sh
+│       │   ├── pr-threads.sh
+│       │   └── wayfinder.sh
+│       ├── tests/                       ← Behavior suites + fixtures
+│       │   ├── pr-threads.test.sh
+│       │   ├── wayfinder.test.sh
 │       │   └── fixtures/
 │       ├── skills/                      ← All plugin skills
 │       │   ├── plan/

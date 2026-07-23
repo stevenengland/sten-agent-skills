@@ -10,6 +10,45 @@ of stenswf does. Front-matter is parsed with `get_fm` from
 [`../scripts/extractors.sh`](../scripts/extractors.sh) (see
 [extractors.md](extractors.md)).
 
+> **Canonical plumbing.** Claiming, the map-body append, resolution, and the
+> handoff generator live in [`../scripts/wayfinder.sh`](../scripts/wayfinder.sh).
+> Skills source that file — do not duplicate the function bodies here.
+
+## Where the state lives
+
+**The tracker is the map's only live state.** The map issue and its tickets are
+canonical; everything else is derived.
+
+- Each decision's full record is its ticket's **resolution comment**.
+- The map body's *Decisions so far* is a human-readable **index**, and it is
+  **rebuilt** from the **resolved** tickets by `sync_map_index` — never
+  accumulated line by line. Resolved, not closed: a ticket becomes eligible
+  for the index the moment its resolution comment lands, which is what lets
+  the close stay last (see [Resolve a ticket](#resolve-a-ticket)).
+- `.stenswf/<N>/decisions.md` is **generated once at handoff** from those
+  comments (`generate_decisions`), not appended to as tickets resolve.
+- `.stenswf/<N>/manifest.json` carries identity only.
+
+This is deliberate, and it is what makes parallel sessions workable. Every
+mirror kept live is a thing two sessions can disagree about and a thing a
+crashed session can leave half-written; a derived artifact regenerated from the
+tracker cannot go stale, because it does not exist between regenerations.
+
+**Editing the map body is serialised.** An issue body is a whole-document
+read-modify-write and the tracker offers no compare-and-set, so a session that
+read the body before yours can land its stale copy after you wrote — and after
+you verified. Verifying cannot catch that; only serialising can. Take the map
+lock around **any** body edit:
+
+```bash
+with_map_lock <map> <command> [args...]   # acquire, run, release
+```
+
+That covers the prose sections too — graduating fog out of *Not yet specified*,
+adding to *Out of scope*. `sync_map_index` takes the lock itself. Where a
+clobber slips through anyway, the index self-heals on the next rebuild; the
+hand-written prose sections do not, which is why the lock is not optional.
+
 ## Map body template
 
 `type: wayfinder`. No label. `<N>` is assigned on `gh issue create` and written
@@ -32,8 +71,8 @@ One or two lines; every session orients to it before choosing a ticket.>
 ## Decisions so far
 
 <!-- the index — one line per closed ticket: enough to judge relevance, then zoom
-the link for the detail the ticket holds. The machine-readable twin lives in
-.stenswf/<N>/decisions.md -->
+the link for the detail the ticket's resolution comment holds. Rebuilt by
+sync_map_index, never edited by hand -->
 
 - [<closed ticket title>](link) — <one-line gist of the answer>
 
@@ -69,34 +108,34 @@ Parent map: #<N>
 
 ## Local-tree seed
 
-Mirror the PRD seed, `kind: "map"`. Run once when charting the map, after the
-map issue exists.
+`kind: "map"`, identity only. Run once when charting the map, after the map
+issue exists.
 
 ```bash
 N=<map-issue-number>
 mkdir -p ".stenswf/$N/assets"
-gh issue view "$N" --json body -q .body > ".stenswf/$N/concept.md"
-CONCEPT_SHA=$(sha256sum ".stenswf/$N/concept.md" | awk '{print $1}')
-BASE_SHA=$(git rev-parse HEAD)
 cat > ".stenswf/$N/manifest.json" <<EOF
 {
   "issue": $N,
   "kind": "map",
-  "base_sha": "$BASE_SHA",
-  "concept_sha256": "$CONCEPT_SHA",
+  "base_sha": "$(git rev-parse HEAD)",
   "created_at": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
-  "tickets": [],
   "decisions_anchor": ".stenswf/$N/decisions.md"
 }
 EOF
-
-# Bootstrap the decision anchor (its Decisions-so-far twin).
-cat > ".stenswf/$N/decisions.md" <<EOF
-# Decisions — #$N
-
-<!-- Seeded by wayfinder. Schema/recipes: plugins/stenswf/README.md#decision-anchor-contract -->
-EOF
 ```
+
+The seed deliberately omits three things the PRD seed carries:
+
+- **No `concept.md` / `concept_sha256`.** Those exist for drift detection, which
+  compares a plan against the issue body it was built from. A map body is
+  *meant* to change — Decisions-so-far grows every time a ticket closes — so the
+  hash could only ever read as drift. Nothing consumes it.
+- **No `tickets` array.** The tracker knows which tickets belong to the map; see
+  [Frontier query](#frontier-query). A second list would only be a thing to keep
+  in sync.
+- **No `decisions.md`.** It is generated at handoff — see
+  [Handoff](#handoff--carry-the-maps-decisions-into-a-prd).
 
 The `.stenswf/` tree is excluded per-clone via `.git/info/exclude` (see
 `bootstrap`).
@@ -110,7 +149,8 @@ gh issue create \
   --body-file /tmp/ticket-body.md   # from the ticket template above
 ```
 
-Record each new ticket number in `manifest.json`'s `tickets` array.
+The `Parent map: #<N>` body line and `map_ref:` front-matter are the ticket's
+membership record — there is no local list to update.
 
 ## Wire blocking (second pass)
 
@@ -133,11 +173,34 @@ gh issue edit <ticket> --body-file /tmp/ticket-body-wired.md
 
 ## Claim a ticket
 
-The assignee _is_ the claim — do it first, before any work.
+Claim first, before any work — and check that the claim was **won**:
 
 ```bash
-gh issue edit <ticket> --add-assignee @me
+source ../../scripts/wayfinder.sh
+
+SID=$(claim_ticket <ticket>) || {   # non-zero: someone else holds it
+  echo "claim lost — taking the next frontier ticket"
+  # pick the next frontier candidate and try again
+}
 ```
+
+`claim_ticket` assigns the ticket to `@me` (what a human sees) and then posts a
+`<!-- stenswf-claim: <session-id> -->` comment; the **earliest claim comment
+wins** and the loser withdraws its own claim automatically.
+
+The comment is not ceremony — assignment alone cannot arbitrate. GitHub's
+assignee field is a set with no compare-and-set, so two sessions can both
+"succeed" at claiming; and when both are sessions of the *same* human they
+authenticate identically, which makes the second `--add-assignee @me` a silent
+no-op that reports success. The claim comment supplies the per-session token
+that assignment cannot, and comment ids give every session the same total order
+to break the tie with.
+
+**Residual window.** Between reading the frontier and its claim comment
+landing, another session may claim and start work. The loser detects this on its
+very next read and yields, but the window is not zero — the tracker offers no
+atomic primitive that would close it. Treat a claim as strong convention plus
+fast collision detection, not as a lock.
 
 ## Frontier query
 
@@ -178,37 +241,79 @@ A candidate passing all three is on the frontier.
 
 ## Resolve a ticket
 
-Four writes, in order:
+Three writes — resolution comment, map index, **close last** — driven by one
+call:
 
 ```bash
-MAP=<map-number>
-TICKET=<ticket-number>
+source ../../scripts/wayfinder.sh
 
-# 1. Post the answer as a resolution comment (full prose; link any assets).
-gh issue comment "$TICKET" --body-file /tmp/resolution.md
-
-# 2. Close the ticket.
-gh issue close "$TICKET"
+resolve_ticket <map> <ticket> /tmp/resolution.md
 ```
 
-3. **Append a one-line gist** to the map body's `## Decisions so far`:
+**The close goes last, and that ordering is the durability guarantee.** Closing
+first takes the ticket off the frontier while its decision may still be missing
+from the map — the effort would then have no signal that anything is owed.
+Closing last means a failure at any step leaves the ticket open, visible, and
+retryable, and every earlier step checks for its own effect before repeating it,
+so re-running after a failure is safe.
 
-   ```markdown
-   - [<ticket title>](<ticket url>) — <one-line gist of the answer>
-   ```
+That ordering is why the index derives from tickets carrying a **resolution
+block**, in any state, rather than from closed ones. A closed-only index would
+skip the very ticket whose resolution triggered the rebuild — it is still open
+at that point — and nothing rebuilds after the close, so each map's newest
+decision would appear only when some *later* ticket resolved, and its last
+decision never.
 
-4. **Append a decision-anchor entry** to `.stenswf/$MAP/decisions.md` using the
-   canonical auto-incrementing snippet (set `ARGUMENTS=$MAP`) from the
-   [Decision Anchor Contract](../README.md#decision-anchor-contract). Category
-   `arch` for structural/boundary calls, `decision` otherwise. This is the
-   durable record that carries forward to the PRD(s) at handoff.
+### Resolution comment
+
+Full prose — the durable record of the answer; link any assets. It ends with a
+**resolution block**, the one marker everything downstream reads:
+
+```markdown
+<the answer, in full prose — what was decided and what it rests on>
+
+<!-- stenswf-resolved:v1
+gist: <one line for the map index>
+category: arch
+title: <≤60 chars, imperative, no period>
+rationale: <≤180 chars — why this, not the obvious alternative>
+refs: <comma-separated paths/ids, ≤8 tokens>
+-->
+```
+
+- `gist:` is required — it is the line `sync_map_index` puts on the map.
+- The remaining fields are what make this an anchor entry.  `category` is
+  `arch` for structural/boundary calls, `decision` otherwise; the fields and
+  their caps follow the
+  [Decision Anchor Contract](../README.md#decision-anchor-contract).
+
+A **task** ticket resolved nothing to record as a decision, so it carries
+`gist:` alone and contributes no anchor entry. It still needs the block: the
+marker is how a retry knows the resolution comment was already posted, so a
+task without one would re-post its comment on every retry.
 
 ## Handoff — carry the map's decisions into a PRD
 
-When the way is clear, the map's `.stenswf/<map#>/decisions.md` is the durable
-record of every decision the effort walked. A single map may feed **several**
-PRDs, each taking only the subset it needs — so carry decisions forward
-**selectively**, not by bulk-copying the whole anchor into every PRD:
+When the way is clear, **generate the anchor** from the map's resolved tickets:
+
+```bash
+source ../../scripts/wayfinder.sh
+generate_decisions <map#>          # writes .stenswf/<map#>/decisions.md
+```
+
+It walks the resolved tickets in resolution order, reads each resolution block,
+and emits `D1..Dn` per the Decision Anchor Contract for every ticket that
+recorded a `category` and a `rationale` — tasks are resolved but are not
+entries. Re-running it rebuilds the file from scratch — it never appends, so a
+regenerated anchor cannot drift from the tracker or double up its entries. The
+file is assembled elsewhere and renamed into place, so an interrupted run
+leaves the previous anchor rather than a truncated one, and a ticket list that
+would have been truncated fails loudly instead of producing a short anchor.
+
+That file is then the durable record of every decision the effort walked. A
+single map may feed **several** PRDs, each taking only the subset it needs — so
+carry decisions forward **selectively**, not by bulk-copying the whole anchor
+into every PRD:
 
 1. In the PRD's front-matter, record `map_ref: <map#>` — the provenance link. Any
    reviewer of the PRD or its slices can then hop to the map's anchor for the

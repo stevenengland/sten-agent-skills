@@ -55,13 +55,17 @@ The map is an **index**, not a store. It lists the decisions made and points at
 the tickets that hold their detail; a decision lives in exactly one place — its
 ticket — so the map never restates it, only gists it and links.
 
-**The map also seeds a local tree** `.stenswf/<map#>/` — `manifest.json`
-(`kind: "map"`), `concept.md` (the map body snapshot), and `decisions.md` (the
-**decision anchor**). The map body's *Decisions so far* is the human-readable
-index; `decisions.md` is its machine-readable, reviewer-facing twin — and the
-sole thing `prd-from-grill-me` later inherits. Body template, ticket template,
-local-tree seed, and every tracker operation live in
-[../../references/wayfinder-map.md](../../references/wayfinder-map.md).
+**The tracker is the map's only live state.** The map issue and its tickets are
+canonical; each decision's full record is its ticket's resolution comment, and
+the map body's *Decisions so far* indexes them. The local tree
+`.stenswf/<map#>/` holds identity (`manifest.json`, `kind: "map"`) and assets —
+nothing that mirrors the tracker. The **decision anchor** `decisions.md` is
+**generated at handoff** from the resolved tickets, not maintained alongside them:
+a derived artifact cannot go stale, and parallel sessions never write to it.
+Body template, ticket template, local-tree seed, and every tracker operation
+live in [../../references/wayfinder-map.md](../../references/wayfinder-map.md);
+the operations that assume a concurrent writer live in
+[../../scripts/wayfinder.sh](../../scripts/wayfinder.sh).
 
 ## Tickets
 
@@ -71,9 +75,18 @@ resolves — sized to one agent session. Front-matter carries `type:
 wayfinder-ticket`, `ticket_type:` (one of `research` / `prototype` / `grilling`
 / `task`), `map_ref:`, and — once wired — `blocked_by:`.
 
-A session **claims** a ticket by assigning the issue to the dev driving the map,
-**first**, before any work, so concurrent sessions skip it. That assignee _is_
-the claim: an open, unassigned ticket is unclaimed.
+A session **claims** a ticket **first**, before any work, via `claim_ticket`:
+it assigns the issue to the dev driving the map — an open, unassigned ticket is
+unclaimed — and posts a claim comment carrying a per-session token. The
+**earliest claim comment wins**, and a session that loses withdraws and takes
+the next frontier ticket.
+
+The token is what makes the claim mean something. Assignment is a set with no
+compare-and-set, and two sessions of the same human assign identically, so a
+loser could never detect the collision by reading assignees. Even so this is
+detection, not exclusion: a narrow window remains between reading the frontier
+and the claim landing (see
+[../../references/wayfinder-map.md](../../references/wayfinder-map.md#claim-a-ticket)).
 
 Blocking uses the stenswf **`blocked_by:` front-matter** convention (no labels,
 no reliance on tracker-native dependency edges): a space-separated list of the
@@ -190,14 +203,18 @@ you pick the next decision, not the user.
 
 1. Load the **map** — the low-res view, not every ticket body.
 2. Choose the ticket. If the user named one, use it. Otherwise take the first
-   frontier ticket in order. **Claim it**: assign it to yourself before any work.
+   frontier ticket in order. **Claim it** with `claim_ticket` before any work —
+   and if the claim is lost, move to the next frontier ticket rather than
+   proceeding.
 3. Resolve it — **zoom as needed**: fetch the full body of any related or closed
    ticket on demand; invoke the skills the `## Notes` block names. If in doubt,
    use `grill-me`.
-4. Record the resolution: post the answer as a **resolution comment**, **close**
-   the issue, **append a one-line gist** to the map's Decisions-so-far, and
-   **append a decision-anchor entry** to `.stenswf/<map#>/decisions.md` (canonical
-   snippet in the [Decision Anchor Contract](../../README.md#decision-anchor-contract)).
+4. Record the resolution with `resolve_ticket`: post the answer as a **resolution
+   comment** (full prose, ending in the `stenswf-resolved:v1` block), **rebuild
+   the map's Decisions-so-far** from the resolved tickets, and **close the ticket
+   last** — so a failure anywhere leaves the ticket open and retryable rather
+   than closed with its decision unrecorded. The decision-anchor entry is not
+   written here; it is generated from this comment at handoff.
 5. Add newly-surfaced tickets (create-then-wire); graduate any fog the answer has
    made specifiable, clearing each graduated patch from **Not yet specified**. If
    the answer reveals a ticket sits beyond the destination, **rule it out of
@@ -205,16 +222,25 @@ you pick the next decision, not the user.
    the map, update or delete those tickets.
 
 The user may run unblocked tickets in parallel, so expect other sessions to be
-editing the tracker concurrently.
+editing the tracker concurrently. **Every edit to the map body goes through
+`with_map_lock`** — including graduating fog and ruling work out of scope in
+step 5. An issue body is a whole-document write with no compare-and-set, so two
+unserialised sessions silently lose each other's edits; the lock is what stops
+that, and rebuilding the decisions index rather than appending to it is what
+makes a clobber that slips through recoverable.
 
 ## Handoff to prd-from-grill-me
 
 When the frontier empties and the way is clear, the map is done. The destination
 was *"ready to write the PRD(s)"* — so hand off, don't keep charting:
 
-1. Tell the user the way is clear and recommend `/stenswf:prd-from-grill-me` — once
+1. **Generate the decision anchor**: `generate_decisions <map#>` builds
+   `.stenswf/<map#>/decisions.md` from the resolved tickets' resolution comments,
+   in resolution order. This is the first handoff step because until now the
+   anchor does not exist.
+2. Tell the user the way is clear and recommend `/stenswf:prd-from-grill-me` — once
    per PRD-sized chunk if the destination spans several.
-2. For each PRD, record `map_ref: <map#>` in its front-matter (the provenance
+3. For each PRD, record `map_ref: <map#>` in its front-matter (the provenance
    link) and let the map's `.stenswf/<map#>/decisions.md` **inform** that PRD's
    `## Conventions` / `## Implementation Decisions` — carry forward only the
    subset each PRD needs. `prd-from-grill-me`'s own anchor-seeding then re-records
