@@ -151,7 +151,12 @@ _threads_json() {
       page=$(gh api graphql -f query="$_THREADS_QUERY" \
         -F owner="$owner" -F name="$name" -F pr="$pr" -f cursor="$cursor") || return 1
     fi
-    rows=$(printf '%s' "$page" | jq -r '
+    # One compact JSON object per line (NDJSON), not a TSV row wrapping the
+    # object in a JSON *string*. `tojson | @tsv` double-escaped a body's
+    # backslashes (a literal `"` became `\\"`), so any thread quoting HTML
+    # or code corrupted the whole listing (#17). The consumers all re-parse
+    # each line as JSON, so NDJSON needs no unwrapping.
+    rows=$(printf '%s' "$page" | jq -c '
       .data.repository.pullRequest.reviewThreads.nodes[]
       | (.root.nodes[0].body // "")            as $root
       | ([$root | scan("<!-- stenswf-fp: ([0-9a-f]+) -->")] | flatten | first // "") as $fp
@@ -167,13 +172,7 @@ _threads_json() {
           replies: (.recent.nodes | length),
           total: (.recent.totalCount // 0),
           body: $root
-        }
-      # Flagged here rather than re-inspected per object downstream: a
-      # thread deeper than one comment page may be hiding its left-open
-      # marker behind the newest replies, and only such a thread should
-      # pay for a second round trip.
-      | [ (if .disposition == "none" and .total > .replies then "1" else "0" end),
-          .id, tojson ] | @tsv') || return 1
+        }') || return 1
 
     # Read from a here-doc, not a pipe: a `while` fed by a pipeline runs in
     # a subshell, and a failure to page a thread's comments could not then
@@ -182,9 +181,17 @@ _threads_json() {
     # unhandled. Same reason the marker test consumes the whole result
     # first instead of `grep -q`, whose early exit closes the pipe under
     # the writer and makes `gh` spray broken-pipe errors.
-    while IFS=$'\t' read -r deep tid obj; do
+    #
+    # `deep` is derived from the row itself — the object already carries
+    # `total` and `replies`. A thread deeper than one comment page may be
+    # hiding its left-open marker behind the newest replies, and only such
+    # a thread should pay for a second round trip.
+    while IFS= read -r obj; do
       [ -n "$obj" ] || continue
+      deep=$(printf '%s' "$obj" \
+        | jq -r 'if .disposition == "none" and .total > .replies then "1" else "0" end')
       if [ "$deep" = "1" ]; then
+        tid=$(printf '%s' "$obj" | jq -r '.id')
         bodies=$(_thread_reply_bodies "$tid") || {
           printf 'THREAD_COMMENTS: could not page comments for %s\n' "$tid" >&2
           return 1
