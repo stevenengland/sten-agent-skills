@@ -58,9 +58,11 @@ printf 'pr-author\n'     > "$AUTHOR"
 printf 'reviewer-bot\n'  > "$ME"
 : > "$PRCOMMENTS"
 
-# Four threads: reviewer-open, human-open, one already resolved that
-# still carries a fingerprint (the dedup set must not forget it), and one
-# deep enough that its disposition is not in the newest page of replies.
+# Five threads: reviewer-open, human-open, one already resolved that
+# still carries a fingerprint (the dedup set must not forget it), one
+# deep enough that its disposition is not in the newest page of replies,
+# and one whose body contains a literal `"` (an HTML tag) — the round-trip
+# regression from #17 that a TSV-wrapped `tojson` corrupted.
 cat > "$THREADS" <<'JSON'
 [
   {"id":"RT_open","isResolved":false,"author":"reviewer-bot",
@@ -72,7 +74,9 @@ cat > "$THREADS" <<'JSON'
   {"id":"RT_deep","isResolved":false,"author":"reviewer-bot",
    "body":"chatty thread\n\n<!-- stenswf-fp: deadbeef0004 -->",
    "replies":["verified: out of scope\n\n<!-- stenswf-left-open: out-of-scope -->",
-              "ack","and one more"]}
+              "ack","and one more"]},
+  {"id":"RT_quote","isResolved":false,"author":"reviewer-bot",
+   "body":"see <a href=\"#\">the tag</a>\n\n<!-- stenswf-fp: deadbeef0005 -->","replies":[]}
 ]
 JSON
 
@@ -239,7 +243,7 @@ assert_match "add_thread body keeps the finding text" "$(cat "$POSTED")" "unchec
 # The fake serves two threads per page. A reader that ignores pageInfo
 # sees only two of three and reports false convergence over the rest.
 listing=$(list_threads 77)
-assert_eq "list_threads pages past the first page" "$(printf '%s\n' "$listing" | grep -c .)" "4"
+assert_eq "list_threads pages past the first page" "$(printf '%s\n' "$listing" | grep -c .)" "5"
 assert_match "list_threads reaches a thread on the second page" "$listing" "RT_done"
 
 # --- list_open_threads returns node-id + author + body --------------------
@@ -248,6 +252,14 @@ assert_match "list_open_threads returns the open thread node-id" "$listing" "RT_
 assert_match "list_open_threads returns the thread author"       "$listing" "reviewer-bot"
 assert_match "list_open_threads surfaces the fingerprint body"   "$listing" "stenswf-fp: deadbeef0001"
 assert_nomatch "list_open_threads excludes resolved threads"     "$listing" "RT_done"
+
+# --- a body with a literal quote does not corrupt the listing (#17) --------
+# `tojson | @tsv` double-escaped a `"` in the body, so a single HTML-quoting
+# thread made every list_* call fail its downstream jq parse. The listing
+# must survive it and still surface the thread whole.
+assert_match "list_open_threads survives a quote in a thread body" "$listing" "RT_quote"
+assert_match "a quoted body's fingerprint is still surfaced"       "$listing" "stenswf-fp: deadbeef0005"
+assert_match "a quoted body round-trips intact"                    "$listing" 'href='
 
 # --- list surfaces open threads regardless of author ----------------------
 # The implementer must act on every open thread, including human-authored
