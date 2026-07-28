@@ -44,7 +44,11 @@ EOF
       next
     }
     # Skip strikethrough entries entirely.
-    /^### ~~D[0-9]+/ { inblock = 0; next }
+    /^### ~~D[0-9]+/ {
+      if (inblock) { print buf; print "---\n" }
+      inblock = 0
+      next
+    }
     # End block at next header of any kind.
     inblock && /^### / {
       print buf

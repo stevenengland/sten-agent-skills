@@ -6,6 +6,9 @@ Dev-only. Not packaged for end users.
   conversation loop's plumbing (`scripts/pr-threads.sh`).
 - [`wayfinder.test.sh`](wayfinder.test.sh) — behavior tests for the
   wayfinder tracker plumbing (`scripts/wayfinder.sh`).
+- [`inherit-decisions.test.sh`](inherit-decisions.test.sh) — behavior tests
+  for copying active PRD decision stubs into slices
+  (`scripts/inherit-decisions.sh`).
 - [`fixtures/`](fixtures/) — hand-authored issue bodies exercising the
   front-matter parser (`references/extractors.md`) and the
   route-selection gates in `plan-light`, `ship-light`, `plan`,
@@ -15,12 +18,13 @@ Dev-only. Not packaged for end users.
 ```bash
 bash plugins/stenswf/tests/pr-threads.test.sh
 bash plugins/stenswf/tests/wayfinder.test.sh
+bash plugins/stenswf/tests/inherit-decisions.test.sh
 ```
 
-Both suites inject a fake `gh` on `PATH` rather than calling GitHub. The
-fake keeps mutable state — threads, comments, assignees, issue bodies —
-so a write is observable by a **later** read, which is the property the
-loops actually depend on. A fake that only recorded what was sent would
+The GitHub-facing suites inject a fake `gh` on `PATH` rather than calling
+GitHub. The fake keeps mutable state — threads, comments, assignees, issue
+bodies — so a write is observable by a **later** read, which is the property
+the loops actually depend on. A fake that only recorded what was sent would
 pass while the real protocol failed to converge.
 
 Fixtures have no runner: they are piped through the canonical extractor
