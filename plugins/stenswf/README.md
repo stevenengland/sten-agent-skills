@@ -138,7 +138,9 @@ idea already fits one PRD interview.
                                  PRD-mode writes `prd-review.xml` (and
                                  `apply` later mirrors it onto the PR)
 /stenswf:apply <target>        → slice-mode: interactive apply + close;
-                                 PRD-mode: themed cleanup PR
+                                 PRD-mode: themed cleanup PR; both verify a
+                                 finding before fixing it, and a rollback
+                                 needs explicit approval
 ```
 
 `review` and `apply` auto-detect **mode** from the target issue's

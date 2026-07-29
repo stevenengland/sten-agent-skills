@@ -19,6 +19,9 @@ cadence, and the sole-writer rule — lives in
 [../../references/pr-conversation-loop.md](../../references/pr-conversation-loop.md).
 Read it before proceeding.
 
+Read and follow the shared finding-validation contract in
+[../../references/review-finding-validation.md](../../references/review-finding-validation.md).
+
 ## Constraint — sole git writer
 
 The implementer is the **sole git writer** (D4): `apply-loop` is the
@@ -105,22 +108,23 @@ list_open_threads "$PR" | awk -F'\t' '$4=="none"'
 For each remaining thread — **regardless of author** (the paired reviewer
 *or* a human) — before any fix:
 
-1. **Verify (tag-driven, mandatory — D7).** Never trust a thread on its
-   author. A thread claiming a **behavior** defect is reproduced with a
-   failing test first (`tdd` red→green) before the fix; a non-behavior
-   finding is confirmed by tracing the code. A behavior thread MUST NOT
-   be marked applied without a reproducing test written first — the
-   TDD-as-lens gate is inherited unchanged and MUST NOT contradict
-   [../tdd/SKILL.md](../tdd/SKILL.md).
+1. **Verify (mandatory — D7).** Apply
+   [../../references/review-finding-validation.md](../../references/review-finding-validation.md).
+   A behavior thread MUST NOT be marked applied without a reproducing
+   failing test written first.
 
-2. **Valid after verification.** Fix it → conventional commit → `git
-   push` → `add_reply <node-id> "<what changed>, fixed in <sha>"` →
-   `resolve_thread <node-id>`.
+2. **Confirmed, safe, non-rollback remedy.** Fix it autonomously →
+   conventional commit → `git push` → `add_reply <node-id> "<what changed>,
+   fixed in <sha>"` → `resolve_thread <node-id>`.
 
-3. **Invalid after verification (D8).** Leave the thread **open**:
-   `add_reply <node-id>` with the verification result and a trailing
-   `<!-- stenswf-left-open: <reason> -->` marker. Do **not** resolve.
-   Collect it for the end-of-session summary.
+3. **Rejected or inconclusive after verification (D8).** Leave the thread
+   **open**: `add_reply <node-id>` with the verification result and a
+   trailing `<!-- stenswf-left-open: <reason> -->` marker. Do **not**
+   resolve. Collect it for the end-of-session summary.
+
+4. **Rollback, or confirmed with no safe remedy.** The thread stays
+   unresolved and unhandled — a rollback until the shared approval gate
+   decides it, a missing safe remedy as a blocker.
 
 A thread is **handled** when it is resolved OR carries a left-open
 reply — and `list_threads` reports that as its `disposition`, so the

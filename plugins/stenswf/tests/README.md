@@ -9,6 +9,9 @@ Dev-only. Not packaged for end users.
 - [`inherit-decisions.test.sh`](inherit-decisions.test.sh) — behavior tests
   for copying active PRD decision stubs into slices
   (`scripts/inherit-decisions.sh`).
+- [`apply-verification.test.sh`](apply-verification.test.sh) — wiring checks
+  that `apply`/`apply-loop` load `references/review-finding-validation.md`
+  and that its links resolve.
 - [`fixtures/`](fixtures/) — hand-authored issue bodies exercising the
   front-matter parser (`references/extractors.md`) and the
   route-selection gates in `plan-light`, `ship-light`, `plan`,
@@ -19,6 +22,7 @@ Dev-only. Not packaged for end users.
 bash plugins/stenswf/tests/pr-threads.test.sh
 bash plugins/stenswf/tests/wayfinder.test.sh
 bash plugins/stenswf/tests/inherit-decisions.test.sh
+bash plugins/stenswf/tests/apply-verification.test.sh
 ```
 
 The GitHub-facing suites inject a fake `gh` on `PATH` rather than calling

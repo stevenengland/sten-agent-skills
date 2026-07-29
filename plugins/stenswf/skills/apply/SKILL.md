@@ -14,6 +14,10 @@ When a suggestion offers competing ways to apply it, weigh them per
 [../../references/decision-weighting.md](../../references/decision-weighting.md)
 — quality and maintainability over build cost.
 
+**Finding validation.** Read and follow
+[../../references/review-finding-validation.md](../../references/review-finding-validation.md)
+before evaluating any suggestion or finding.
+
 ---
 
 ## Mode Detection
