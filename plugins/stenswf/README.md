@@ -625,9 +625,10 @@ into the slice's anchor as a **reference stub** — no rationale inline:
 Reader who needs the "why" does one hop:
 `awk '/^### D<n> /,/^### /' .stenswf/<PRD>/decisions.md`.
 
-In-flight slice stubs are **frozen at slice-creation time** — if the
-PRD later supersedes, the slice's stub stays as-is. This matches how
-`base_sha` locks plan-time state.
+Existing slice stubs are **frozen once inherited** — a rerun never updates
+or removes them if the PRD later supersedes an entry. Reruns are idempotent
+and append only active PRD IDs not already used by an active or superseded
+slice entry. This matches the file-local, never-reused ID contract.
 
 ### Conciseness caps (hard)
 

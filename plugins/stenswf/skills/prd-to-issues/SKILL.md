@@ -253,8 +253,9 @@ entries as reference stubs into each slice's `decisions.md` (creating
 the file with a seed header if absent), and preserves `Refs:` verbatim.
 Strikethrough (superseded) entries are skipped. Silent on success.
 
-Inherited stubs are frozen at slice-creation time — later PRD
-supersessions do not retroactively update slice anchors. See
+Existing inherited stubs are frozen: reruns never update or remove them
+after a later PRD supersession. Reruns append only active PRD IDs not
+already used by an active or superseded slice entry. See
 [../../references/decision-anchor-link.md](../../references/decision-anchor-link.md).
 
 ---

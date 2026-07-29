@@ -66,5 +66,72 @@ for SLICE in 1000 1001; do
     "$ANCHOR" "src/b.py"
 done
 
+FIRST_1000=$(cat "$WORK/.stenswf/1000/decisions.md")
+FIRST_1001=$(cat "$WORK/.stenswf/1001/decisions.md")
+(
+  cd "$WORK" || exit
+  bash "$SCRIPT" 999 1000 1001
+)
+assert_eq "an exact rerun leaves slice 1000 byte-equivalent" \
+  "$(cat "$WORK/.stenswf/1000/decisions.md")" "$FIRST_1000"
+assert_eq "an exact rerun leaves slice 1001 byte-equivalent" \
+  "$(cat "$WORK/.stenswf/1001/decisions.md")" "$FIRST_1001"
+
+cat >> "$WORK/.stenswf/999/decisions.md" <<'EOF'
+
+### D5 — Added after slicing
+
+- **Category:** arch
+- **Refs:** src/e.py
+EOF
+(
+  cd "$WORK" || exit
+  bash "$SCRIPT" 999 1000 1001
+)
+for SLICE in 1000 1001; do
+  ANCHOR=$(cat "$WORK/.stenswf/$SLICE/decisions.md")
+  assert_eq "slice $SLICE appends a later PRD anchor once" \
+    "$(printf '%s\n' "$ANCHOR" | grep -c '^### D5 ')" "1"
+  assert_match "slice $SLICE preserves refs from a later PRD anchor" \
+    "$ANCHOR" "- **Refs:** src/e.py"
+done
+
+cat >> "$WORK/.stenswf/1000/decisions.md" <<'EOF'
+
+### ~~D6~~ — Superseded local decision
+
+- **Category:** decision
+- **Source:** plan
+- **Refs:** src/local.py
+EOF
+cat >> "$WORK/.stenswf/999/decisions.md" <<'EOF'
+
+### D6 — Later PRD anchor with a local collision
+
+- **Category:** arch
+- **Refs:** src/f.py
+EOF
+(
+  cd "$WORK" || exit
+  bash "$SCRIPT" 999 1000 1001
+)
+ANCHOR_1000=$(cat "$WORK/.stenswf/1000/decisions.md")
+ANCHOR_1001=$(cat "$WORK/.stenswf/1001/decisions.md")
+assert_nomatch "a superseded destination ID still blocks reuse" \
+  "$ANCHOR_1000" "- **Source:** #999/D6"
+assert_match "the colliding local decision remains intact" \
+  "$ANCHOR_1000" "### ~~D6~~ — Superseded local decision"
+assert_match "a non-colliding slice imports the same PRD anchor" \
+  "$ANCHOR_1001" "- **Source:** #999/D6"
+
+(
+  cd "$WORK" || exit
+  bash "$SCRIPT" 999 1000 1001
+)
+assert_eq "the incremental rerun does not duplicate slice 1000" \
+  "$(grep -c '^### D5 ' "$WORK/.stenswf/1000/decisions.md")" "1"
+assert_eq "the incremental rerun does not duplicate slice 1001" \
+  "$(grep -c '^### D6 ' "$WORK/.stenswf/1001/decisions.md")" "1"
+
 printf '\n1..%d\n# pass %d fail %d\n' "$((PASS + FAIL))" "$PASS" "$FAIL"
 [ "$FAIL" -eq 0 ]

@@ -29,14 +29,27 @@ for N in "$@"; do
 EOF
   fi
 
-  # Extract active (non-strikethrough) entries, preserving Category, Source, Refs.
+  # Extract unseen active entries, preserving Category, Source, Refs.
   awk -v P="$PRD" '
+    # Destination IDs are local and never reused, including after supersession.
+    NR == FNR {
+      if (match($0, /^### (~~)?D[0-9]+/)) {
+        header = substr($0, RSTART, RLENGTH)
+        match(header, /D[0-9]+/)
+        seen[substr(header, RSTART, RLENGTH)] = 1
+      }
+      next
+    }
     # Start an entry at "### D<n> <title>" (not strikethrough).
     /^### D[0-9]+ / {
       if (inblock) { print buf; print "---\n" }
       hdr = $0
       sub(/^### /, "", hdr)
       id = hdr; sub(/ .*/, "", id)
+      if (seen[id]) {
+        inblock = 0
+        next
+      }
       title = hdr; sub(/^[^ ]+ — /, "", title)
       buf = sprintf("### %s — %s (inherited from #%s)\n\n- **Category:** inherited\n- **Source:** #%s/%s\n", id, title, P, P, id)
       inblock = 1
@@ -65,5 +78,5 @@ EOF
     END {
       if (inblock) { print buf; print "---" }
     }
-  ' "$PRD_SRC" >> "$D/decisions.md"
+  ' "$D/decisions.md" "$PRD_SRC" >> "$D/decisions.md"
 done
