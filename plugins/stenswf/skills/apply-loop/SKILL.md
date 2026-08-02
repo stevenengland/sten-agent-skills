@@ -29,7 +29,8 @@ only party that commits, pushes, and resolves threads; the reviewer
 (`review-loop`) never does. Everything this skill writes to the PR goes
 through [../../scripts/pr-threads.sh](../../scripts/pr-threads.sh)
 (`add_reply`, `resolve_thread`) plus ordinary `git commit`/`push` on the
-PR branch and the disposable `.stenswf/<issue>/loop-state.json` cache.
+PR branch and the disposable `.stenswf/<issue>/loop-state.implementer.json`
+cache.
 `assert_pr_branch` enforces the "on the PR branch" half of that at Phase
 0 — being the sole writer is only safe if it is also the *right* tree —
 and `sync_to_pr_head` enforces the "current" half at the top of **every**
@@ -50,7 +51,7 @@ invariant especially:
   apply/slice Step 0's stale-diff refusal — re-fetch HEAD and re-verify
   each thread against current code every pass instead of refusing.
 - *State keys.* Key handled/verify state on the **PR thread node-id** in
-  `.stenswf/<issue>/loop-state.json`, not apply's `entries.S<n>` in
+  `.stenswf/<issue>/loop-state.implementer.json`, not apply's `entries.S<n>` in
   `apply-state.json`. That file is a cache; the PR is the record (see the
   reference's *Where the state lives*).
 
@@ -65,7 +66,7 @@ PR=$(resolve_pr "$ARGUMENTS")          # arg (number/URL) or current branch's PR
 
 assert_pr_branch "$PR" || exit 1        # sole writer: never commit to another branch
 ISSUE=$(resolve_issue "$PR") || exit 1  # via closingIssuesReferences; loud on 0 or >1
-STATE=".stenswf/$ISSUE/loop-state.json"
+STATE=".stenswf/$ISSUE/loop-state.implementer.json"   # role-partitioned: see reference
 gh issue view "$ISSUE" --json body -q .body > /tmp/al-$ISSUE.md
 TYPE=$(get_fm type /tmp/al-$ISSUE.md)
 parse_type                              # sets MODE (prd | slice)

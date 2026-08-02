@@ -437,6 +437,16 @@ assert_eq "loop_cycle_bump increments"    "$(LOOP_MAX_CYCLES=2 loop_cycle_bump "
 LOOP_MAX_CYCLES=2 loop_cycle_bump "$CYCLE" >/dev/null && fail "loop_cycle_bump fails past the cap" || ok "loop_cycle_bump fails past the cap"
 assert_eq "loop_cycle_bump persists the count" "$(jq -r .cycle "$CYCLE")" "3"
 
+# The two loops share an issue, so only the role in the path keeps their
+# counters apart. Same-file bumps would co-mingle and trip the cap early.
+IMPL="$WORK/251/loop-state.implementer.json"
+REVW="$WORK/251/loop-state.reviewer.json"
+LOOP_MAX_CYCLES=5 loop_cycle_bump "$IMPL" >/dev/null
+LOOP_MAX_CYCLES=5 loop_cycle_bump "$REVW" >/dev/null
+LOOP_MAX_CYCLES=5 loop_cycle_bump "$REVW" >/dev/null
+assert_eq "reviewer bumps do not advance the implementer counter" "$(jq -r .cycle "$IMPL")" "1"
+assert_eq "each role counts only its own cycles"                  "$(jq -r .cycle "$REVW")" "2"
+
 # --- wake-up: waits on a condition, and says which one fired --------------
 # timeout 0 keeps the suite fast: each case resolves on its first poll.
 assert_eq "wait_for_change reports an advanced HEAD" \
