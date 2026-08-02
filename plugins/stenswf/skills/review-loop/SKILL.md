@@ -29,7 +29,7 @@ writer** (D4). Restate before loading the engine sub-file: **reviewer is
 read-only against git; the only new writes are `add_thread` and
 `signal_convergence` via
 [../../scripts/pr-threads.sh](../../scripts/pr-threads.sh), plus the
-disposable `.stenswf/<issue>/loop-state.json` cache.**
+disposable `.stenswf/<issue>/loop-state.reviewer.json` cache.**
 
 ## Phase 0 — Resolve target + mode
 
@@ -41,7 +41,7 @@ PR=$(resolve_pr "$ARGUMENTS")          # arg (number/URL) or current branch's PR
 [ -n "$PR" ] || { echo "ROUTE_HEAVY: no PR for arg/current branch"; exit 1; }
 
 ISSUE=$(resolve_issue "$PR") || exit 1  # via closingIssuesReferences; loud on 0 or >1
-STATE=".stenswf/$ISSUE/loop-state.json"
+STATE=".stenswf/$ISSUE/loop-state.reviewer.json"   # role-partitioned: see reference
 
 # GitHub refuses an approval from the PR's own author. Say so once, up
 # front, rather than discovering it at the stop condition.

@@ -58,11 +58,19 @@ loops safe to run in separate harnesses against the same PR.
 
 **GitHub is authoritative.** Everything the two loops need to agree on —
 which findings exist, which are handled, how — is readable from the PR
-itself via `list_threads`. `.stenswf/<issue>/loop-state.json` is a
+itself via `list_threads`. `.stenswf/<issue>/loop-state.<role>.json` is a
 **disposable cache**: deleting it may cost a pass's worth of work, never
 correctness. Neither loop may depend on it for a decision it could not
 re-derive from GitHub, because the other loop runs in a different harness
 and cannot see it.
+
+**The filename carries the role** — `loop-state.implementer.json` and
+`loop-state.reviewer.json` — so each loop owns its own file. The role is a
+*key*, not a field: `loop_cycle_bump` reads a bare `.cycle`, so a shared
+path would merge both loops' bumps into one counter and trip
+`LOOP_MAX_CYCLES` on a count neither loop reached alone. Nothing enforces
+the "no shared working tree" premise above, and `$STATE` is a relative
+path, so one checkout running both harnesses is all it takes.
 
 The consequence is that **every pass is idempotent**. Re-listing a thread
 that is already handled, re-verifying a finding already fixed, or
@@ -73,7 +81,6 @@ The cache's schema:
 
 ```json
 {
-  "role": "reviewer | implementer",
   "cycle": 3,
   "last_reviewed_sha": "<sha>",
   "threads": {

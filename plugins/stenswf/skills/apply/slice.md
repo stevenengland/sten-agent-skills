@@ -46,8 +46,9 @@ fi
 If the user says **YOLO**:
 
 - Skip interactive questions.
-- Self-assess every suggestion. Implement only those with meaningful value.
-- Proceed directly to Phase 2.
+- Run Phase 1 without its approval prompts — self-approve safe, non-rollback
+  remedies and still persist every disposition. A rollback keeps its explicit
+  approval (PARK when unattended).
 - Show a brief summary:
 
   Implementing:
@@ -60,11 +61,13 @@ If the user says **YOLO**:
 
 For each numbered suggestion:
 
-1. Assess independently whether it is a good idea.
-2. If worth doing, ask:
-   _"Suggestion #N: [one-line summary] — implement this?"_
-3. Wait for yes/no.
-4. Track approvals in `apply-state.json` under `entries.S<n>`.
+1. Validate independently per
+   [../../references/review-finding-validation.md](../../references/review-finding-validation.md).
+2. For a confirmed diagnosis with a safe remedy, show the evidence and ask:
+   _"Suggestion #N: implement the proposed remedy?"_ — YOLO self-approves
+   unless it is classified `Rollback: yes`, which always goes through the
+   shared approval gate.
+3. Persist the disposition in `apply-state.json` under `entries.S<n>`.
    **Resume-safe write:** never overwrite an entry already in
    `applied` or `skipped` state (the resume contract from
    [SKILL.md](SKILL.md)):
@@ -72,6 +75,7 @@ For each numbered suggestion:
    ```bash
    ID="S$N"
    STATUS="approved"   # or "skipped" with a reason
+   REASON=""           # verification/decline reason when skipped
    STATE=".stenswf/$ARGUMENTS/apply-state.json"
    CUR=$(jq -r --arg id "$ID" '.entries[$id].status // "missing"' "$STATE")
    case "$CUR" in
@@ -86,16 +90,19 @@ For each numbered suggestion:
        exit 1
        ;;
    esac
-   jq --arg id "$ID" --arg status "$STATUS" \
-     '.entries[$id] = {"status":$status,"commit_sha":null,"reason":null}' \
+   jq --arg id "$ID" --arg status "$STATUS" --arg reason "$REASON" \
+     '.entries[$id] = {
+       "status":$status,
+       "commit_sha":null,
+       "reason":(if $status == "skipped" then $reason else null end)
+     }' \
      "$STATE" > /tmp/as.json && mv /tmp/as.json "$STATE"
    ```
 
-   Use `status: "skipped"` with a `reason` for declined suggestions.
+   Use `status: "skipped"` with a `reason` for declined, rejected, or
+   inconclusive suggestions.
 
 Do not implement anything during this phase.
-
-_(Skipped entirely in YOLO mode.)_
 
 ## Phase 2 — Implementation
 

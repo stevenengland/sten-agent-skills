@@ -62,6 +62,11 @@ done
 
 Parse each `<finding>`: id, severity, axis, what, why, evidence.
 
+**Validate before grouping.** For every explicit or implicit finding, follow
+[../../references/review-finding-validation.md](../../references/review-finding-validation.md).
+Record rejected or inconclusive diagnoses as skipped with their evidence; stop
+with `FINDING_BLOCKER` when a confirmed diagnosis has no safe remedy.
+
 **Coverage matrix.** `<coverage-matrix>` rows with
 `status="not covered"` or `status="partially covered"` are first-class
 findings even without matching `<finding>` elements. Treat as implicit
@@ -69,8 +74,8 @@ findings with ID `USn`, group under `alignment`. After implementation,
 re-read PRD user stories/ACs and confirm coverage; if any remain
 `not covered`, stop and report. Log `contract_violation`.
 
-**Group by axis.** Each axis with ≥1 finding → one commit. Sub-commits
-OK for disjoint areas within an axis.
+**Group by axis.** Each axis with ≥1 confirmed finding → one commit.
+Sub-commits OK for disjoint areas within an axis.
 
 Present the grouping (skipped in YOLO):
 
@@ -79,8 +84,11 @@ Present the grouping (skipped in YOLO):
 > - architectural-coherence: F5, F6, F7 (3 findings)
 > - test-strategy: F9 (1 finding)
 >
-> Skipping: F3 (low severity, out of scope), F8 (already addressed).
+> Skipping: F3 (diagnosis rejected — evidence), F8 (already addressed).
 > Proceed? (y/N)
+
+This gate does not cover any finding classified `Rollback: yes` — each of
+those needs its own approval per the shared contract, in YOLO too.
 
 ## Phase 2 — Branch and implement
 
