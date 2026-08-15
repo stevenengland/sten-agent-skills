@@ -57,10 +57,15 @@ lite plan-ahead artifacts (distinct from heavy `manifest.json`'s
 using this same shape — see
 [../ship-light/SKILL.md](../ship-light/SKILL.md) Phase 4.
 
+The 4th input is empty on every slice the HITL escape hatch did not
+touch, so pre-existing signatures are unchanged. `ship-light`
+recomputes the same four sections — all sites must match.
+
 ```bash
 SIG=$( { cat /tmp/slice-$ARGUMENTS-what.md; \
          cat /tmp/slice-$ARGUMENTS-conv.md; \
          cat /tmp/slice-$ARGUMENTS-acs.md; \
+         cat /tmp/slice-$ARGUMENTS-hitl.md; \
        } | sha256sum | cut -d' ' -f1)
 
 # extract_acs hard-errors itself on untagged ACs; BEHAVIOR_ACS is the
@@ -100,6 +105,15 @@ EOF
 
 Populate `## Assumptions (plan-light)` with the same bullets written
 to `plan-light.md`'s `## Assumptions` section.
+
+When the HITL escape hatch ran for this slice, add one more bullet
+pointing `review` at the durable record — the resolutions themselves
+are decisions, not assumptions, so only the pointer belongs here:
+
+```
+- HITL escape hatch resolved <n> judgment call(s); see the issue's
+  `## Resolved judgment calls` section and anchors D<a>, D<b>.
+```
 
 ## Out of scope (deliberate)
 

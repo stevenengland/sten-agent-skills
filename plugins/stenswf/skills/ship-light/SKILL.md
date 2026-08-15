@@ -44,7 +44,13 @@ TYPE=$(get_fm type /tmp/slice-$ARGUMENTS.md)
 LITE=$(get_fm lite_eligible /tmp/slice-$ARGUMENTS.md)
 DISQ=$(get_fm disqualifier /tmp/slice-$ARGUMENTS.md)
 OVERRIDE=$(get_fm lite_override /tmp/slice-$ARGUMENTS.md)
+HITL_OK=$(get_fm hitl_resolved /tmp/slice-$ARGUMENTS.md)
 BLOCKED=$(get_fm blocked_by /tmp/slice-$ARGUMENTS.md)
+parse_type   # normalises $TYPE, exports MODE + SLICE_TYPE
+# Classify the HITL blocker once: not-hitl | open | cleared. Hard-errors on
+# contradictory front-matter or a malformed attestation, having logged it.
+HITL_STATE=$(hitl_status /tmp/slice-$ARGUMENTS.md) || {
+  echo "aborting — invalid HITL front-matter; see log"; exit 1; }
 ```
 
 Abort to `/stenswf:plan` + `/stenswf:ship` (one-line reason to user,
@@ -52,9 +58,6 @@ nothing posted to issue) if any:
 
 - Body lacks an `Acceptance criteria` section with ≥1 checkbox. Log `contract_violation`.
 - `BLOCKED` non-empty.
-- `TYPE == "slice — HITL"`. HITL slices are structurally unfit for the
-  lite path; reroute regardless of `lite_eligible` or `lite_override`.
-  Echo: `aborting — HITL slice not eligible for lite path`.
 - `LITE == "false"`. Echo the disqualifier: `aborting — $DISQ`.
   Exception: `TYPE == "slice — spike"` ignores `arch-unknown`.
   Exception: `lite_override` is non-empty AND `DISQ` is `files>15` or
@@ -71,14 +74,45 @@ nothing posted to issue) if any:
     esac
   fi
   ```
-  `lite_override` is NOT honored for `schema-migration`, `arch-unknown`,
-  or `hitl-cat3` — these signal work the lite path is structurally
-  unfit to handle.
+  `lite_override` is NOT honored for `schema-migration` or
+  `arch-unknown` — these signal work the lite path is structurally
+  unfit to handle. `hitl-cat3` means HITL is the *only* blocker, so it
+  is cleared by the HITL gate below, not by `lite_override`:
+  ```bash
+  # hitl_status has already rejected hitl-cat3 on a non-HITL slice.
+  [ "$DISQ" = "hitl-cat3" ] && LITE=true
+  ```
 - Scope plausibly exceeds the Lite envelope (> 15 files, multi-module,
   schema migration, unresolved arch decision). When `lite_override`
   was honored above, the blast-radius sub-clauses (>15 files,
   multi-module) are waived for this run; schema-migration and
   unresolved arch decision remain disqualifying.
+
+**HITL gate (LAST — every abort clause above must have passed).**
+Reaching here means HITL is the sole remaining blocker, the hatch's
+precondition; running it earlier would write resolutions onto an issue
+another blocker then routes heavy anyway. `$HITL_STATE` was classified in
+Phase 0 by `hitl_status` (contract in
+[../../references/extractors.md](../../references/extractors.md); protocol in
+[../../references/hitl-escape-hatch.md](../../references/hitl-escape-hatch.md)).
+
+```bash
+case "$HITL_STATE" in
+  not-hitl) : ;;                    # nothing to clear
+  cleared)  bash ../../scripts/log-issue.sh user_override \
+              "hitl_resolved honored on #$ARGUMENTS" "$HITL_OK" ;;
+  open)     : ;;                    # hatch (available) / abort (unattended), below
+esac
+# HITL_STATE never assigns LITE — that is the envelope result, decided above.
+```
+
+- `cleared` → continue. `## Resolved judgment calls` is spec, on equal
+  footing with `## Conventions (from PRD)`, and binding for Phase 2.
+- `open`, run **available** → run the hatch; on success re-fetch the body
+  and continue, on its bail-out abort to `/stenswf:plan` + `/stenswf:ship`
+  echoing its reason.
+- `open`, run **unattended** → abort. Echo:
+  `aborting — HITL slice unresolved and run is unattended; re-run attended to resolve, or route heavy`.
 
 When in doubt, proceed — the Phase 3 rubberduck will catch drift.
 
@@ -96,10 +130,13 @@ PLAN_MD=".stenswf/$ARGUMENTS/plan-light.md"
 PLAN_JSON=".stenswf/$ARGUMENTS/plan-light.json"
 
 if [ -s "$PLAN_MD" ] && [ -s "$PLAN_JSON" ]; then
+  # The 4th section is empty on every slice the HITL escape hatch did not
+  # touch, so pre-existing signatures are unchanged.
   CUR_SIG=$( { \
     extract_section 'What to build'            /tmp/slice-$ARGUMENTS.md; \
     extract_section 'Conventions \(from PRD\)' /tmp/slice-$ARGUMENTS.md; \
     extract_section 'Acceptance criteria'      /tmp/slice-$ARGUMENTS.md; \
+    extract_section 'Resolved judgment calls'  /tmp/slice-$ARGUMENTS.md; \
   } | sha256sum | cut -d' ' -f1)
   PLAN_SIG=$(jq -r .source_signature "$PLAN_JSON")
 
@@ -324,6 +361,7 @@ if [ ! -s "$PLAN_JSON" ] && [ ! -s "$ANCHOR" ]; then
     extract_section 'What to build'            /tmp/slice-$ARGUMENTS.md; \
     extract_section 'Conventions \(from PRD\)' /tmp/slice-$ARGUMENTS.md; \
     extract_section 'Acceptance criteria'      /tmp/slice-$ARGUMENTS.md; \
+    extract_section 'Resolved judgment calls'  /tmp/slice-$ARGUMENTS.md; \
   } | sha256sum | cut -d' ' -f1)
   cat > "$ANCHOR" <<EOF
 {

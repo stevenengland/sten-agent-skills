@@ -53,8 +53,34 @@ List every decision that would trigger a HITL slice. Classify each:
   cross-cutting conventions (emit `conventions_source: none`).
 - **Novel pattern** → either lock in PRD `## Conventions`, or introduce
   a spike slice (tiny AFK+Lite, lands types/vocabulary, no consumers).
-- **Genuine judgment call** (irreducible) → keep HITL. Write an escape
-  hatch into the slice.
+- **Genuine judgment call** (irreducible) → keep HITL, and emit a
+  **required** `## Open judgment calls` section in the slice body with
+  one entry per call:
+
+  ```markdown
+  ## Open judgment calls
+
+  - **<what must be decided, one sentence>** — <why it needs a human>
+  ```
+
+  That section is the sole input to the HITL escape hatch
+  ([../../references/hitl-escape-hatch.md](../../references/hitl-escape-hatch.md)),
+  which an attended `plan-light` / `ship-light` run uses to clear the
+  HITL blocker. The hatch does not reconstruct the list from AC wording
+  — omit the section and the slice is stranded on the heavy path.
+
+  Front-matter for a HITL slice — `lite_eligible: false` always, and
+  `disqualifier` names the **envelope** blocker:
+
+  - envelope blocker present (`files>15`, `cross-module`,
+    `schema-migration`, `arch-unknown`) → emit **that**. The HITL
+    blocker is already carried by `type`; overwriting it with
+    `hitl-cat3` would hide the envelope blocker, and a slice that is
+    both HITL *and* over-envelope must show both.
+  - no envelope blocker → emit `disqualifier: hitl-cat3`.
+
+  `hitl-cat3` on a non-HITL slice is a contract violation — both light
+  skills abort on it.
 
 Goal: zero HITL slices except irreducible judgment calls. Present the
 triage table to the user for confirmation.

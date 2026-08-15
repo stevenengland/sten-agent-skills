@@ -32,7 +32,13 @@ Pipeline for slice issue $ARGUMENTS:
 2. On `READY`: dispatch subagent → `ship-light` → implements, opens PR,
    watches CI, returns terminal state.
 3. On `ROUTE_HEAVY` from either phase: surface reason, recommend heavy
-   `plan` + `ship`, exit.
+   `plan` + `ship`, exit. **Exception:** when the reason names an
+   unresolved HITL slice, recommend instead running
+   `/stenswf:plan-light $ARGUMENTS` attended first — its HITL escape
+   hatch resolves the outstanding judgment calls (see
+   [../../references/hitl-escape-hatch.md](../../references/hitl-escape-hatch.md))
+   — then re-running `slice-e2e`. `slice-e2e` itself stays unattended and
+   never runs the hatch.
 4. On `PARKED` from either phase: surface the parked decision and where the
    tension lives (PR body, or an issue comment if no PR exists, plus a pending
    `parked` anchor in `decisions.md`), tell the user to resume when available,

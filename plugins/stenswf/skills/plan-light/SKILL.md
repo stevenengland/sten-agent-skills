@@ -49,6 +49,7 @@ TYPE=$(get_fm type /tmp/slice-$ARGUMENTS.md)
 LITE=$(get_fm lite_eligible /tmp/slice-$ARGUMENTS.md)
 DISQ=$(get_fm disqualifier /tmp/slice-$ARGUMENTS.md)
 OVERRIDE=$(get_fm lite_override /tmp/slice-$ARGUMENTS.md)
+HITL_OK=$(get_fm hitl_resolved /tmp/slice-$ARGUMENTS.md)
 BLOCKED=$(get_fm blocked_by /tmp/slice-$ARGUMENTS.md)
 ```
 
@@ -62,11 +63,17 @@ Gate:
   because the user does NOT need heavy `plan` + `ship` here — they
   need a different stage entirely. `slice-e2e` recognises this
   envelope and routes accordingly.)
-- `TYPE == "slice — HITL"` → emit
-  `ROUTE_HEAVY: HITL slice not eligible for lite path` as FINAL line
-  and exit. HITL slices are structurally unfit for the lite path;
-  the `lite_override` escape hatch below does not apply.
-- `TYPE` starts with `slice` (and is not HITL) → continue.
+- `TYPE` starts with `slice` → continue. A `HITL` slice is **not**
+  rejected here; HITL is evaluated last, after every other envelope
+  blocker (see *HITL gate* below).
+
+```bash
+parse_type   # normalises $TYPE, exports MODE + SLICE_TYPE
+# Classify the HITL blocker once: not-hitl | open | cleared. Hard-errors on
+# contradictory front-matter or a malformed attestation, having logged it.
+HITL_STATE=$(hitl_status /tmp/slice-$ARGUMENTS.md) || {
+  echo "ROUTE_HEAVY: invalid HITL front-matter — see log"; exit 1; }
+```
 
 Extract envelope-check inputs (body sections):
 
@@ -80,15 +87,23 @@ else
 fi
 extract_section 'Acceptance criteria'      /tmp/slice-$ARGUMENTS.md > /tmp/slice-$ARGUMENTS-acs.md
 extract_section 'Files \(hint\)'           /tmp/slice-$ARGUMENTS.md > /tmp/slice-$ARGUMENTS-files.md
+# Exactly one of these is populated on a HITL slice; both empty otherwise.
+extract_section 'Open judgment calls'      /tmp/slice-$ARGUMENTS.md > /tmp/slice-$ARGUMENTS-open.md
+extract_section 'Resolved judgment calls'  /tmp/slice-$ARGUMENTS.md > /tmp/slice-$ARGUMENTS-hitl.md
 ```
+
+Re-run this extraction after the escape hatch writes back, so
+`/tmp/slice-$ARGUMENTS-hitl.md` reflects the resolutions before the
+`source_signature` is computed in Phase 3.
 
 **Manual override (`lite_override`).** A non-empty `lite_override`
 field bypasses the `LITE == "false"` gate ONLY when the disqualifier
 is blast-radius (`files>15` or `cross-module`). For
-`schema-migration`, `arch-unknown`, or `hitl-cat3`, the override is
-ignored and `ROUTE_HEAVY` still fires — these disqualifiers signal
-work the lite path is structurally unfit to handle (irreversible
-change, unresolved architecture, mandatory human-in-loop). When the
+`schema-migration` or `arch-unknown`, the override is ignored and
+`ROUTE_HEAVY` still fires — these disqualifiers signal work the lite
+path is structurally unfit to handle (irreversible change, unresolved
+architecture). `hitl-cat3` means HITL is the *only* blocker; it is
+cleared by the HITL gate below, not by `lite_override`. When the
 override is honored, log `user_override` with the reason as evidence
 and continue normally:
 
@@ -102,6 +117,9 @@ if [ "$LITE" = "false" ] && [ -n "$OVERRIDE" ]; then
       ;;
   esac
 fi
+# hitl-cat3 = "HITL is the sole blocker", so nothing else to clear here.
+# hitl_status has already rejected it on a non-HITL slice.
+[ "$DISQ" = "hitl-cat3" ] && LITE=true
 ```
 
 Lite envelope check — emit `ROUTE_HEAVY` as FINAL line and exit if any:
@@ -122,6 +140,40 @@ sub-bullets (>15 files, multi-module) are also waived for this run —
 the override IS the attestation that those signals are acceptable.
 The schema-migration and architectural-decision sub-bullets remain
 in force regardless of override.
+
+Exception: when the HITL escape hatch resolved this slice, treat every
+decision recorded in `## Resolved judgment calls` as pinned — it counts
+as resolved for the "architectural decision not resolved" sub-bullet,
+exactly as a `## Conventions (from PRD)` line would. Anything the hatch
+did NOT resolve is still unresolved.
+
+**HITL gate (LAST — every check above must have passed).** Reaching here
+means HITL is the sole remaining blocker, the hatch's precondition. Running
+it earlier would write resolutions onto an issue another blocker then routes
+heavy anyway. `$HITL_STATE` was classified in Phase 0 by `hitl_status`
+(contract in
+[../../references/extractors.md](../../references/extractors.md); protocol in
+[../../references/hitl-escape-hatch.md](../../references/hitl-escape-hatch.md)).
+
+```bash
+case "$HITL_STATE" in
+  not-hitl) : ;;                    # nothing to clear
+  cleared)  bash ../../scripts/log-issue.sh user_override \
+              "hitl_resolved honored on #$ARGUMENTS" "$HITL_OK" ;;
+  open)     : ;;                    # hatch (available) / ROUTE_HEAVY (unattended), below
+esac
+# HITL_STATE never assigns LITE — that is the envelope result, decided above.
+```
+
+- `cleared` → continue; the recorded decisions are pinned. Reuse silently.
+- `open`, run **available** (per
+  [../../references/decision-escalation.md](../../references/decision-escalation.md)
+  § Availability) → run the hatch. On success re-fetch the body, re-run the
+  section extraction above, continue. On its bail-out emit that
+  `ROUTE_HEAVY: <reason>` verbatim as FINAL line.
+- `open`, run **unattended** → emit
+  `ROUTE_HEAVY: HITL slice unresolved and run is unattended — re-run /stenswf:plan-light attended to resolve, or route heavy`
+  as FINAL line.
 
 ---
 
@@ -185,7 +237,9 @@ silently. A *heavy* fork escalates per
 
 Walk each AC. For every ambiguity:
 
-1. Covered by `## Conventions (from PRD)` → use silently.
+1. Covered by `## Conventions (from PRD)`, or by a call already pinned
+   in `## Resolved judgment calls` → use silently. Never re-ask a
+   question the escape hatch already answered.
 2. Codebase analog exists → mirror silently, record in `## Assumptions`.
    When two analogs are equally supported, prefer the one that better
    matches [../tdd/interface-design.md](../tdd/interface-design.md)

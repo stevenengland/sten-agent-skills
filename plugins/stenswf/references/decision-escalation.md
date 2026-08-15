@@ -147,6 +147,16 @@ After the answer, record a `decision` anchor per
 **and** the rejected alternative. Never ask a bare "what should I do?" — a
 recommendation is mandatory.
 
+### Applied at preflight: the HITL escape hatch
+
+[hitl-escape-hatch.md](hitl-escape-hatch.md) is this contract applied in a
+loop, at `plan-light` / `ship-light` preflight, to the outstanding judgment
+calls that made a slice HITL. It changes nothing here: every call still goes to
+the user with alternatives and a recommendation, and the hatch decides nothing
+on its own. The one difference is *timing* — the fork is known before any work
+starts, so there is nothing to park; an unattended run emits `ROUTE_HEAVY`
+naming the hatch rather than `PARKED`.
+
 ---
 
 ## PARK — heavy decision, no answer obtainable

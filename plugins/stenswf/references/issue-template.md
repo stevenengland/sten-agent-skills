@@ -71,6 +71,31 @@ Optional. **Required** when parent has `class: refactor` or
 verbatim from the parent's `## Invariants Preserved` section.
 ```
 
+## Judgment-call sections (HITL slices only)
+
+A HITL slice carries exactly one of these, appended **last** so no
+extractor above it is perturbed.
+
+**`## Open judgment calls` — required on every `slice — HITL`.** Emitted
+by `prd-to-issues` (Step 3) and `triage-issue` (Phase 5.6). One entry
+per irreducible call that made the slice HITL:
+
+```markdown
+## Open judgment calls
+
+- **<what must be decided, one sentence>** — <why it needs a human>
+```
+
+It is the sole input to [hitl-escape-hatch.md](hitl-escape-hatch.md);
+the hatch does not reconstruct the list from AC wording. Omit it and the
+slice is stranded on the heavy path.
+
+**`## Resolved judgment calls`** replaces it, atomically, once the hatch
+runs. Never written by a producer. It is **spec-bearing** — it
+participates in the `source_signature` that `plan-light` writes and
+`ship-light` recomputes. Shape and write-back rules live in that
+reference.
+
 ## Front-matter rules
 
 - `type` — exactly one of: `slice — HITL` | `slice — AFK` | `slice — spike`
@@ -82,6 +107,11 @@ verbatim from the parent's `## Invariants Preserved` section.
 - `conventions_source` — `prd#<N>` if inherited, `none` if slice-local only
 - `prd_ref` — parent PRD issue number (int)
 - `blocked_by` (optional) — space-separated issue numbers
+- `hitl_resolved` — never emitted here. Added later by
+  [hitl-escape-hatch.md](hitl-escape-hatch.md) when a HITL slice's
+  judgment calls are resolved. Clears only the HITL blocker, only
+  alongside a non-empty `## Resolved judgment calls` section, and
+  without rewriting `type` / `lite_eligible` / `disqualifier`.
 
 ## Blocked-by
 

@@ -91,6 +91,15 @@ Record:
       esac
       ```
 - [ ] **Slice type.** `HITL | AFK | spike` — derived from `TYPE`.
+- [ ] **Already-resolved judgment calls.** If the body carries a
+  `## Resolved judgment calls` section, a prior attended light run
+  resolved those forks through the HITL escape hatch
+  ([../../references/hitl-escape-hatch.md](../../references/hitl-escape-hatch.md)).
+  Extract it and treat every entry as **pinned**, on equal footing with
+  `## Conventions (from PRD)` — do not re-interview them below. The
+  corresponding anchors already exist in `decisions.md`; do not
+  duplicate them. `type` stays `slice — HITL` in that case; the section,
+  not the type marker, tells you what is still open.
 - [ ] **Conventions (from PRD).**
 
       ```bash
