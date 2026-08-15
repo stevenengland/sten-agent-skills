@@ -78,3 +78,68 @@ parse_type() {
     *) echo "unrecognised type: $TYPE" >&2; return 1 ;;
   esac
 }
+
+# HITL gate status (see ../references/hitl-escape-hatch.md).
+#
+# Prints exactly one of: not-hitl | open | cleared
+# Returns 1 — after logging contract_violation — on self-contradictory
+# front-matter or a malformed attestation. Never a quiet "open" in those
+# cases: that reads as ordinary unresolved work and would send the user
+# back through an interview they already completed.
+#
+# Self-contained: it normalises the slice type itself, so callers need no
+# particular ordering relative to parse_type.
+#
+# Usage: HITL_STATE=$(hitl_status "$BODY") || <route heavy; already logged>
+hitl_status() {
+  local body="$1" t disq att open_n res_n claimed
+
+  _hitl_bad() {
+    printf 'stenswf: %s\n' "$1" >&2
+    local d; d=$(CDPATH= cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
+    bash "$d/log-issue.sh" contract_violation \
+      "hitl contract violated on #${ARGUMENTS:-?}" "$1"
+  }
+
+  t=$(get_fm type "$body" | sed 's/–/—/g; s/--/—/g; s/ *— */ — /g')
+  disq=$(get_fm disqualifier "$body")
+  att=$(get_fm hitl_resolved "$body")
+
+  if [ "$t" != "slice — HITL" ]; then
+    # hitl-cat3 means "HITL is the only blocker" — meaningless off a HITL
+    # slice, and it must not buy a free pass past the envelope.
+    if [ "$disq" = "hitl-cat3" ]; then
+      _hitl_bad "hitl-cat3 on a non-HITL slice ($t)"; return 1
+    fi
+    printf 'not-hitl'; return 0
+  fi
+
+  # Count real entries, not boilerplate: a bullet whose text is bolded.
+  open_n=$(extract_section 'Open judgment calls' "$body" \
+    | grep -c '^[[:space:]]*-[[:space:]]\+\*\*' || true)
+  res_n=$(extract_section 'Resolved judgment calls' "$body" \
+    | grep -c '^[[:space:]]*-[[:space:]]\+\*\*' || true)
+
+  # Nothing attested and nothing resolved → ordinary unresolved HITL work.
+  if [ -z "$att" ] && [ "$res_n" -eq 0 ]; then printf 'open'; return 0; fi
+
+  # Half an attestation carries no decisions into the spec.
+  [ -n "$att" ] || {
+    _hitl_bad "resolved judgment calls without hitl_resolved"; return 1; }
+  [ "$res_n" -gt 0 ] || {
+    _hitl_bad "hitl_resolved without any resolved decision"; return 1; }
+  # The two sections are exclusive — the hatch swaps one for the other.
+  [ "$open_n" -eq 0 ] || {
+    _hitl_bad "both open and resolved judgment calls present"; return 1; }
+
+  # Only the hatch writes this field, so the form is strict.
+  printf '%s' "$att" | grep -Eq \
+    '^[0-9]{4}-[0-9]{2}-[0-9]{2} — [0-9]+ judgment calls? resolved via hitl-escape-hatch$' || {
+    _hitl_bad "hitl_resolved not in canonical form: $att"; return 1; }
+
+  claimed=$(printf '%s' "$att" | sed -E 's/^[0-9-]+ — ([0-9]+) .*/\1/')
+  [ "$claimed" -eq "$res_n" ] || {
+    _hitl_bad "hitl_resolved claims $claimed call(s), body records $res_n"; return 1; }
+
+  printf 'cleared'
+}

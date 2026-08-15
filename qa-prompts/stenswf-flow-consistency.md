@@ -24,8 +24,9 @@ audit must walk every track end-to-end:
 
 - **Bug intake.** `triage-issue` →
   - `C-1`: emits a single slice → routes to `plan` (heavy) or
-    `plan-light` (lite, only if `type: slice — AFK`); HITL slices
-    always go heavy.
+    `plan-light` (lite, only if `type: slice — AFK`); HITL slices go
+    heavy unless resolved via the HITL escape hatch
+    (`references/hitl-escape-hatch.md`), which requires an attended run.
   - `C-N`: hands off to `prd-to-issues` (bug-brief mode) which emits
     fan-out slices.
 - **PRD inception.** `grill-me` → `prd-from-grill-me` → `prd-to-issues`.

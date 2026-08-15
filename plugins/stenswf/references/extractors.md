@@ -76,6 +76,46 @@ parse_type
 echo "MODE=$MODE${SLICE_TYPE:+ SLICE_TYPE=$SLICE_TYPE}"
 ```
 
+## `hitl_status <body-path>` (HITL escape hatch)
+
+Single source for **the HITL gate's state and what a valid attestation is**.
+Prints exactly one of:
+
+| State | Meaning |
+|---|---|
+| `not-hitl` | Not a HITL slice — this gate has nothing to say. |
+| `open` | HITL, judgment calls unresolved. Caller runs the hatch (available) or routes heavy (unattended). |
+| `cleared` | HITL, calls resolved and attested. Caller continues. |
+
+Self-contained: it normalises the slice type itself (folding `--` and `–` to
+`—`), so callers need no particular ordering relative to `parse_type`.
+
+A contradictory or malformed slice is a **hard error inside the function** —
+it logs `contract_violation` via `log-issue.sh` and returns non-zero rather
+than printing `open`. That distinction matters: a quiet `open` looks like
+ordinary unresolved work and would send the user back through an interview
+they already completed. Rejected:
+
+- `disqualifier: hitl-cat3` on a non-HITL slice — the marker means "HITL is
+  the only blocker", so off a HITL slice it is meaningless and must not buy a
+  free pass past the envelope.
+- `hitl_resolved` with no resolved decision recorded (including a section
+  holding only its boilerplate comment), or decisions recorded with no
+  `hitl_resolved`.
+- `## Open judgment calls` and `## Resolved judgment calls` both present —
+  the hatch swaps one for the other, so they are mutually exclusive.
+- An attestation not in canonical form. Only the hatch writes this field, so
+  the form is strict:
+  `<YYYY-MM-DD> — <n> judgment call(s) resolved via hitl-escape-hatch`
+- A stated count that disagrees with the number of decisions recorded.
+
+A "decision" is a bullet whose text is bolded (`- **…**`), matching the shape
+in [hitl-escape-hatch.md](hitl-escape-hatch.md).
+
+```bash
+HITL_STATE=$(hitl_status /tmp/slice-$ARGUMENTS.md) || exit 1   # already logged
+```
+
 ## PRD base SHA
 
 Resolved exclusively from the PRD issue front-matter:

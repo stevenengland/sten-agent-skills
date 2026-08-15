@@ -484,11 +484,32 @@ bug_ref: <ARGUMENTS>
 `prd-to-issues` step 4: ≤15 files, single top-level module, no schema
 migration, no unresolved arch decisions.
 
-**HITL never routes to lite.** When `type == "slice — HITL"`, force
-`lite_eligible: false` and emit `disqualifier: hitl-cat3` in the
-front-matter regardless of the envelope checks. The lite path is
-structurally unfit for HITL work; both `plan-light` and `ship-light`
-re-enforce this gate (see their Phase 0).
+**HITL does not route to lite on its own.** When
+`type == "slice — HITL"`, force `lite_eligible: false`. The
+`disqualifier` keeps its envelope meaning — it names the *envelope*
+blocker, and `hitl-cat3` means "HITL is the only one":
+
+- envelope blocker present (`files>15`, `cross-module`,
+  `schema-migration`, `arch-unknown`) → emit **that**. The HITL blocker
+  is already carried by `type`; overwriting the envelope blocker with
+  `hitl-cat3` would hide it, and a slice that is both HITL *and*
+  over-envelope must show both.
+- no envelope blocker → emit `disqualifier: hitl-cat3`.
+
+**Emit `## Open judgment calls` (required).** One entry per call that
+made this slice HITL, from Phase 3's `judgment_calls`:
+
+```markdown
+## Open judgment calls
+
+- **<what must be decided, one sentence>** — <why it needs a human>
+```
+
+This section is the sole input to the HITL escape hatch
+([../../references/hitl-escape-hatch.md](../../references/hitl-escape-hatch.md)),
+which an **attended** `plan-light` / `ship-light` run uses to interview
+the user and clear the HITL blocker. Omitting it strands the slice on
+the heavy path; a vague entry costs the user a round of questions.
 
 Build the slice body in `/tmp/triage-$ARGUMENTS-slice.md` (mirror
 Phase 5.3's bug-brief body construction). Use

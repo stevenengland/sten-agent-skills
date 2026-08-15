@@ -173,12 +173,28 @@ Three ways to take a slice issue from creation to merged PR:
   **Manual override.** A slice marked `lite_eligible: false` whose
   disqualifier is `files>15` or `cross-module` may carry a
   `lite_override: <reason>` front-matter field to force the lite path
-  (e.g. mechanical renames, codemod-driven sweeps). Other
-  disqualifiers (`schema-migration`, `arch-unknown`, `hitl-cat3`)
-  cannot be overridden — they signal work the lite path is
-  structurally unfit to handle. Honored overrides are logged via
-  `user_override`. See
+  (e.g. mechanical renames, codemod-driven sweeps). `schema-migration`
+  and `arch-unknown` cannot be overridden — they signal work the lite
+  path is structurally unfit to handle. Honored overrides are logged
+  via `user_override`. See
   [references/front-matter-schema.md](references/front-matter-schema.md).
+
+  **HITL escape hatch.** A HITL slice is lite-shaped work with
+  irreducible judgment calls still outstanding, listed in a required
+  `## Open judgment calls` section. When HITL is the **sole** remaining
+  blocker — every other envelope check having passed first — an
+  **attended** `plan-light` / `ship-light` run interviews the user
+  through those calls (2–3 researched alternatives, cited
+  industry-leader precedent, weighed by structural soundness rather
+  than build effort), then atomically swaps in `## Resolved judgment
+  calls` plus a `hitl_resolved` attestation and continues lite. More
+  than 3 calls, or coupled ones, route heavy instead. `type`,
+  `lite_eligible`, and `disqualifier` stay as written — the HITL
+  provenance is not erased. Unattended runs (including `slice-e2e`)
+  route heavy. Protocol:
+  [references/hitl-escape-hatch.md](references/hitl-escape-hatch.md);
+  gate states and attestation form:
+  [references/extractors.md](references/extractors.md).
 
 - **Lite guided one-shot — `/stenswf:slice-e2e <issue>`.** Dispatches
   `plan-light` then `ship-light` as separate subagent sessions with
@@ -194,8 +210,12 @@ Three ways to take a slice issue from creation to merged PR:
 
   - Multi-subsystem, schema/migration involved, architecturally
     uncertain.
-  - HITL slice (human design review wanted).
-  - `lite_eligible: false` or absent.
+  - HITL slice with coupled judgment calls, or more than 3 of them
+    (fewer and independent → the escape hatch above).
+  - `lite_eligible` absent, or `false` for an unresolved **non-HITL**
+    envelope blocker with no applicable override. A HITL-only slice
+    also carries `lite_eligible: false` (plus `hitl-cat3`) by design —
+    that one the hatch clears.
   - Either light skill returned `ROUTE_HEAVY` for this issue.
 
 Both light skills' preflight gates abort cleanly to `plan` + `ship` if
@@ -465,7 +485,12 @@ Claude Code discovers and loads it automatically. Reload if already running:
      `/stenswf:ship-light <slice-N>` in the same session.
      `ship-light` consumes both `plan-light.md` and `plan-light.json`
      if both are current.
-   - **Full path** (HITL, multi-subsystem, or `lite_eligible: false`):
+   - **HITL slice** whose only blocker is HITL (`disqualifier:
+     hitl-cat3`): run `/stenswf:plan-light <slice-N>` or
+     `/stenswf:ship-light <slice-N>` **attended** — see the HITL escape
+     hatch under "Choosing the right path" above.
+   - **Full path** (multi-subsystem, unresolvable HITL, or
+     `lite_eligible: false`):
      1. `/stenswf:plan <slice-N>` → writes `.stenswf/<slice-N>/` locally:
         manifest, per-task fragments, pre-assembled `stable-prefix.md`.
      2. `/stenswf:ship <slice-N>` → dispatches one subagent per task
@@ -535,10 +560,12 @@ completed task SHAs and regenerates the rest.
 
 `ship-light` uses a lighter mechanism for plan-light artifacts: it
 recomputes a sha256 over the issue body's `What to build` ∥
-`Conventions (from PRD)` ∥ `Acceptance criteria` sections and compares
-to `plan-light.json:source_signature`. On mismatch the plan is
-silently ignored and `ship-light` proceeds from the issue body — no
-prompt, no deletion.
+`Conventions (from PRD)` ∥ `Acceptance criteria` ∥
+`Resolved judgment calls` sections and compares to
+`plan-light.json:source_signature`. On mismatch the plan is silently
+ignored and `ship-light` proceeds from the issue body — no prompt, no
+deletion. The 4th section is absent (and so contributes nothing) on
+every slice the HITL escape hatch did not touch.
 
 ## Decision Anchor Contract
 

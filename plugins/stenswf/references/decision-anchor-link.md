@@ -16,15 +16,16 @@ Write contract by skill (one-line summary):
 | `triage-issue` | yes | Phase 5 convert | arch (root cause), decision (introduced convention) |
 | `prd-to-issues` | yes | stub inheritance | inherited |
 | `plan` | yes | Phase 1 interview, ASK-resolved fork | decision, arch |
-| `plan-light` | yes | ASK-resolved or parked heavy fork; Phase 3 | decision |
+| `plan-light` | yes | ASK-resolved or parked heavy fork; HITL escape-hatch resolution; Phase 3 | decision, arch |
 | `ship` | yes | drift-continue, BLOCKED override, ASK-resolved or parked fork | decision |
-| `ship-light` | yes | rubberduck-rejected alternatives, ASK-resolved or parked fork | decision |
+| `ship-light` | yes | rubberduck-rejected alternatives, ASK-resolved or parked fork, HITL escape-hatch resolution | decision, arch |
 | `review` | no | — | — |
 | `apply` | yes | Phase 2 override, ASK-resolved or parked fork | matches superseded |
 
 ASK-resolved and parked forks come from
-[decision-escalation.md](decision-escalation.md). Provenance stays with the
-host seam — there is no `decision-escalation` source.
+[decision-escalation.md](decision-escalation.md); HITL escape-hatch resolutions
+from [hitl-escape-hatch.md](hitl-escape-hatch.md). Provenance stays with the
+host seam — there is no `decision-escalation` or `hitl-escape-hatch` source.
 
 ## Parked decisions
 

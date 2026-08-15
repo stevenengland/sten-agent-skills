@@ -33,6 +33,8 @@ expectations still hold.
 | `issue-slice-lite.md`    | `ship-light` eligible (lite_eligible=true) |
 | `issue-slice-override.md`          | `ship-light` eligible via `lite_override` (disqualifier=files>15, override honored, `user_override` logged) |
 | `issue-slice-override-rejected.md` | `plan` + `ship` — `lite_override` IGNORED for disqualifier=schema-migration; ROUTE_HEAVY fires |
+| `issue-slice-hitl-resolved.md`     | `plan-light` / `ship-light` eligible — HITL was the sole blocker (disqualifier=hitl-cat3) and both halves of the attestation are present (`hitl_resolved` + non-empty `## Resolved judgment calls`), so the Phase-0 HITL gate sets `HITL_CLEARED=true`. Also the signature input. |
+| `issue-slice-hitl-open.md`         | `plan` + `ship` — blocked by BOTH the envelope (disqualifier=files>15) and HITL. Routes heavy on the envelope check *before* the HITL gate, so the escape hatch must not run. Carries the `## Open judgment calls` input section. |
 | `issue-prd.md`           | PRD-mode (type=PRD) |
 | `triage-issue-clean-repro.md` | `triage-issue` Phase-4 default → C-1 (single slice). Bug-brief + one AFK lite slice. |
 | `triage-issue-ambiguous.md`   | `triage-issue` Phase-4 only offers R-info (needs-info). No derived artifacts. |
