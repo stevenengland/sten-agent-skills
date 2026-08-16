@@ -10,7 +10,24 @@ Phase 3.
 | `CI_MAX_CYCLES` | 3 | 2 | 3 |
 | `WAIT_FOR_MERGE` | yes | no | yes |
 | `PR_TITLE` | from task | `<type>(<scope>): <subject> (#$ARGUMENTS)` | `PRD #$ARGUMENTS cleanup — capstone findings` |
-| `PR_BODY` | see caller | see caller | see caller |
+| `PR_BODY_FILE` | see caller | see caller | see caller |
+
+`PR_BODY_FILE` is a **path**, not the body text — `gh pr create` below
+consumes it via `--body-file`, and the decision block is appended to it.
+Building the body inline (`--body "$(...)"`) breaks both: the append
+lands nowhere and the PR publishes silently without its decisions.
+
+Every caller appends the rendered decision block to `$PR_BODY_FILE`
+**before** `gh pr create` below, so the PR carries it from the first
+render instead of needing a follow-up edit:
+
+```bash
+bash ../../scripts/publish-decisions.sh render "$ARGUMENTS" >> "$PR_BODY_FILE"
+```
+
+Empty anchor → nothing appended. Refreshes after the PR exists go
+through `publish-decisions.sh pr <issue> <pr>`, which upserts in place.
+Rules: [decision-anchor-link.md](decision-anchor-link.md).
 
 ## Push and open PR
 

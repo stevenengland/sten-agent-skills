@@ -28,9 +28,12 @@ The implementer is the **sole git writer** (D4): `apply-loop` is the
 only party that commits, pushes, and resolves threads; the reviewer
 (`review-loop`) never does. Everything this skill writes to the PR goes
 through [../../scripts/pr-threads.sh](../../scripts/pr-threads.sh)
-(`add_reply`, `resolve_thread`) plus ordinary `git commit`/`push` on the
-PR branch and the disposable `.stenswf/<issue>/loop-state.implementer.json`
-cache.
+(`add_reply`, `resolve_thread`) plus one `gh pr edit --body-file` refresh
+of the decision block at end of session (see below), ordinary
+`git commit`/`push` on the PR branch, and the disposable
+`.stenswf/<issue>/loop-state.implementer.json` cache. The body refresh is
+listed here because it is a PR write and sole-writer has to enumerate
+them all; `review-loop` never performs it.
 `assert_pr_branch` enforces the "on the PR branch" half of that at Phase
 0 — being the sole writer is only safe if it is also the *right* tree —
 and `sync_to_pr_head` enforces the "current" half at the top of **every**
@@ -165,7 +168,26 @@ listing still-open threads and stop — never loop forever.
 
 ## End-of-session summary
 
-Whether the loop converged or hit the cap, print every thread
+**First, refresh the published decision block** — both surfaces, on both
+the converged and the cap-reached path:
+
+```bash
+bash ../../scripts/publish-decisions.sh pr "$ISSUE" "$PR"
+bash ../../scripts/publish-decisions.sh issue "$ISSUE"
+```
+
+Refreshing only the PR body would leave the issue comment asserting a
+decision this session superseded — correct on the PR, wrong on the
+issue, with the issue outliving the branch.
+
+This loop borrows `apply/slice.md` as its engine, so it inherits the
+override rule that supersedes anchor entries — and it runs that rule
+once per pass over a long session. The block written at PR-create time
+is stale by now. The upsert is idempotent (it replaces its own marked
+block and leaves the rest of the body, including a human's edits,
+untouched), so running it every session is safe.
+
+Then, whether the loop converged or hit the cap, print every thread
 **deliberately left open**, each with its node-id, author, and
 `<!-- stenswf-left-open: <reason> -->` reason, so the user can
 adjudicate the disputes. A converged run with nothing left open says so

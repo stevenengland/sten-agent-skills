@@ -266,6 +266,22 @@ Brevity Rules apply to `house-rules.md`, `design-summary.md`. They do
 NOT apply to `conventions.md` (verbatim copy), `decisions.md` (cross-skill
 anchor), task bodies, commands, file paths, or `review-step.md`.
 
+**Publish the interview decisions.** Last step of this phase:
+
+```bash
+bash ../../scripts/publish-decisions.sh issue "$ARGUMENTS"
+```
+
+The plan tree is gitignored, so without this the Phase-1 interview
+decisions — the 2–6 hardest to reconstruct, and the ones a `git blame`
+reader most wants — exist only in this working copy. Whoever runs `ship`
+next may not be on this machine. The subcommand upserts one comment per
+issue, so `ship` refreshing it later updates rather than duplicates.
+
+An issue **comment**, never `gh issue edit`: the body is hashed whole
+into `concept_sha256`, so writing there would make this skill's own
+`--resume` raise a drift prompt against the plan it just wrote.
+
 ---
 
 ## Phase 3 — Resume (`plan --resume`)

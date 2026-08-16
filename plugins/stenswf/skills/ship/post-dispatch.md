@@ -150,6 +150,17 @@ PR body must include:
 - `Closes #$ARGUMENTS`.
 - Summary of any `lint-escape` actions, with rationale.
 - Any justified Review-Step absences.
+- The rendered decision block, appended **before** `gh pr create` so the
+  PR carries it from its first render:
+
+  ```bash
+  bash ../../scripts/publish-decisions.sh render "$ARGUMENTS" >> "$PR_BODY_FILE"
+  ```
+
+  `.stenswf/` is gitignored and Phase 5 archives it, so this block plus
+  the wrap-up comment below are the only copies that outlive this
+  working copy. Empty anchor → nothing appended. Never hand-write the
+  block or edit inside its `<!-- stenswf:decisions:… -->` markers.
 
 ## Phase 5 — Wrap-up + archive
 
@@ -159,6 +170,19 @@ Post a single wrap-up comment on the issue:
 - Task list by T-ID and commit SHA (from manifest).
 - Any `lint-escape` actions taken.
 - Any justified review-step absences.
+
+Then upsert the issue's **separate** decisions comment — the one `plan`
+already posted, if it ran:
+
+```bash
+bash ../../scripts/publish-decisions.sh issue "$ARGUMENTS"
+```
+
+Decisions get their own comment rather than riding in the wrap-up prose
+so that `apply` can refresh them in place later; a block embedded in the
+wrap-up would go stale the moment an entry is superseded. Run it either
+side of the archive below — the script resolves the anchor
+live-or-archived.
 
 Archive the local plan tree:
 

@@ -625,7 +625,15 @@ override of an `arch` entry is itself category `arch`.
 - **Rationale:** <≤180 chars, "why this, not the obvious alternative">
 - **Refs:** <AC#N, T<id>, path/to/file, sha7 — comma-sep, ≤8 tokens>
 - **Supersedes:** D<n> — <≤100-char reason>   <!-- omit if none -->
+- **Status:** parked                          <!-- omit unless parked -->
 ```
+
+`Status:` is the only optional-by-state field: present exactly while a
+heavy decision is unanswered (see *Parked decisions* in
+[decision-anchor-link.md](references/decision-anchor-link.md)), removed
+when the anchor is resolved. `parked` is its only value. It must be a
+field line like every other — a bare `status: parked` paragraph in the
+entry body is the legacy form, still parsed, but no longer written.
 
 - IDs are **local** to the file (`D1`, `D2`, …). Cross-file refs use
   path + anchor: `.stenswf/42/decisions.md#D3`.
@@ -683,11 +691,17 @@ needs splitting."* No hard cap.
 | `ship` | yes | drift `(c)ontinue`, rare BLOCKED override | decision | 0–2 |
 | `ship-light` | rare | Phase 3 rubberduck-rejected alternatives | decision | 0–2 |
 | `review` | **no** | — (findings go to `review/slice.md`) | — | 0 |
+| `review-loop` | **no** | — | — | 0 |
 | `apply` | yes | Phase 2 override implementation | matches superseded | 0–N |
+| `apply-loop` | yes | via the borrowed `apply` engine | matches superseded | 0–N |
 
 Writers never ask the user for confirmation of routine anchor
 operations. Truncation warnings are informational. Supersession is
 silent.
+
+Writing an entry and publishing it are separate contracts — for who
+publishes where, see [Publication](#publication) below. It is the one
+place that mapping is stated.
 
 ### Read contract (reviewers)
 
@@ -764,17 +778,80 @@ On `concept_sha256` drift (existing mechanism):
 The anchor has no checksum of its own; append-only + strikethrough
 semantics make it inherently stable under concurrent writes.
 
-### Two-tier model (local vs committed excerpt)
+### Three-tier model (local, published, committed)
 
 - **Local:** `.stenswf/<N>/decisions.md` (full, per-developer; excluded via `.git/info/exclude`, see `bootstrap`).
-- **Committed excerpt:** `docs/decisions/prd-<N>.md`, written
-  silently by `apply` PRD-mode at PRD close. Curation filter:
-  `Category ∈ {arch, decision}` ∧ not-superseded ∧ `Refs:` contains a
-  concrete file path. Staged with message
+- **Published:** a marker-delimited `## Decisions` block in the PR body
+  and the wrap-up issue comment, rendered by
+  [scripts/publish-decisions.sh](scripts/publish-decisions.sh). All
+  active entries, unfiltered. See *Publication* below.
+- **Committed excerpt:** `docs/stenswf/decisions/prd-<N>.md`, written
+  by `apply` PRD-mode at PRD close after a `(y)/(e)/(n)` confirmation.
+  Curation filter: `Category ∈ {arch, decision}` ∧ not-superseded ∧
+  `Refs:` contains a concrete file path. Staged with message
   `docs(stenswf): curated decisions for PRD #<N>`.
 
-Solo-slice flows (no PRD) skip the excerpt by default. Manual recipe
-in [docs/decisions/README.md](../../docs/decisions/README.md).
+Solo-slice flows (no PRD) skip the committed excerpt by default; the
+published tier covers them. Manual recipe in
+[docs/stenswf/decisions/README.md](../../docs/stenswf/decisions/README.md).
+
+### Publication
+
+`.stenswf/` is gitignored, and `ship` archives it at Phase 5. Without
+publication a decision survives only as an untracked file on one
+machine — invisible to CI, to a second clone, and to everyone else.
+
+| Skill | Surface | When |
+|---|---|---|
+| `plan` | decisions comment | Phase 2, after the tree is written |
+| `plan-light` | decisions comment | Phase 4, before the final line |
+| `ship` | PR body + decisions comment | Phase 4 (before `gh pr create`), Phase 5 |
+| `ship-light` | PR body + decisions comment | Phase 4 (before `gh pr create`), Phase 6 |
+| `apply` slice-mode | both, refreshed | Phase 3, after supersessions land |
+| `apply-loop` | both, refreshed | End-of-session, both converged and cap paths |
+| `apply` PRD-mode | committed excerpt (`--excerpt`) | Phase 3 |
+| `review`, `review-loop` | none | reviewers never write or publish anchors |
+
+Rules:
+
+- **There is exactly one decisions comment per issue**, owned by
+  `publish-decisions.sh issue` and upserted by every publisher above.
+  Appending a fresh comment per run would leave stale blocks visible
+  forever, contradicted by a newer one further down the thread with no
+  cue which is current. It is a **separate** comment from `ship`'s
+  wrap-up prose, so `apply` can refresh it without rewriting that.
+- **Planners publish too.** The plan tree is gitignored, so a slice
+  planned on one machine and shipped from another clone would otherwise
+  lose exactly the decisions that are hardest to reconstruct — the
+  Phase-1 interview calls. No PR exists yet at plan time, hence the
+  comment.
+- **Render into `$PR_BODY_FILE` before `gh pr create`**, so the PR
+  carries the block from its first render rather than needing a second
+  API call.
+- **The upsert is idempotent.** It replaces its own
+  `<!-- stenswf:decisions:start -->` … `<!-- stenswf:decisions:end -->`
+  block and preserves everything outside the markers, including a
+  human's later edits. Never hand-write the block or edit inside it.
+- **Refresh after `apply`.** `apply` supersedes entries, so a block
+  written at PR-create time can contradict the code that shipped.
+- **Inherited stubs are resolved at publish time.** A stub's
+  `Source: #<PRD>/D<n>` points at a local file and carries no rationale;
+  the renderer inlines the PRD entry's rationale, or degrades to
+  `see #<PRD>` when that anchor is unavailable. A published block never
+  contains a `.stenswf/` pointer.
+- **Superseded entries never publish.** A published contradiction of
+  the shipped code is worse than no record.
+- **Parked entries publish with a `⚠` and a `Status: parked` line** —
+  they are High/blocking, and the PR is where a human should trip over
+  them.
+
+**The slice issue body is deliberately not a publication surface.**
+`references/drift-check.md` hashes the *entire* issue body into
+`manifest.json:concept_sha256`. Appending a section there makes every
+later `ship` / `plan --resume` / `review` / `apply` raise a false
+`(r)/(c)/(a)` drift prompt — and `(c)ontinue` appends a
+"drift accepted" entry, so the mechanism would pollute the anchor it
+publishes. Issue *comments* cost nothing; use those.
 
 ### Consuming decisions from outside stenswf
 

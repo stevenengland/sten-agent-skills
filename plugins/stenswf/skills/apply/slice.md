@@ -141,8 +141,11 @@ strikethrough the old header per
 
 ## Phase 3 — Wrap-up (Slice-mode)
 
-- Update the issue description / add a brief comment reflecting what
-  changed and why (referencing suggestion numbers).
+- Add a brief issue comment reflecting what changed and why
+  (referencing suggestion numbers). Comment, not issue-body edit: the
+  body is hashed whole into `manifest.json:concept_sha256`, so editing
+  it makes every later `ship` / `plan --resume` / `review` / `apply`
+  raise a false drift prompt.
 - Ask the user to confirm the final review is complete.
 - After confirmation: craft a **single conventional commit** for the
   review-fix delivery (does NOT squash prior `ship`/`ship-light`
@@ -160,6 +163,26 @@ strikethrough the old header per
   [../../references/conventional-commits.md](../../references/conventional-commits.md):
   `feat|fix|refactor|perf|docs|test|chore|build|ci|style|revert`.
 
+- **Refresh the published decisions.** This mode is what strikes entries
+  through (Phase 2 override), so a block published at PR-create time now
+  contradicts the code that shipped. Re-render it — the upsert replaces
+  the existing block in place and preserves everything around it:
+
+  ```bash
+  source ../../scripts/pr-threads.sh
+  # No-arg resolve_pr = the current branch's PR, which is where slice-mode
+  # already is. Never pass $ARGUMENTS: resolve_pr returns a numeric argument
+  # verbatim, so it would silently address the PR whose number happens to
+  # equal the issue number.
+  PR=$(resolve_pr) || PR=""
+  [ -n "$PR" ] && bash ../../scripts/publish-decisions.sh pr "$ARGUMENTS" "$PR"
+  bash ../../scripts/publish-decisions.sh issue "$ARGUMENTS"
+  ```
+
+  Both upserts replace their existing block in place, so the superseded
+  entry disappears from the PR body and the issue comment rather than
+  standing next to its replacement. No PR (slice shipped without one) →
+  the comment is the only surface.
 - Push the branch and close the issue. No labels applied.
 
 Emit the feedback-log boundary ping.
