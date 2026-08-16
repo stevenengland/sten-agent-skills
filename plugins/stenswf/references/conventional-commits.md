@@ -12,6 +12,9 @@ drift in type list and trailer format.
 <optional body paragraph — omit when self-explanatory>
 
 Refs: #<issue-number>
+Decision: #<issue>/D<n> [<category>] <title>
+Rationale: <why, folded to one trailer value>
+Touches: <files the decision implicates>
 ```
 
 ## Type list (canonical)
@@ -32,6 +35,34 @@ from review feedback or rollback decisions, both downstream.
   breaks `git interpret-trailers` parsing.
 - For `apply`-PRD commits, add `Addresses: F1, F2, …` above `Refs:`.
 - For multi-issue references, separate with comma: `Refs: #123, #124`.
+- The decision trailers go in the **same paragraph** as `Refs:`, never in
+  a paragraph of their own. Git only parses the last paragraph, so a blank
+  line between them demotes `Refs:` to body text.
+
+## Decision trailers
+
+`.stenswf/` is gitignored, so the decision anchor dies with the working
+copy. Every commit carries the decisions that were not yet recorded on this
+branch — which makes the branch history the repo-durable record, readable
+with `git log --grep='^Decision:'` long after the branch is deleted. The
+canonical form, at every commit site:
+
+```bash
+DEC=$(bash ../../scripts/publish-decisions.sh trailer "$ARGUMENTS")
+git commit -m "<type>(<scope>): <subject>" \
+           -m "$(printf 'Refs: #%s\n%s' "$ARGUMENTS" "$DEC")"
+```
+
+`$(...)` strips the trailing newline, so an empty `$DEC` — no anchor, or
+nothing new since the last commit — leaves a bare `Refs: #N` and the commit
+is unchanged. Never hand-write these trailers; the script owns the ids, the
+supersession wording, and the resolution of inherited stubs.
+
+The log is an **append-only journal, not a current state view**: a decision
+superseded later keeps the trailer on the commit that was made on its basis,
+and the superseding entry names what it retired. For current state, read the
+PR body block or the issue comment. See
+[decision-anchor-link.md](decision-anchor-link.md).
 
 Example (ship-light, slice mode):
 

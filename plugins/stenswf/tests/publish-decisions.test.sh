@@ -316,6 +316,8 @@ case "\$1 \$2" in
     [ "\$f" = "-" ] && cat > "\$CBODY" || cp "\$f" "\$CBODY"
     echo 4242 > "\$CMETA" ;;
   "api user") echo "octocat" ;;
+  # `trailer` asks for the default branch to scope its git-log scan.
+  "repo view") echo "master" ;;
   *)
     case "\$args" in
       # List comments: emit the one comment, if it exists, as the --jq
@@ -448,6 +450,139 @@ assert_match "issue says it could not list the comments" "$ERR" "cannot list com
 assert_eq "a failed listing posts no comment" \
   "$( [ -e "$CBODY" ] && echo exists || echo absent )" "absent"
 
+# --- 6c. Commit-message trailers -------------------------------------------
+# The repo-durable tier. Two properties carry it, and both fail silently:
+#
+#   1. Re-emission. `trailer` is called at EVERY commit site, so if it does
+#      not subtract what the branch already recorded, a ten-commit slice
+#      repeats decision D1 ten times and the journal becomes unreadable.
+#   2. Under-emission. Anchor ids are local to an issue, so an unqualified
+#      `D1` seen on a sibling issue's commit would suppress this issue's D1
+#      forever — a decision silently absent from the record, with nothing to
+#      notice, because the commit still succeeds.
+
+GWORK="$WORK/git"
+mkdir -p "$GWORK"
+cp -r "$WORK/.stenswf" "$GWORK/.stenswf"
+
+git init -q -b master "$GWORK"
+git -C "$GWORK" config user.email t@example.com
+git -C "$GWORK" config user.name test
+git -C "$GWORK" commit -q --allow-empty -m "root"
+
+# A real bare remote, so the merge-base path — the one production takes — is
+# what gets exercised. Without it only the bounded-scan fallback would run.
+git init -q --bare "$WORK/origin.git"
+git -C "$GWORK" remote add origin "$WORK/origin.git"
+git -C "$GWORK" push -q origin master
+git -C "$GWORK" checkout -q -b slice
+
+trailer()   { ( cd "$GWORK" && bash "$SCRIPT" trailer "$@" ); }
+gcommit()   { git -C "$GWORK" commit -q --allow-empty -m "$1" -m "$2"; }
+
+T900=$(trailer 900)
+assert_match "trailer emits a decision key qualified by issue" "$T900" "Decision: #900/D1"
+assert_match "trailer carries the category" "$T900" "[arch] Use a queue, not a cron poll"
+assert_match "trailer carries the rationale" "$T900" "Rationale: Polling costs a round trip"
+assert_match "trailer maps Refs onto its own token" "$T900" "Touches: src/queue.py, src/worker.py"
+assert_nomatch "trailer never spends the Refs token the commit convention owns" \
+  "$T900" "Refs: src/queue.py"
+assert_eq "trailer emits every unrecorded entry" \
+  "$(printf '%s\n' "$T900" | grep -c '^Decision:')" "2"
+assert_eq "trailer emits no blank line inside the block (git trailers are one paragraph)" \
+  "$(printf '%s\n' "$T900" | grep -c '^$')" "0"
+
+# The property the whole design rests on: record it once, never again.
+gcommit "feat: add the queue" "$T900"
+assert_eq "an already-recorded decision is never re-emitted" "$(trailer 900)" ""
+assert_eq "an exhausted trailer still exits 0" \
+  "$( trailer 900 >/dev/null 2>&1; echo $? )" "0"
+
+cat >> "$GWORK/.stenswf/900/decisions.md" <<'EOF'
+
+### D3 — Drop the nightly reconcile job
+
+- **Category:** arch
+- **Source:** ship-light
+- **Rationale:** The queue makes it redundant, and it double-writes on retry.
+- **Refs:** src/reconcile.py
+EOF
+T900B=$(trailer 900)
+assert_match "a newly appended entry is emitted" "$T900B" "Decision: #900/D3"
+assert_nomatch "an appended entry does not drag the recorded ones back" \
+  "$T900B" "Decision: #900/D1"
+
+# Ids are local to an issue. #900/D1 is recorded; #901/D1 must still emit.
+T901=$(trailer 901)
+assert_match "a sibling issue's identical id is not suppressed" "$T901" "Decision: #901/D1"
+
+assert_match "trailer resolves an inherited stub's rationale from the PRD" \
+  "$T901" "Rationale: Polling costs a round trip"
+assert_nomatch "trailer never writes a local-file pointer into git history" \
+  "$T901" ".stenswf/"
+assert_nomatch "trailer never leaves a raw stub pointer" "$T901" "#900/D1 —"
+
+assert_match "a superseding entry names what it retires" "$T901" "supersedes #901/D2"
+assert_nomatch "a superseded entry is never emitted" "$T901" "Decision: #901/D2"
+
+# Parked = an open question, not a decision. It joins the journal when it
+# resolves; until then the ⚠ in the PR body is the surface that carries it.
+assert_nomatch "a parked entry is not recorded as a decision" "$T901" "Decision: #901/D5"
+assert_match "a non-parked entry beside it still records" "$T901" "Decision: #901/D6"
+
+assert_eq "a missing anchor emits nothing" "$(trailer 999)" ""
+assert_eq "a missing anchor exits 0, so \${DEC:+-m} degrades to a plain commit" \
+  "$( trailer 999 >/dev/null 2>&1; echo $? )" "0"
+assert_eq "an all-superseded anchor emits nothing" "$(trailer 904)" ""
+
+# Folding: a rationale longer than a terminal line must stay ONE trailer
+# value, or `git interpret-trailers` reads the overflow as a new trailer.
+mkdir -p "$GWORK/.stenswf/908"
+cat > "$GWORK/.stenswf/908/decisions.md" <<'EOF'
+# Decisions — #908
+
+### D1 — Fold long rationales
+
+- **Category:** decision
+- **Source:** ship-light
+- **Rationale:** This rationale runs well past any reasonable terminal width so that the folding path is exercised rather than merely declared, and it keeps going for a while yet to force at least two continuation lines.
+- **Refs:** src/fold.py
+EOF
+T908=$(trailer 908)
+assert_eq "no folded line exceeds 78 columns" \
+  "$(printf '%s\n' "$T908" | awk 'length > 78' | wc -l | tr -d ' ')" "0"
+assert_eq "continuation lines are indented, so they stay part of one value" \
+  "$(printf '%s\n' "$T908" | sed -n '2,$p' | grep -c '^  ')" \
+  "$(printf '%s\n' "$T908" | sed -n '2,$p' | grep -vc '^\(Decision\|Rationale\|Touches\):')"
+
+# The canonical call form puts the block in the SAME paragraph as `Refs:`,
+# so both survive `git interpret-trailers`. Two paragraphs would demote
+# `Refs:` to body text — conventional-commits.md requires it stay a trailer.
+COMBINED=$(printf 'feat(x): thing\n\n%s' "$(printf 'Refs: #908\n%s' "$T908")")
+PARSED=$(printf '%s\n' "$COMBINED" | git interpret-trailers --parse)
+assert_match "the canonical form keeps Refs a parseable trailer" "$PARSED" "Refs: #908"
+assert_match "git unfolds the wrapped rationale back into one value" \
+  "$PARSED" "exercised rather than merely declared, and it keeps going"
+assert_eq "git sees exactly the trailers we emitted, plus Refs" \
+  "$(printf '%s\n' "$PARSED" | wc -l | tr -d ' ')" "4"
+
+# Round trip through git the way an agent would query it later.
+gcommit "feat: fold" "$T908"
+assert_eq "git log --grep finds the recorded decision" \
+  "$(git -C "$GWORK" log --grep='^Decision: #908/D1' --format=%h | wc -l | tr -d ' ')" "1"
+
+# No remote / no merge-base: the bounded-scan fallback must still subtract,
+# or a detached or freshly-branched tree re-emits everything it already has.
+git init -q -b master "$WORK/noremote"
+cp -r "$WORK/.stenswf" "$WORK/noremote/.stenswf"
+git -C "$WORK/noremote" config user.email t@example.com
+git -C "$WORK/noremote" config user.name test
+NR=$( cd "$WORK/noremote" && bash "$SCRIPT" trailer 900 )
+assert_match "with no remote, trailer still emits" "$NR" "Decision: #900/D1"
+git -C "$WORK/noremote" commit -q --allow-empty -m "seed" -m "$NR"
+assert_eq "with no remote, the bounded scan still subtracts what was recorded" \
+  "$( cd "$WORK/noremote" && bash "$SCRIPT" trailer 900 )" ""
+
 # --- 7. Wiring -------------------------------------------------------------
 # The skills must actually call the script; a correct script wired nowhere
 # publishes nothing.
@@ -484,6 +619,27 @@ done
 
 assert_nomatch "decisions-excerpt no longer carries its own curation awk" \
   "$(cat "$ROOT/skills/apply/decisions-excerpt.md")" "curate_anchor()"
+
+# A commit site that does not call `trailer` drops those decisions from the
+# repo silently — the commit still succeeds, and nothing downstream notices.
+for F in skills/ship-light/SKILL.md skills/ship/dispatch.md \
+         skills/ship/post-dispatch.md skills/apply/slice.md \
+         skills/apply-loop/SKILL.md references/plan-task-template.md; do
+  assert_match "$F records decisions in its commit" \
+    "$(cat "$ROOT/$F")" "publish-decisions.sh trailer"
+done
+
+# The block must share the paragraph with Refs:, or Refs: stops being a
+# trailer — conventional-commits.md states that as a hard rule.
+for F in skills/ship-light/SKILL.md skills/ship/dispatch.md \
+         skills/apply/slice.md skills/apply-loop/SKILL.md \
+         references/plan-task-template.md; do
+  assert_match "$F keeps Refs and the block in one paragraph" \
+    "$(cat "$ROOT/$F")" "printf 'Refs: #%s"
+done
+
+assert_match "the commit spec documents the decision trailers" \
+  "$(cat "$ROOT/references/conventional-commits.md")" "## Decision trailers"
 
 printf '\n1..%d\n# pass %d fail %d\n' "$((PASS + FAIL))" "$PASS" "$FAIL"
 [ "$FAIL" -eq 0 ]

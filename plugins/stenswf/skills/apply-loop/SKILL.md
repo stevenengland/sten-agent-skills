@@ -121,6 +121,18 @@ For each remaining thread — **regardless of author** (the paired reviewer
    conventional commit → `git push` → `add_reply <node-id> "<what changed>,
    fixed in <sha>"` → `resolve_thread <node-id>`.
 
+   Commit with the decision trailers, so a decision reached mid-loop lands
+   in the repo and not only on the PR:
+
+   ```bash
+   DEC=$(bash ../../scripts/publish-decisions.sh trailer "$ISSUE")
+   git commit -m "<type>(<scope>): <imperative summary>" \
+              -m "$(printf 'Refs: #%s\n%s' "$ISSUE" "$DEC")"
+   ```
+
+   Emits nothing once every entry is recorded, so calling it on each of a
+   long loop's commits is safe — that is exactly the case it is built for.
+
 3. **Rejected or inconclusive after verification (D8).** Leave the thread
    **open**: `add_reply <node-id>` with the verification result and a
    trailing `<!-- stenswf-left-open: <reason> -->` marker. Do **not**

@@ -77,7 +77,9 @@ Run lint + tests. Apply `lint-escape` if needed.
 
 ```bash
 git add <changed paths>
-git commit -m "refactor(<scope>): post-implementation refactor for #$ARGUMENTS"
+DEC=$(bash ../../scripts/publish-decisions.sh trailer "$ARGUMENTS")
+git commit -m "refactor(<scope>): post-implementation refactor for #$ARGUMENTS" \
+           -m "$(printf 'Refs: #%s\n%s' "$ARGUMENTS" "$DEC")"
 ```
 
 Mark manifest:

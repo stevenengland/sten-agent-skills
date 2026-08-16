@@ -60,7 +60,9 @@ After all tests in the slice are green:
       `Refs: #$ARGUMENTS T<id>` trailer:
   ```bash
   git add <paths>
-  git commit -m "<commit attribute verbatim>" -m "Refs: #$ARGUMENTS T<id>"
+  DEC=$(bash ../../scripts/publish-decisions.sh trailer "$ARGUMENTS")
+  git commit -m "<commit attribute verbatim>" \
+             -m "$(printf 'Refs: #%s T<id>\n%s' "$ARGUMENTS" "$DEC")"
   ```
 
 </task>

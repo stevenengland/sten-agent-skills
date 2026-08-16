@@ -15,8 +15,12 @@ Dev-only. Not packaged for end users.
   inherited stubs publishing as dangling `#<PRD>/D<n>` pointers with no
   rationale, a non-idempotent upsert growing a second `## Decisions` block on
   every `apply-loop` pass, and superseded entries leaking into a surface that
-  then contradicts the shipped code. Plus wiring checks that the publishing
-  skills call the script and that `review-loop` does not.
+  then contradicts the shipped code. Also covers the commit-trailer tier
+  against a real throwaway git repo — re-emission (a ten-commit slice
+  repeating D1 ten times) and under-emission (a sibling issue's `D1`
+  suppressing this one's, silently) — plus wiring checks that the publishing
+  skills call the script, that every commit site records, and that
+  `review-loop` does neither.
 - [`apply-verification.test.sh`](apply-verification.test.sh) — wiring checks
   that `apply`/`apply-loop` load `references/review-finding-validation.md`
   and that its links resolve.
