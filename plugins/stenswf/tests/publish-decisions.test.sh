@@ -644,18 +644,42 @@ assert_eq "git log --grep finds decisions through a squash" \
   "$(git -C "$GWORK" log --grep='^Decision: #908/D1' --format=%h | wc -l | tr -d ' ')" "1"
 git -C "$GWORK" checkout -q slice
 
-# --amend must NOT recompute: the scan runs before the rewrite, so HEAD still
-# contains the commit being amended, the call returns empty, and re-passing it
-# would drop the trailers the original message carried.
+# --amend must NOT recompute. The scan runs before the rewrite, so HEAD still
+# contains the commit being amended: the call returns empty and re-passing it
+# drops the trailers the original message carried.
+#
+# This needs an anchor with something left to emit — running it against an
+# already-recorded issue would "pass" for the trivial reason that nothing was
+# ever emitted, against code where the hazard did not exist.
+mkdir -p "$GWORK/.stenswf/911"
+printf '# Decisions — #911\n\n### D1 — Amend hazard\n\n- **Category:** arch\n- **Source:** plan\n- **Rationale:** Recomputing after the commit exists loses the block.\n- **Refs:** src/amend.py\n' \
+  > "$GWORK/.stenswf/911/decisions.md"
+
+DEC911=$(trailer 911)
+assert_match "precondition: the fresh anchor has something to record" \
+  "$DEC911" "Decision: #911/D1"
 git -C "$GWORK" commit -q --allow-empty -m "feat: amend me" \
-  -m "$(printf 'Refs: #%s\n%s' 908 "$(trailer 908)")"
-BEFORE=$(git -C "$GWORK" log -1 --format=%B | grep -c '^Decision:' || true)
-assert_eq "the pre-amend commit carries its trailers" "$BEFORE" "0"
-git -C "$GWORK" commit -q --amend --allow-empty --no-edit -m "feat: amended subject" \
-  -m "$(printf 'Refs: #%s' 908)"
-assert_eq "recomputing on amend would return empty (hence the --no-edit rule)" \
-  "$(trailer 908)" ""
-assert_match "the documented amend rule is stated where the form lives" \
+  -m "$(printf 'Refs: #%s\n%s' 911 "$DEC911")"
+assert_eq "the pre-amend commit carries its trailer" \
+  "$(git -C "$GWORK" log -1 --format=%B | grep -c '^Decision:')" "1"
+
+# The hazard itself: HEAD already holds the entry, so a recompute is empty.
+assert_eq "recomputing while the commit is still HEAD returns empty" \
+  "$(trailer 911)" ""
+git -C "$GWORK" commit -q --amend --allow-empty \
+  -m "feat: amended subject" -m "$(printf 'Refs: #%s\n%s' 911 "$(trailer 911)")"
+assert_eq "recomputing on amend DROPS the trailer — the loss the rule prevents" \
+  "$(git -C "$GWORK" log -1 --format=%B | grep -c '^Decision:')" "0"
+assert_eq "and the decision is now absent from the whole history" \
+  "$(git -C "$GWORK" log --format=%B | grep -c '^Decision: #911/')" "0"
+
+# The documented alternative preserves it.
+git -C "$GWORK" commit -q --allow-empty -m "feat: amend me safely" \
+  -m "$(printf 'Refs: #%s\n%s' 911 "$(trailer 911)")"
+git -C "$GWORK" commit -q --amend --allow-empty --no-edit
+assert_eq "--amend --no-edit keeps the trailer" \
+  "$(git -C "$GWORK" log -1 --format=%B | grep -c '^Decision:')" "1"
+assert_match "the amend rule is stated where the commit form lives" \
   "$(cat "$HERE/../references/conventional-commits.md")" "--amend --no-edit"
 
 # No remote / no merge-base: the bounded-scan fallback must still subtract,
