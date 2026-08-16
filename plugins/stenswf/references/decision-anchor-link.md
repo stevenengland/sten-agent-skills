@@ -33,16 +33,11 @@ publishes where is stated once, in
 
 Recording is a third contract again: every skill that **commits** also emits
 `Decision:` / `Rationale:` / `Touches:` trailers for whatever this branch has
-not recorded yet, which is what puts the reasoning in the repository rather
-than only on GitHub. `ship`, `ship-light`, `apply` and `apply-loop` do; the
-planners commit nothing, so their entries reach git with the first
-implementation commit. Form and query recipes:
-[conventional-commits.md](conventional-commits.md) and
-[Recording in git](../README.md#recording-in-git).
-
-A **parked** entry is written and published but deliberately **not**
-recorded — it is an open question, and it joins the git journal when it
-resolves.
+not recorded yet. Form:
+[conventional-commits.md](conventional-commits.md); rationale:
+[Recording in git](../README.md#recording-in-git). A **parked** entry is
+written and published but deliberately **not** recorded — an open question is
+not a decision.
 
 ASK-resolved and parked forks come from
 [decision-escalation.md](decision-escalation.md); HITL escape-hatch resolutions

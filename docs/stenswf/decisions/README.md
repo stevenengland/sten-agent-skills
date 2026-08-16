@@ -7,19 +7,8 @@ One file per PRD: `prd-<N>.md`, written by `/stenswf:apply` in PRD-mode
 at PRD close (after a `(y)/(e)/(n)` confirmation) and staged as part of
 the cleanup PR.
 
-This is the **top** of four tiers. Below it sit two others:
-
-- *Published* — `ship` and `ship-light` render every active entry into a
-  marker-delimited `## Decisions` block in the PR body and a wrap-up issue
-  comment, and `apply` refreshes it once supersessions land. Unfiltered, and
-  always **current state**: superseded entries vanish. See
-  [the Publication section](../../../plugins/stenswf/README.md#publication).
-- *Recorded in git* — every commit carries `Decision:` / `Rationale:` /
-  `Touches:` trailers for whatever the branch had not recorded yet, so the
-  reasoning is in the repository itself and survives the branch. An
-  append-only **journal**: it keeps what was believed at each commit. See
-  [Recording in git](../../../plugins/stenswf/README.md#recording-in-git).
-
+This is the **top** of four tiers; the other three are defined in
+[the stenswf README](../../../plugins/stenswf/README.md#four-tier-model-local-recorded-published-committed).
 This file is for the small subset worth carrying as curated documentation.
 
 ## Curation filter
@@ -47,9 +36,8 @@ git log --grep='^Decision: #<slice>/'          # one slice
 git log --grep='^Touches:.*path/to/file'       # what was decided about a file
 ```
 
-Grep, not `git interpret-trailers`: individual commits parse cleanly, but a
-squash merge concatenates several messages and the trailer parser only reads
-the last paragraph of the result.
+Grep, not `git interpret-trailers` —
+[why](../../../plugins/stenswf/README.md#recording-in-git).
 
 ## Manual excerpt
 

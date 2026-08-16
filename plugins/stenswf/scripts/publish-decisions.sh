@@ -17,8 +17,7 @@
 #                   a file-path Ref, and no markers or heading.
 # trailer           the repo-durable tier: `Decision:`/`Rationale:`/`Touches:`
 #                   lines for entries not yet recorded in this branch's
-#                   history, for a third `git commit -m`. Append-only journal,
-#                   NOT a current-state view — see the README.
+#                   history. Contract: README.md#recording-in-git.
 # pr / issue        idempotent: replace an existing block, preserve
 #                   everything outside the markers, remove the block when
 #                   the render is empty. `issue` owns ONE comment per issue
@@ -63,6 +62,7 @@ parse_anchor() {
     }
     function reset() {
       id=""; header=""; cat=""; src=""; rat=""; refs=""; sup=""; parked=0; hasref=0
+      last=""
     }
     function emit() {
       if (id == "") return
@@ -84,15 +84,35 @@ parse_anchor() {
       next
     }
     id == "" { next }
-    /^- \*\*Category:\*\*/   { cat = val($0); next }
-    /^- \*\*Source:\*\*/     { src = val($0); next }
-    /^- \*\*Rationale:\*\*/  { rat = val($0); next }
-    /^- \*\*Supersedes:\*\*/ { sup = val($0); next }
-    /^- \*\*Refs:\*\*/       { refs = val($0); if (refs ~ /\//) hasref = 1; next }
+    # A blank line ends any wrapped value. Nothing legitimately continues
+    # across one, and without this a stray paragraph would be swallowed into
+    # whichever field happened to come last.
+    /^[[:space:]]*$/ { last = ""; next }
+    /^- \*\*Category:\*\*/   { cat  = val($0); last = "cat";  next }
+    /^- \*\*Source:\*\*/     { src  = val($0); last = "src";  next }
+    /^- \*\*Rationale:\*\*/  { rat  = val($0); last = "rat";  next }
+    /^- \*\*Supersedes:\*\*/ { sup  = val($0); last = "sup";  next }
+    /^- \*\*Refs:\*\*/       { refs = val($0); last = "refs"; if (refs ~ /\//) hasref = 1; next }
     # Canonical field form, plus the legacy bare paragraph. Both anchored to
     # line start so the word "parked" inside a rationale never sets the flag.
-    /^- \*\*Status:\*\*[[:space:]]*parked/ { parked = 1; next }
-    /^status:[[:space:]]*parked/           { parked = 1; next }
+    /^- \*\*Status:\*\*[[:space:]]*parked/ { parked = 1; last = ""; next }
+    /^status:[[:space:]]*parked/           { parked = 1; last = ""; next }
+    # Wrapped field value. Every doc in this repo hard-wraps at ~72 columns,
+    # so an agent writing an anchor produces these routinely — dropping them
+    # silently truncates the rationale on every surface at once, and the
+    # entry still renders, so nothing looks wrong.
+    last != "" {
+      cont = $0
+      sub(/^[[:space:]]+/, "", cont)
+      sub(/[[:space:]]+$/, "", cont)
+      if (cont == "") next
+      if      (last == "cat")  cat  = cat  " " cont
+      else if (last == "src")  src  = src  " " cont
+      else if (last == "rat")  rat  = rat  " " cont
+      else if (last == "sup")  sup  = sup  " " cont
+      else if (last == "refs") { refs = refs " " cont; if (refs ~ /\//) hasref = 1 }
+      next
+    }
     END { emit() }
   ' "$1"
 }
@@ -263,8 +283,20 @@ trailer() {
     _title="${_title#— }"
 
     if [ -n "$sup" ]; then
-      _sup=$(printf '%s' "$sup" | sed "s|\(D[0-9][0-9]*\)|#$_issue/\1|g")
-      _title="supersedes $_sup — $_title"
+      # Qualify only the leading id list. The field is `D3 — <free-text
+      # reason>`, and a reason mentioning another entry ("the D3 experiment
+      # showed…") must not be rewritten into a claim about what was retired.
+      _sup_ids=$(printf '%s' "$sup" | sed -n 's|^\(D[0-9][0-9]*\([[:space:]]*,[[:space:]]*D[0-9][0-9]*\)*\).*|\1|p')
+      if [ -n "$_sup_ids" ]; then
+        _sup_why=$(printf '%s' "${sup#"$_sup_ids"}" \
+          | sed -e 's|^[[:space:]]*||' -e 's|^—[[:space:]]*||' -e 's|^-[[:space:]]*||')
+        _sup_q=$(printf '%s' "$_sup_ids" | sed "s|\(D[0-9][0-9]*\)|#$_issue/\1|g")
+        if [ -n "$_sup_why" ]; then
+          _title="supersedes $_sup_q ($_sup_why) — $_title"
+        else
+          _title="supersedes $_sup_q — $_title"
+        fi
+      fi
     fi
 
     fold_line "Decision: $_key [${cat:-decision}] $_title"

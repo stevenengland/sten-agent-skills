@@ -60,10 +60,13 @@ After all tests in the slice are green:
       `Refs: #$ARGUMENTS T<id>` trailer:
   ```bash
   git add <paths>
-  DEC=$(bash ../../scripts/publish-decisions.sh trailer "$ARGUMENTS")
-  git commit -m "<commit attribute verbatim>" \
-             -m "$(printf 'Refs: #%s T<id>\n%s' "$ARGUMENTS" "$DEC")"
+  git commit -m "<commit attribute verbatim>" -m "Refs: #$ARGUMENTS T<id>"
   ```
+      If your prompt carried a `COMMIT TRAILERS` section, append those
+      lines to the same paragraph as `Refs:` — verbatim, no blank line.
+      Never call `publish-decisions.sh` from here: this file is executed
+      by a subagent whose CWD is the repo root, with no skill directory
+      to resolve a relative script path against.
 
 </task>
 ```

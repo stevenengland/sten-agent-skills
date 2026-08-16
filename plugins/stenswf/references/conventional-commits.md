@@ -41,11 +41,7 @@ from review feedback or rollback decisions, both downstream.
 
 ## Decision trailers
 
-`.stenswf/` is gitignored, so the decision anchor dies with the working
-copy. Every commit carries the decisions that were not yet recorded on this
-branch — which makes the branch history the repo-durable record, readable
-with `git log --grep='^Decision:'` long after the branch is deleted. The
-canonical form, at every commit site:
+The canonical form, at every commit site:
 
 ```bash
 DEC=$(bash ../../scripts/publish-decisions.sh trailer "$ARGUMENTS")
@@ -56,13 +52,17 @@ git commit -m "<type>(<scope>): <subject>" \
 `$(...)` strips the trailing newline, so an empty `$DEC` — no anchor, or
 nothing new since the last commit — leaves a bare `Refs: #N` and the commit
 is unchanged. Never hand-write these trailers; the script owns the ids, the
-supersession wording, and the resolution of inherited stubs.
+supersession wording, and the resolution of inherited stubs. Never recompute
+on `--amend` (use `--amend --no-edit`): the scan runs before the rewrite, so
+it returns empty and drops the trailers the message already had.
 
-The log is an **append-only journal, not a current state view**: a decision
-superseded later keeps the trailer on the commit that was made on its basis,
-and the superseding entry names what it retired. For current state, read the
-PR body block or the issue comment. See
-[decision-anchor-link.md](decision-anchor-link.md).
+Subagent-dispatched commits (`ship` Phase 1) are the exception — they
+receive the block in their prompt instead, because a relative script path
+has nothing to resolve against there. See
+[../skills/ship/dispatch.md](../skills/ship/dispatch.md).
+
+Rationale, query recipes, and the journal-vs-current-state split:
+[README — Recording in git](../README.md#recording-in-git).
 
 Example (ship-light, slice mode):
 

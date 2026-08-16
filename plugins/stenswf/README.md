@@ -822,8 +822,13 @@ git commit -m "<type>(<scope>): <subject>" \
 - **The branch history is the record.** `trailer` subtracts the keys already
   present in `git log <merge-base>..HEAD`, so the first commit carries the
   whole plan-time backlog and later ones only what was added since. There is
-  no state file to drift, and `--amend` / rebase re-derive correctly because
-  the rewritten log is what gets scanned.
+  no state file to drift, and a rebase re-derives correctly because the
+  rewritten log is what the next call scans.
+- **Never recompute on `git commit --amend`.** The scan runs *before* the
+  rewrite, so HEAD still contains the commit being amended: the call returns
+  empty and re-passing it drops the trailers the original message carried.
+  Amend with `--amend --no-edit`, or edit the subject while leaving the
+  trailer block in place.
 - **Keys are issue-qualified** (`#<issue>/D<n>`). Anchor ids are local to an
   issue, so a bare `D1` would be ambiguous the moment two issues' commits
   share a history — and the failure mode is silent under-emission.

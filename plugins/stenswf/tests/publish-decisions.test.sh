@@ -124,6 +124,34 @@ cat > "$WORK/.stenswf/.archive/905-2026-01-01/decisions.md" <<'EOF'
 - **Refs:** src/queue.py
 EOF
 
+# 909: fields wrapped across lines. Every doc in this repo hard-wraps at
+# ~72 columns, so an agent writing an anchor produces these routinely — and
+# a line-oriented parser drops everything after the first line while the
+# entry still renders, so the truncation is invisible on every surface.
+mkdir -p "$WORK/.stenswf/909"
+cat > "$WORK/.stenswf/909/decisions.md" <<'EOF'
+# Decisions — #909
+
+### D1 — Use a queue, not a cron poll
+
+- **Category:** arch
+- **Source:** plan
+- **Rationale:** Polling costs a round trip per tick and cannot express
+  ordering; the queue already exists for billing and is cheaper to run.
+- **Refs:** src/queue.py,
+  src/worker.py
+
+### D2 — Retry with backoff
+
+- **Category:** decision
+- **Source:** apply
+- **Rationale:** Flat retries stampede a cold dependency.
+- **Refs:** src/worker.py
+- **Supersedes:** D1 — the D3 experiment showed flat retries fail
+
+A stray paragraph after a blank line belongs to no field.
+EOF
+
 cat > "$WORK/.stenswf/903/decisions.md" <<'EOF'
 # Decisions — #903
 
@@ -187,6 +215,29 @@ assert_match "an unresolvable stub degrades to an issue reference" \
 assert_nomatch "an unresolvable stub still publishes no local pointer" \
   "$OUT903" "#906/D1"
 
+# --- 2b. Wrapped field values ----------------------------------------------
+# A regression the equivalence test cannot see: it compares selected ids, not
+# byte layout, so a truncated rationale still "matches".
+
+W909=$(render 909)
+assert_match "a wrapped rationale keeps its first line" \
+  "$W909" "Polling costs a round trip per tick"
+assert_match "a wrapped rationale keeps its continuation" \
+  "$W909" "the queue already exists for billing and is cheaper to run"
+assert_match "the continuation is joined onto one field line" \
+  "$W909" "cannot express ordering; the queue"
+assert_match "a wrapped Refs list keeps both paths" "$W909" "src/queue.py, src/worker.py"
+assert_nomatch "a stray paragraph after a blank line joins no field" \
+  "$W909" "belongs to no field"
+
+# A path that only appears on the wrapped continuation must still satisfy the
+# curated filter, or the excerpt silently drops the entry.
+mkdir -p "$WORK/.stenswf/910"
+printf '# Decisions — #910\n\n### D1 — Wrapped ref only\n\n- **Category:** arch\n- **Source:** plan\n- **Rationale:** Short.\n- **Refs:** AC#1,\n  src/late.py\n' \
+  > "$WORK/.stenswf/910/decisions.md"
+assert_match "a file path found only on a continuation line satisfies --excerpt" \
+  "$(render --excerpt 910)" "### D1 —"
+
 # --- 3. Parked entries -----------------------------------------------------
 
 assert_match "a parked entry is flagged in the header" "$OUT" "### ⚠ D5 —"
@@ -228,7 +279,7 @@ assert_nomatch "excerpt drops an inherited stub" "$CUR" "### D1 —"
 
 CUR900=$(render --excerpt 900)
 assert_match "excerpt keeps an arch entry with a file-path Ref" "$CUR900" "### D1 —"
-assert_match "excerpt keeps a decision entry with a file-path Ref" "$CUR900" "### D2 —"
+assert_match "excerpt keeps the PRD's own decision entry" "$CUR900" "### D2 —"
 
 # The committed excerpt supplies its own `# Decisions — PRD #N` heading, so
 # the block chrome must stay out. Without this, markers and a duplicate
@@ -571,6 +622,42 @@ gcommit "feat: fold" "$T908"
 assert_eq "git log --grep finds the recorded decision" \
   "$(git -C "$GWORK" log --grep='^Decision: #908/D1' --format=%h | wc -l | tr -d ' ')" "1"
 
+# The composed call form, executed rather than described. An empty $DEC must
+# leave a bare `Refs:` — conventional-commits.md asserts this in prose, and
+# the whole "safe to call at every commit site" claim rests on it.
+gcommit "feat: drop the reconcile job" "$(trailer 900)"
+EMPTY=$(trailer 900)          # now fully recorded
+assert_eq "the exhausted anchor really is empty" "$EMPTY" ""
+COMPOSED=$(printf 'Refs: #%s\n%s' 900 "$EMPTY")
+assert_eq "an empty emission composes to a bare Refs line" "$COMPOSED" "Refs: #900"
+assert_eq "and leaves no trailing blank line to break trailer parsing" \
+  "$(printf '%s\n' "$COMPOSED" | wc -l | tr -d ' ')" "1"
+
+# `git log --grep` must survive a squash merge — the README claims it does,
+# because GitHub's COMMIT_MESSAGES default concatenates the branch's messages.
+SQUASHED=$(git -C "$GWORK" log --format='* %s%n%b' -2)
+assert_match "a concatenated squash message still carries the decision keys" \
+  "$SQUASHED" "Decision: #908/D1"
+git -C "$GWORK" checkout -q -b squashed master
+git -C "$GWORK" commit -q --allow-empty -m "$SQUASHED"
+assert_eq "git log --grep finds decisions through a squash" \
+  "$(git -C "$GWORK" log --grep='^Decision: #908/D1' --format=%h | wc -l | tr -d ' ')" "1"
+git -C "$GWORK" checkout -q slice
+
+# --amend must NOT recompute: the scan runs before the rewrite, so HEAD still
+# contains the commit being amended, the call returns empty, and re-passing it
+# would drop the trailers the original message carried.
+git -C "$GWORK" commit -q --allow-empty -m "feat: amend me" \
+  -m "$(printf 'Refs: #%s\n%s' 908 "$(trailer 908)")"
+BEFORE=$(git -C "$GWORK" log -1 --format=%B | grep -c '^Decision:' || true)
+assert_eq "the pre-amend commit carries its trailers" "$BEFORE" "0"
+git -C "$GWORK" commit -q --amend --allow-empty --no-edit -m "feat: amended subject" \
+  -m "$(printf 'Refs: #%s' 908)"
+assert_eq "recomputing on amend would return empty (hence the --no-edit rule)" \
+  "$(trailer 908)" ""
+assert_match "the documented amend rule is stated where the form lives" \
+  "$(cat "$HERE/../references/conventional-commits.md")" "--amend --no-edit"
+
 # No remote / no merge-base: the bounded-scan fallback must still subtract,
 # or a detached or freshly-branched tree re-emits everything it already has.
 git init -q -b master "$WORK/noremote"
@@ -622,24 +709,51 @@ assert_nomatch "decisions-excerpt no longer carries its own curation awk" \
 
 # A commit site that does not call `trailer` drops those decisions from the
 # repo silently — the commit still succeeds, and nothing downstream notices.
-for F in skills/ship-light/SKILL.md skills/ship/dispatch.md \
-         skills/ship/post-dispatch.md skills/apply/slice.md \
-         skills/apply-loop/SKILL.md references/plan-task-template.md; do
+# These files are read by the skill-loading agent, so the skill-relative path
+# resolves for them.
+for F in skills/ship-light/SKILL.md skills/ship/post-dispatch.md \
+         skills/apply/slice.md skills/apply/prd.md skills/apply-loop/SKILL.md \
+         skills/ship/dispatch.md; do
   assert_match "$F records decisions in its commit" \
     "$(cat "$ROOT/$F")" "publish-decisions.sh trailer"
 done
 
 # The block must share the paragraph with Refs:, or Refs: stops being a
 # trailer — conventional-commits.md states that as a hard rule.
-for F in skills/ship-light/SKILL.md skills/ship/dispatch.md \
-         skills/apply/slice.md skills/apply-loop/SKILL.md \
-         references/plan-task-template.md; do
+for F in skills/ship-light/SKILL.md skills/apply/slice.md \
+         skills/apply/prd.md skills/apply-loop/SKILL.md; do
   assert_match "$F keeps Refs and the block in one paragraph" \
-    "$(cat "$ROOT/$F")" "printf 'Refs: #%s"
+    "$(cat "$ROOT/$F")" "Refs: #%s"
 done
 
 assert_match "the commit spec documents the decision trailers" \
   "$(cat "$ROOT/references/conventional-commits.md")" "## Decision trailers"
+
+# Subagent-facing files. A skill-relative script path has nothing to resolve
+# against there — the subagent's CWD is the repo root — so the call would
+# fail, the commit would still succeed with a bare `Refs:`, and the report
+# format is silent on success. Demonstrate the breakage, then assert neither
+# file contains one.
+REPO_ROOT=$(CDPATH= cd -- "$ROOT/../.." && pwd)
+assert_eq "a skill-relative script path does not resolve from the repo root" \
+  "$( cd "$REPO_ROOT" && bash ../../scripts/publish-decisions.sh trailer 1 >/dev/null 2>&1; echo $? )" \
+  "127"
+
+for F in references/plan-task-template.md; do
+  assert_nomatch "$F never calls the script from subagent context" \
+    "$(cat "$ROOT/$F")" "bash ../../scripts/publish-decisions.sh"
+  assert_match "$F takes its trailers from the prompt instead" \
+    "$(cat "$ROOT/$F")" "COMMIT TRAILERS"
+done
+
+# dispatch.md is read by the orchestrator but contains the subagent's prompt.
+# The computation must sit outside that prompt block, and the prompt must
+# carry the result.
+assert_match "dispatch.md passes the trailers through the prompt tail" \
+  "$(cat "$ROOT/skills/ship/dispatch.md")" "--- COMMIT TRAILERS ---"
+assert_nomatch "the subagent's commit step does not call the script itself" \
+  "$(sed -n '/FETCH YOUR TASK FRAGMENT/,/REPORT FORMAT/p' "$ROOT/skills/ship/dispatch.md")" \
+  "publish-decisions.sh"
 
 printf '\n1..%d\n# pass %d fail %d\n' "$((PASS + FAIL))" "$PASS" "$FAIL"
 [ "$FAIL" -eq 0 ]
