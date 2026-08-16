@@ -3,9 +3,18 @@
 Committed, team-visible excerpts of per-issue decision anchors
 (`.stenswf/<N>/decisions.md`).
 
-One file per PRD: `prd-<N>.md`, written silently by
-`/stenswf:apply` in PRD-mode at PRD close and staged as part of the
-cleanup PR.
+One file per PRD: `prd-<N>.md`, written by `/stenswf:apply` in PRD-mode
+at PRD close (after a `(y)/(e)/(n)` confirmation) and staged as part of
+the cleanup PR.
+
+This is the **top** of three tiers. Below it sits the *published* tier:
+`ship` and `ship-light` render every active entry into a
+marker-delimited `## Decisions` block in the PR body and a wrap-up issue
+comment, and `apply` refreshes it once supersessions land. That tier is
+unfiltered and needs no curation — it is where a slice's decisions go to
+survive, since `.stenswf/` is gitignored. This file is for the small
+subset worth carrying in the repo forever. See
+[the Publication section](../../../plugins/stenswf/README.md#publication).
 
 ## Curation filter
 
@@ -23,17 +32,18 @@ library of durable decisions, not a working log.
 
 ## Manual excerpt (solo-slice flows)
 
-Slice-only flows (no PRD) don't produce excerpts by default. If you
-want one, run:
+Slice-only flows (no PRD) don't produce a committed excerpt by default —
+their decisions live in the published tier (PR body + issue comment),
+which is usually enough. If you want one in the repo as well:
 
 ```bash
 N=<slice-issue>
-awk '/^### D[0-9]+/,/^### /' .stenswf/$N/decisions.md \
-  | grep -B1 -A5 -E 'Category: (arch|decision)' \
-  > docs/decisions/slice-$N.md
+bash plugins/stenswf/scripts/publish-decisions.sh render --excerpt "$N" \
+  > docs/stenswf/decisions/slice-$N.md
 ```
 
-Review the output before committing.
+Same filter and the same live-or-archived anchor lookup that PRD-mode
+uses. Review the output before committing.
 
 ## Schema
 

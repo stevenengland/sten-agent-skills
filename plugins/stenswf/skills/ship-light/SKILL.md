@@ -375,6 +375,18 @@ EOF
 fi
 ```
 
+**Publish the decision anchor.** `.stenswf/` is gitignored, so the
+anchor does not survive this working copy. Append the rendered block to
+`$PR_BODY_FILE` **before** `gh pr create`, so the PR carries the
+decisions from its first render (`scripts/publish-decisions.sh`):
+
+```bash
+bash ../../scripts/publish-decisions.sh render "$ARGUMENTS" >> "$PR_BODY_FILE"
+```
+
+Empty anchor → nothing appended. See
+[../../references/decision-anchor-link.md](../../references/decision-anchor-link.md).
+
 Then run the shared PR+CI procedure with `CI_MAX_CYCLES=2` and
 `WAIT_FOR_MERGE=no`:
 [../../references/pr-ci-merge.md](../../references/pr-ci-merge.md).
@@ -388,6 +400,20 @@ PR body template: [pr-body.md](pr-body.md). Verbatim, no brevity compression.
 post `CI_BLOCKER (ship-light cap reached)` and log `tool_failure`.
 
 `ship-light` does NOT wait for merge — user handles async.
+
+## Phase 6 — Decision comment
+
+```bash
+bash ../../scripts/publish-decisions.sh issue "$ARGUMENTS"
+```
+
+Upserts the issue's single decisions comment — creating it, or updating
+the one `plan-light` already posted. Empty anchor → nothing posted.
+
+Unlike `ship`, `ship-light` neither archives the plan tree nor waits for
+merge, so without this a rejected alternative lives only in a gitignored
+file on one machine. The PR body block (Phase 4) covers the review
+window; the comment covers the issue after the branch is gone.
 
 ## Out of scope (deliberate)
 

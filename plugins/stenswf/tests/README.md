@@ -9,6 +9,14 @@ Dev-only. Not packaged for end users.
 - [`inherit-decisions.test.sh`](inherit-decisions.test.sh) — behavior tests
   for copying active PRD decision stubs into slices
   (`scripts/inherit-decisions.sh`).
+- [`publish-decisions.test.sh`](publish-decisions.test.sh) — behavior tests for
+  rendering decision anchors to the PR body and issue comment
+  (`scripts/publish-decisions.sh`). Targets three silent failures:
+  inherited stubs publishing as dangling `#<PRD>/D<n>` pointers with no
+  rationale, a non-idempotent upsert growing a second `## Decisions` block on
+  every `apply-loop` pass, and superseded entries leaking into a surface that
+  then contradicts the shipped code. Plus wiring checks that the publishing
+  skills call the script and that `review-loop` does not.
 - [`apply-verification.test.sh`](apply-verification.test.sh) — wiring checks
   that `apply`/`apply-loop` load `references/review-finding-validation.md`
   and that its links resolve.
@@ -37,6 +45,7 @@ bash plugins/stenswf/tests/wayfinder.test.sh
 bash plugins/stenswf/tests/inherit-decisions.test.sh
 bash plugins/stenswf/tests/apply-verification.test.sh
 bash plugins/stenswf/tests/hitl-escape-hatch.test.sh
+bash plugins/stenswf/tests/publish-decisions.test.sh
 ```
 
 The GitHub-facing suites inject a fake `gh` on `PATH` rather than calling

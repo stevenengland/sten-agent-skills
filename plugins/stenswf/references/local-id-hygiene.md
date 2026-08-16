@@ -22,7 +22,7 @@ Describe the behavior, finding, or decision in plain language instead — e.g.
   review XML is mirrored onto the PR, so finding codes resolve there),
 - PR bodies and issue / PR comments,
 - the committed decisions excerpt headers (`### D<n>` in
-  `docs/decisions/prd-N.md`),
+  `docs/stenswf/decisions/prd-N.md`),
 - any file under `.stenswf/`.
 
 The distinction is durability + resolvability: a git history reader years

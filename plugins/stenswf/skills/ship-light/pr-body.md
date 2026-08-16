@@ -18,3 +18,16 @@ Closes #$ARGUMENTS
 ## Notable assumptions
 - <only include if silent assumptions were recorded; else omit section>
 ```
+
+`## Decisions` is appended below this by
+[../../scripts/publish-decisions.sh](../../scripts/publish-decisions.sh)
+at Phase 4 — do not hand-write it, and do not edit inside its
+`<!-- stenswf:decisions:… -->` markers; later refreshes replace whatever
+sits between them.
+
+The two sections sit next to each other and are not the same thing.
+`## Notable assumptions` is a transient review surface for silent
+"mirror the analog" guesses; `## Decisions` is the durable anchor —
+rejected alternatives that pass the grep-blame + surfaces test. An
+assumption that turns out to have been a decision belongs in the
+anchor, not here.

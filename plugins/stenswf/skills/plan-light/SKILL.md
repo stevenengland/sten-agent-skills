@@ -363,6 +363,17 @@ entry (source `plan-light`) to `.stenswf/$ARGUMENTS/decisions.md` per
 [../../references/decision-anchor-link.md](../../references/decision-anchor-link.md).
 Otherwise skip.
 
+Then publish, whether or not an entry was added:
+
+```bash
+bash ../../scripts/publish-decisions.sh issue "$ARGUMENTS"
+```
+
+Empty anchor → nothing posted. The plan artifact is gitignored, so a
+slice planned here and shipped from another clone would otherwise lose
+the entry. `ship-light` Phase 6 upserts the same single comment, so this
+never duplicates — it just closes the window between the two.
+
 **Pre-finalize reflection — before printing `READY`.** The checklist
 above verifies *shape*; this verifies *reasoning*. Pause and step
 back:

@@ -12,9 +12,15 @@ excerpt. Therefore mention them defensively if you think they might represent ma
 
 ## Generate the candidate excerpt
 
+Curation and the live-or-archived anchor lookup both live in
+[../../scripts/publish-decisions.sh](../../scripts/publish-decisions.sh).
+`render --excerpt` applies exactly the filter above; the same script
+renders the unfiltered block that `ship` / `ship-light` publish to the
+PR and issue.
+
 ```bash
-mkdir -p docs/decisions
-EXCERPT="docs/decisions/prd-$ARGUMENTS.md"
+mkdir -p docs/stenswf/decisions
+EXCERPT="docs/stenswf/decisions/prd-$ARGUMENTS.md"
 TITLE=$(gh issue view $ARGUMENTS --json title -q .title)
 DATE=$(date -u +%Y-%m-%d)
 
@@ -23,51 +29,26 @@ SLICES=$(gh issue list --state closed \
   --search "in:body \"Parent PRD\" \"#$ARGUMENTS\"" \
   --json number -q '.[].number')
 
-# Extract ACTIVE arch/decision entries with at least one file-path Ref
-# from one anchor. Active = header `### D<n> ` (strikethrough won't match).
-# Entries bounded by next `### ` or EOF.
-curate_anchor() {
-  awk '
-    function flush() {
-      if (have && (category=="arch" || category=="decision") && hasref) print block
-      block=""; category=""; hasref=0; have=0
-    }
-    /^### / {
-      flush()
-      if ($0 ~ /^### D[0-9]+ /) { block=$0 "\n"; have=1 }
-      next
-    }
-    have {
-      block = block $0 "\n"
-      if ($0 ~ /^- \*\*Category:\*\* (arch|decision)/) {
-        category=$0; sub(/.*Category:\*\* */,"",category)
-      }
-      if ($0 ~ /^- \*\*Refs:\*\*.*\//) hasref=1
-    }
-    END { flush() }
-  ' "$1"
-}
-
 {
   printf '# Decisions — PRD #%s: %s\n\n' "$ARGUMENTS" "$TITLE"
   printf '*Curated from slice anchors on %s.*\n\n' "$DATE"
 
-  # PRD's own anchor (live or archived)
-  for SRC in ".stenswf/$ARGUMENTS/decisions.md" \
-             $(ls -1 .stenswf/.archive/$ARGUMENTS-*/decisions.md 2>/dev/null); do
-    [ -s "$SRC" ] && curate_anchor "$SRC"
-  done
+  # PRD's own anchor
+  bash ../../scripts/publish-decisions.sh render --excerpt "$ARGUMENTS"
 
   # Per-slice anchors
   for S in $SLICES; do
-    SRC=".stenswf/$S/decisions.md"
-    [ -s "$SRC" ] || SRC=$(ls -1 .stenswf/.archive/$S-*/decisions.md 2>/dev/null | head -1)
-    [ -n "$SRC" ] && [ -s "$SRC" ] || continue
+    OUT=$(bash ../../scripts/publish-decisions.sh render --excerpt "$S")
+    [ -n "$OUT" ] || continue
     printf '\n<!-- from slice #%s -->\n\n' "$S"
-    curate_anchor "$SRC"
+    printf '%s\n' "$OUT"
   done
 } > "$EXCERPT"
 ```
+
+Inherited stubs are dropped by the curated filter on their `inherited`
+category — the PRD's own anchor is curated in its own right above, so
+keeping the stubs would list every PRD decision twice.
 
 ## Confirm with the user
 
@@ -76,7 +57,7 @@ Skip the commit silently when no qualifying entries exist.
 
 ```markdown
 The following major decisions were extracted for permanent
-record in `docs/decisions/prd-$ARGUMENTS.md`:
+record in `docs/stenswf/decisions/prd-$ARGUMENTS.md`:
 
 ---
 <contents of $EXCERPT>

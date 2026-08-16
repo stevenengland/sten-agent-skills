@@ -20,7 +20,16 @@ Write contract by skill (one-line summary):
 | `ship` | yes | drift-continue, BLOCKED override, ASK-resolved or parked fork | decision |
 | `ship-light` | yes | rubberduck-rejected alternatives, ASK-resolved or parked fork, HITL escape-hatch resolution | decision, arch |
 | `review` | no | — | — |
+| `review-loop` | no | — | — |
 | `apply` | yes | Phase 2 override, ASK-resolved or parked fork | matches superseded |
+| `apply-loop` | yes | via the `apply` engine | matches superseded |
+
+Publishing an entry is a separate contract from writing one — it is what
+makes the entry survive the machine it was made on, since `.stenswf/` is
+gitignored. Renderer:
+[../scripts/publish-decisions.sh](../scripts/publish-decisions.sh); who
+publishes where is stated once, in
+[the Publication section](../README.md#publication).
 
 ASK-resolved and parked forks come from
 [decision-escalation.md](decision-escalation.md); HITL escape-hatch resolutions
@@ -30,10 +39,15 @@ host seam — there is no `decision-escalation` or `hitl-escape-hatch` source.
 ## Parked decisions
 
 A heavy decision reached with no answer obtainable (unattended) is
-**parked**: write a pending `decision` anchor carrying a `status: parked` line
-in its body, pointing at the PR/issue location where the full tension lives.
-On resume the anchor is answered and the `status: parked` line is removed (it
-becomes an ordinary resolved `decision`).
+**parked**: write a pending `decision` anchor carrying a
+`- **Status:** parked` field line, pointing at the PR/issue location where
+the full tension lives. On resume the anchor is answered and the `Status:`
+line is removed (it becomes an ordinary resolved `decision`).
+
+Field form only — see the [schema](../README.md#schema). A bare
+`status: parked` paragraph is the legacy form: still parsed by
+[publish-decisions.sh](../scripts/publish-decisions.sh) so old anchors keep
+their `⚠`, never written by a new one.
 
 Severity rules for contradictions (consumed by `review`):
 
