@@ -124,6 +124,34 @@ cat > "$WORK/.stenswf/.archive/905-2026-01-01/decisions.md" <<'EOF'
 - **Refs:** src/queue.py
 EOF
 
+# 909: fields wrapped across lines. Every doc in this repo hard-wraps at
+# ~72 columns, so an agent writing an anchor produces these routinely — and
+# a line-oriented parser drops everything after the first line while the
+# entry still renders, so the truncation is invisible on every surface.
+mkdir -p "$WORK/.stenswf/909"
+cat > "$WORK/.stenswf/909/decisions.md" <<'EOF'
+# Decisions — #909
+
+### D1 — Use a queue, not a cron poll
+
+- **Category:** arch
+- **Source:** plan
+- **Rationale:** Polling costs a round trip per tick and cannot express
+  ordering; the queue already exists for billing and is cheaper to run.
+- **Refs:** src/queue.py,
+  src/worker.py
+
+### D2 — Retry with backoff
+
+- **Category:** decision
+- **Source:** apply
+- **Rationale:** Flat retries stampede a cold dependency.
+- **Refs:** src/worker.py
+- **Supersedes:** D1 — the D3 experiment showed flat retries fail
+
+A stray paragraph after a blank line belongs to no field.
+EOF
+
 cat > "$WORK/.stenswf/903/decisions.md" <<'EOF'
 # Decisions — #903
 
@@ -187,6 +215,29 @@ assert_match "an unresolvable stub degrades to an issue reference" \
 assert_nomatch "an unresolvable stub still publishes no local pointer" \
   "$OUT903" "#906/D1"
 
+# --- 2b. Wrapped field values ----------------------------------------------
+# A regression the equivalence test cannot see: it compares selected ids, not
+# byte layout, so a truncated rationale still "matches".
+
+W909=$(render 909)
+assert_match "a wrapped rationale keeps its first line" \
+  "$W909" "Polling costs a round trip per tick"
+assert_match "a wrapped rationale keeps its continuation" \
+  "$W909" "the queue already exists for billing and is cheaper to run"
+assert_match "the continuation is joined onto one field line" \
+  "$W909" "cannot express ordering; the queue"
+assert_match "a wrapped Refs list keeps both paths" "$W909" "src/queue.py, src/worker.py"
+assert_nomatch "a stray paragraph after a blank line joins no field" \
+  "$W909" "belongs to no field"
+
+# A path that only appears on the wrapped continuation must still satisfy the
+# curated filter, or the excerpt silently drops the entry.
+mkdir -p "$WORK/.stenswf/910"
+printf '# Decisions — #910\n\n### D1 — Wrapped ref only\n\n- **Category:** arch\n- **Source:** plan\n- **Rationale:** Short.\n- **Refs:** AC#1,\n  src/late.py\n' \
+  > "$WORK/.stenswf/910/decisions.md"
+assert_match "a file path found only on a continuation line satisfies --excerpt" \
+  "$(render --excerpt 910)" "### D1 —"
+
 # --- 3. Parked entries -----------------------------------------------------
 
 assert_match "a parked entry is flagged in the header" "$OUT" "### ⚠ D5 —"
@@ -228,7 +279,7 @@ assert_nomatch "excerpt drops an inherited stub" "$CUR" "### D1 —"
 
 CUR900=$(render --excerpt 900)
 assert_match "excerpt keeps an arch entry with a file-path Ref" "$CUR900" "### D1 —"
-assert_match "excerpt keeps a decision entry with a file-path Ref" "$CUR900" "### D2 —"
+assert_match "excerpt keeps the PRD's own decision entry" "$CUR900" "### D2 —"
 
 # The committed excerpt supplies its own `# Decisions — PRD #N` heading, so
 # the block chrome must stay out. Without this, markers and a duplicate
@@ -316,6 +367,8 @@ case "\$1 \$2" in
     [ "\$f" = "-" ] && cat > "\$CBODY" || cp "\$f" "\$CBODY"
     echo 4242 > "\$CMETA" ;;
   "api user") echo "octocat" ;;
+  # `trailer` asks for the default branch to scope its git-log scan.
+  "repo view") echo "master" ;;
   *)
     case "\$args" in
       # List comments: emit the one comment, if it exists, as the --jq
@@ -448,6 +501,199 @@ assert_match "issue says it could not list the comments" "$ERR" "cannot list com
 assert_eq "a failed listing posts no comment" \
   "$( [ -e "$CBODY" ] && echo exists || echo absent )" "absent"
 
+# --- 6c. Commit-message trailers -------------------------------------------
+# The repo-durable tier. Two properties carry it, and both fail silently:
+#
+#   1. Re-emission. `trailer` is called at EVERY commit site, so if it does
+#      not subtract what the branch already recorded, a ten-commit slice
+#      repeats decision D1 ten times and the journal becomes unreadable.
+#   2. Under-emission. Anchor ids are local to an issue, so an unqualified
+#      `D1` seen on a sibling issue's commit would suppress this issue's D1
+#      forever — a decision silently absent from the record, with nothing to
+#      notice, because the commit still succeeds.
+
+GWORK="$WORK/git"
+mkdir -p "$GWORK"
+cp -r "$WORK/.stenswf" "$GWORK/.stenswf"
+
+git init -q -b master "$GWORK"
+git -C "$GWORK" config user.email t@example.com
+git -C "$GWORK" config user.name test
+git -C "$GWORK" commit -q --allow-empty -m "root"
+
+# A real bare remote, so the merge-base path — the one production takes — is
+# what gets exercised. Without it only the bounded-scan fallback would run.
+git init -q --bare "$WORK/origin.git"
+git -C "$GWORK" remote add origin "$WORK/origin.git"
+git -C "$GWORK" push -q origin master
+git -C "$GWORK" checkout -q -b slice
+
+trailer()   { ( cd "$GWORK" && bash "$SCRIPT" trailer "$@" ); }
+gcommit()   { git -C "$GWORK" commit -q --allow-empty -m "$1" -m "$2"; }
+
+T900=$(trailer 900)
+assert_match "trailer emits a decision key qualified by issue" "$T900" "Decision: #900/D1"
+assert_match "trailer carries the category" "$T900" "[arch] Use a queue, not a cron poll"
+assert_match "trailer carries the rationale" "$T900" "Rationale: Polling costs a round trip"
+assert_match "trailer maps Refs onto its own token" "$T900" "Touches: src/queue.py, src/worker.py"
+assert_nomatch "trailer never spends the Refs token the commit convention owns" \
+  "$T900" "Refs: src/queue.py"
+assert_eq "trailer emits every unrecorded entry" \
+  "$(printf '%s\n' "$T900" | grep -c '^Decision:')" "2"
+assert_eq "trailer emits no blank line inside the block (git trailers are one paragraph)" \
+  "$(printf '%s\n' "$T900" | grep -c '^$')" "0"
+
+# The property the whole design rests on: record it once, never again.
+gcommit "feat: add the queue" "$T900"
+assert_eq "an already-recorded decision is never re-emitted" "$(trailer 900)" ""
+assert_eq "an exhausted trailer still exits 0" \
+  "$( trailer 900 >/dev/null 2>&1; echo $? )" "0"
+
+cat >> "$GWORK/.stenswf/900/decisions.md" <<'EOF'
+
+### D3 — Drop the nightly reconcile job
+
+- **Category:** arch
+- **Source:** ship-light
+- **Rationale:** The queue makes it redundant, and it double-writes on retry.
+- **Refs:** src/reconcile.py
+EOF
+T900B=$(trailer 900)
+assert_match "a newly appended entry is emitted" "$T900B" "Decision: #900/D3"
+assert_nomatch "an appended entry does not drag the recorded ones back" \
+  "$T900B" "Decision: #900/D1"
+
+# Ids are local to an issue. #900/D1 is recorded; #901/D1 must still emit.
+T901=$(trailer 901)
+assert_match "a sibling issue's identical id is not suppressed" "$T901" "Decision: #901/D1"
+
+assert_match "trailer resolves an inherited stub's rationale from the PRD" \
+  "$T901" "Rationale: Polling costs a round trip"
+assert_nomatch "trailer never writes a local-file pointer into git history" \
+  "$T901" ".stenswf/"
+assert_nomatch "trailer never leaves a raw stub pointer" "$T901" "#900/D1 —"
+
+assert_match "a superseding entry names what it retires" "$T901" "supersedes #901/D2"
+assert_nomatch "a superseded entry is never emitted" "$T901" "Decision: #901/D2"
+
+# Parked = an open question, not a decision. It joins the journal when it
+# resolves; until then the ⚠ in the PR body is the surface that carries it.
+assert_nomatch "a parked entry is not recorded as a decision" "$T901" "Decision: #901/D5"
+assert_match "a non-parked entry beside it still records" "$T901" "Decision: #901/D6"
+
+assert_eq "a missing anchor emits nothing" "$(trailer 999)" ""
+assert_eq "a missing anchor exits 0, so \${DEC:+-m} degrades to a plain commit" \
+  "$( trailer 999 >/dev/null 2>&1; echo $? )" "0"
+assert_eq "an all-superseded anchor emits nothing" "$(trailer 904)" ""
+
+# Folding: a rationale longer than a terminal line must stay ONE trailer
+# value, or `git interpret-trailers` reads the overflow as a new trailer.
+mkdir -p "$GWORK/.stenswf/908"
+cat > "$GWORK/.stenswf/908/decisions.md" <<'EOF'
+# Decisions — #908
+
+### D1 — Fold long rationales
+
+- **Category:** decision
+- **Source:** ship-light
+- **Rationale:** This rationale runs well past any reasonable terminal width so that the folding path is exercised rather than merely declared, and it keeps going for a while yet to force at least two continuation lines.
+- **Refs:** src/fold.py
+EOF
+T908=$(trailer 908)
+assert_eq "no folded line exceeds 78 columns" \
+  "$(printf '%s\n' "$T908" | awk 'length > 78' | wc -l | tr -d ' ')" "0"
+assert_eq "continuation lines are indented, so they stay part of one value" \
+  "$(printf '%s\n' "$T908" | sed -n '2,$p' | grep -c '^  ')" \
+  "$(printf '%s\n' "$T908" | sed -n '2,$p' | grep -vc '^\(Decision\|Rationale\|Touches\):')"
+
+# The canonical call form puts the block in the SAME paragraph as `Refs:`,
+# so both survive `git interpret-trailers`. Two paragraphs would demote
+# `Refs:` to body text — conventional-commits.md requires it stay a trailer.
+COMBINED=$(printf 'feat(x): thing\n\n%s' "$(printf 'Refs: #908\n%s' "$T908")")
+PARSED=$(printf '%s\n' "$COMBINED" | git interpret-trailers --parse)
+assert_match "the canonical form keeps Refs a parseable trailer" "$PARSED" "Refs: #908"
+assert_match "git unfolds the wrapped rationale back into one value" \
+  "$PARSED" "exercised rather than merely declared, and it keeps going"
+assert_eq "git sees exactly the trailers we emitted, plus Refs" \
+  "$(printf '%s\n' "$PARSED" | wc -l | tr -d ' ')" "4"
+
+# Round trip through git the way an agent would query it later.
+gcommit "feat: fold" "$T908"
+assert_eq "git log --grep finds the recorded decision" \
+  "$(git -C "$GWORK" log --grep='^Decision: #908/D1' --format=%h | wc -l | tr -d ' ')" "1"
+
+# The composed call form, executed rather than described. An empty $DEC must
+# leave a bare `Refs:` — conventional-commits.md asserts this in prose, and
+# the whole "safe to call at every commit site" claim rests on it.
+gcommit "feat: drop the reconcile job" "$(trailer 900)"
+EMPTY=$(trailer 900)          # now fully recorded
+assert_eq "the exhausted anchor really is empty" "$EMPTY" ""
+COMPOSED=$(printf 'Refs: #%s\n%s' 900 "$EMPTY")
+assert_eq "an empty emission composes to a bare Refs line" "$COMPOSED" "Refs: #900"
+assert_eq "and leaves no trailing blank line to break trailer parsing" \
+  "$(printf '%s\n' "$COMPOSED" | wc -l | tr -d ' ')" "1"
+
+# `git log --grep` must survive a squash merge — the README claims it does,
+# because GitHub's COMMIT_MESSAGES default concatenates the branch's messages.
+SQUASHED=$(git -C "$GWORK" log --format='* %s%n%b' -2)
+assert_match "a concatenated squash message still carries the decision keys" \
+  "$SQUASHED" "Decision: #908/D1"
+git -C "$GWORK" checkout -q -b squashed master
+git -C "$GWORK" commit -q --allow-empty -m "$SQUASHED"
+assert_eq "git log --grep finds decisions through a squash" \
+  "$(git -C "$GWORK" log --grep='^Decision: #908/D1' --format=%h | wc -l | tr -d ' ')" "1"
+git -C "$GWORK" checkout -q slice
+
+# --amend must NOT recompute. The scan runs before the rewrite, so HEAD still
+# contains the commit being amended: the call returns empty and re-passing it
+# drops the trailers the original message carried.
+#
+# This needs an anchor with something left to emit — running it against an
+# already-recorded issue would "pass" for the trivial reason that nothing was
+# ever emitted, against code where the hazard did not exist.
+mkdir -p "$GWORK/.stenswf/911"
+printf '# Decisions — #911\n\n### D1 — Amend hazard\n\n- **Category:** arch\n- **Source:** plan\n- **Rationale:** Recomputing after the commit exists loses the block.\n- **Refs:** src/amend.py\n' \
+  > "$GWORK/.stenswf/911/decisions.md"
+
+DEC911=$(trailer 911)
+assert_match "precondition: the fresh anchor has something to record" \
+  "$DEC911" "Decision: #911/D1"
+git -C "$GWORK" commit -q --allow-empty -m "feat: amend me" \
+  -m "$(printf 'Refs: #%s\n%s' 911 "$DEC911")"
+assert_eq "the pre-amend commit carries its trailer" \
+  "$(git -C "$GWORK" log -1 --format=%B | grep -c '^Decision:')" "1"
+
+# The hazard itself: HEAD already holds the entry, so a recompute is empty.
+assert_eq "recomputing while the commit is still HEAD returns empty" \
+  "$(trailer 911)" ""
+git -C "$GWORK" commit -q --amend --allow-empty \
+  -m "feat: amended subject" -m "$(printf 'Refs: #%s\n%s' 911 "$(trailer 911)")"
+assert_eq "recomputing on amend DROPS the trailer — the loss the rule prevents" \
+  "$(git -C "$GWORK" log -1 --format=%B | grep -c '^Decision:')" "0"
+assert_eq "and the decision is now absent from the whole history" \
+  "$(git -C "$GWORK" log --format=%B | grep -c '^Decision: #911/')" "0"
+
+# The documented alternative preserves it.
+git -C "$GWORK" commit -q --allow-empty -m "feat: amend me safely" \
+  -m "$(printf 'Refs: #%s\n%s' 911 "$(trailer 911)")"
+git -C "$GWORK" commit -q --amend --allow-empty --no-edit
+assert_eq "--amend --no-edit keeps the trailer" \
+  "$(git -C "$GWORK" log -1 --format=%B | grep -c '^Decision:')" "1"
+assert_match "the amend rule is stated where the commit form lives" \
+  "$(cat "$HERE/../references/conventional-commits.md")" "--amend --no-edit"
+
+# No remote / no merge-base: the bounded-scan fallback must still subtract,
+# or a detached or freshly-branched tree re-emits everything it already has.
+git init -q -b master "$WORK/noremote"
+cp -r "$WORK/.stenswf" "$WORK/noremote/.stenswf"
+git -C "$WORK/noremote" config user.email t@example.com
+git -C "$WORK/noremote" config user.name test
+NR=$( cd "$WORK/noremote" && bash "$SCRIPT" trailer 900 )
+assert_match "with no remote, trailer still emits" "$NR" "Decision: #900/D1"
+git -C "$WORK/noremote" commit -q --allow-empty -m "seed" -m "$NR"
+assert_eq "with no remote, the bounded scan still subtracts what was recorded" \
+  "$( cd "$WORK/noremote" && bash "$SCRIPT" trailer 900 )" ""
+
 # --- 7. Wiring -------------------------------------------------------------
 # The skills must actually call the script; a correct script wired nowhere
 # publishes nothing.
@@ -484,6 +730,54 @@ done
 
 assert_nomatch "decisions-excerpt no longer carries its own curation awk" \
   "$(cat "$ROOT/skills/apply/decisions-excerpt.md")" "curate_anchor()"
+
+# A commit site that does not call `trailer` drops those decisions from the
+# repo silently — the commit still succeeds, and nothing downstream notices.
+# These files are read by the skill-loading agent, so the skill-relative path
+# resolves for them.
+for F in skills/ship-light/SKILL.md skills/ship/post-dispatch.md \
+         skills/apply/slice.md skills/apply/prd.md skills/apply-loop/SKILL.md \
+         skills/ship/dispatch.md; do
+  assert_match "$F records decisions in its commit" \
+    "$(cat "$ROOT/$F")" "publish-decisions.sh trailer"
+done
+
+# The block must share the paragraph with Refs:, or Refs: stops being a
+# trailer — conventional-commits.md states that as a hard rule.
+for F in skills/ship-light/SKILL.md skills/apply/slice.md \
+         skills/apply/prd.md skills/apply-loop/SKILL.md; do
+  assert_match "$F keeps Refs and the block in one paragraph" \
+    "$(cat "$ROOT/$F")" "Refs: #%s"
+done
+
+assert_match "the commit spec documents the decision trailers" \
+  "$(cat "$ROOT/references/conventional-commits.md")" "## Decision trailers"
+
+# Subagent-facing files. A skill-relative script path has nothing to resolve
+# against there — the subagent's CWD is the repo root — so the call would
+# fail, the commit would still succeed with a bare `Refs:`, and the report
+# format is silent on success. Demonstrate the breakage, then assert neither
+# file contains one.
+REPO_ROOT=$(CDPATH= cd -- "$ROOT/../.." && pwd)
+assert_eq "a skill-relative script path does not resolve from the repo root" \
+  "$( cd "$REPO_ROOT" && bash ../../scripts/publish-decisions.sh trailer 1 >/dev/null 2>&1; echo $? )" \
+  "127"
+
+for F in references/plan-task-template.md; do
+  assert_nomatch "$F never calls the script from subagent context" \
+    "$(cat "$ROOT/$F")" "bash ../../scripts/publish-decisions.sh"
+  assert_match "$F takes its trailers from the prompt instead" \
+    "$(cat "$ROOT/$F")" "COMMIT TRAILERS"
+done
+
+# dispatch.md is read by the orchestrator but contains the subagent's prompt.
+# The computation must sit outside that prompt block, and the prompt must
+# carry the result.
+assert_match "dispatch.md passes the trailers through the prompt tail" \
+  "$(cat "$ROOT/skills/ship/dispatch.md")" "--- COMMIT TRAILERS ---"
+assert_nomatch "the subagent's commit step does not call the script itself" \
+  "$(sed -n '/FETCH YOUR TASK FRAGMENT/,/REPORT FORMAT/p' "$ROOT/skills/ship/dispatch.md")" \
+  "publish-decisions.sh"
 
 printf '\n1..%d\n# pass %d fail %d\n' "$((PASS + FAIL))" "$PASS" "$FAIL"
 [ "$FAIL" -eq 0 ]

@@ -108,17 +108,20 @@ For each approved axis group (severity order: critical → low):
 2. Run tests. All must pass.
 3. Commit:
 
-   ```
-   refactor(<axis-or-scope>): address <axis> findings from PRD #$ARGUMENTS
-
-   <one paragraph summary>
-
-   Addresses: F1, F2
-   Refs: #$ARGUMENTS
+   ```bash
+   DEC=$(bash ../../scripts/publish-decisions.sh trailer "$ARGUMENTS")
+   git commit -m "refactor(<axis-or-scope>): address <axis> findings from PRD #$ARGUMENTS" \
+              -m "<one paragraph summary>" \
+              -m "$(printf 'Addresses: F1, F2\nRefs: #%s\n%s' "$ARGUMENTS" "$DEC")"
    ```
 
    Types by axis: `test(...)`, `refactor(...)`, `fix(...)`,
    `chore(ops):`, `feat(ops):`.
+
+   The trailers matter more here than anywhere else: the curated excerpt
+   below keeps only entries whose `Refs:` carries a file path, so a PRD
+   decision without one would otherwise reach neither the git tier nor
+   `docs/stenswf/decisions/` — recorded nowhere in the repo at all.
 
    **Local-ID hygiene.** `F<n>` codes belong in the `Addresses:` trailer and
    the PR body only — never in the commit subject, source, comments, or test

@@ -151,17 +151,21 @@ strikethrough the old header per
   review-fix delivery (does NOT squash prior `ship`/`ship-light`
   commits — this is one additional commit on top):
 
-  ```
-  <type>(<scope>): <imperative summary, lower case, no period, ≤72 chars>
-
-  <body paragraph — omit if self-explanatory>
-
-  Refs: #$ARGUMENTS
+  ```bash
+  DEC=$(bash ../../scripts/publish-decisions.sh trailer "$ARGUMENTS")
+  git commit -m "<type>(<scope>): <imperative summary, ≤72 chars>" \
+             -m "$(printf 'Refs: #%s\n%s' "$ARGUMENTS" "$DEC")"
   ```
 
   `apply` slice-mode allowed types per
   [../../references/conventional-commits.md](../../references/conventional-commits.md):
   `feat|fix|refactor|perf|docs|test|chore|build|ci|style|revert`.
+
+  Commit **after** the Phase 2 anchor writes, so this commit carries the
+  superseding entry — the trailer names what it retired
+  (`supersedes #$ARGUMENTS/D<n>`), while the commit that introduced the
+  original keeps its own trailer. The log is a journal of what was believed
+  when, not a current-state view; that is what the two upserts below are for.
 
 - **Refresh the published decisions.** This mode is what strikes entries
   through (Phase 2 override), so a block published at PR-create time now

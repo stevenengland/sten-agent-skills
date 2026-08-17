@@ -257,11 +257,18 @@ Conventional Commits (full spec at
 [../../references/conventional-commits.md](../../references/conventional-commits.md)):
 
 ```bash
-git commit -m "<type>(<scope>): <imperative subject>" -m "Refs: #$ARGUMENTS"
+DEC=$(bash ../../scripts/publish-decisions.sh trailer "$ARGUMENTS")
+git commit -m "<type>(<scope>): <imperative subject>" \
+           -m "$(printf 'Refs: #%s\n%s' "$ARGUMENTS" "$DEC")"
 ```
 
 `type`: `feat|fix|refactor|perf|docs|test|chore|build|ci`. Subject
 lower-case, no period, ≤72 chars. Apply `lint-escape` if blocked. No squash.
+
+`$DEC` carries the decisions this branch has not recorded yet — the first
+commit takes the whole `plan-light` backlog, later ones only what was added
+since. Empty when there is nothing new, which leaves a bare `Refs:` line.
+`.stenswf/` is gitignored; this is what puts the reasoning in the repo.
 
 **Local-ID hygiene.** Never write `AC<n>` into source, comments, test
 names, or commit subjects — describe the behavior in plain language. See
@@ -319,13 +326,20 @@ Same session, no subagent. Orthogonal to `clean-code`:
 - **Leftover smell.** Grep diff for
   `TODO|FIXME|print(|console\.log|debugger` and commented-out blocks.
 
-If anything was fixed, re-run tests+lint, then:
-`git commit -am "refactor(<scope>): self-critique pass" -m "Refs: #$ARGUMENTS"`.
+If anything was fixed, re-run tests+lint, then commit:
+
+```bash
+DEC=$(bash ../../scripts/publish-decisions.sh trailer "$ARGUMENTS")
+git commit -am "refactor(<scope>): self-critique pass" \
+           -m "$(printf 'Refs: #%s\n%s' "$ARGUMENTS" "$DEC")"
+```
 
 If the rubberduck rejected a concrete alternative, append one
 `decision` entry (source `ship-light`) to
 `.stenswf/$ARGUMENTS/decisions.md` per
-[../../references/decision-anchor-link.md](../../references/decision-anchor-link.md).
+[../../references/decision-anchor-link.md](../../references/decision-anchor-link.md)
+**before** committing — that ordering is what lets this commit carry the
+rejection into the permanent record instead of the next one.
 
 Non-decision "minor guesses" go in both the PR body's
 `## Notable assumptions` AND `lite-notes.md`'s

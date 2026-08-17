@@ -12,6 +12,9 @@ drift in type list and trailer format.
 <optional body paragraph — omit when self-explanatory>
 
 Refs: #<issue-number>
+Decision: #<issue>/D<n> [<category>] <title>
+Rationale: <why, folded to one trailer value>
+Touches: <files the decision implicates>
 ```
 
 ## Type list (canonical)
@@ -32,6 +35,34 @@ from review feedback or rollback decisions, both downstream.
   breaks `git interpret-trailers` parsing.
 - For `apply`-PRD commits, add `Addresses: F1, F2, …` above `Refs:`.
 - For multi-issue references, separate with comma: `Refs: #123, #124`.
+- The decision trailers go in the **same paragraph** as `Refs:`, never in
+  a paragraph of their own. Git only parses the last paragraph, so a blank
+  line between them demotes `Refs:` to body text.
+
+## Decision trailers
+
+The canonical form, at every commit site:
+
+```bash
+DEC=$(bash ../../scripts/publish-decisions.sh trailer "$ARGUMENTS")
+git commit -m "<type>(<scope>): <subject>" \
+           -m "$(printf 'Refs: #%s\n%s' "$ARGUMENTS" "$DEC")"
+```
+
+`$(...)` strips the trailing newline, so an empty `$DEC` — no anchor, or
+nothing new since the last commit — leaves a bare `Refs: #N` and the commit
+is unchanged. Never hand-write these trailers; the script owns the ids, the
+supersession wording, and the resolution of inherited stubs. Never recompute
+on `--amend` (use `--amend --no-edit`): the scan runs before the rewrite, so
+it returns empty and drops the trailers the message already had.
+
+Subagent-dispatched commits (`ship` Phase 1) are the exception — they
+receive the block in their prompt instead, because a relative script path
+has nothing to resolve against there. See
+[../skills/ship/dispatch.md](../skills/ship/dispatch.md).
+
+Rationale, query recipes, and the journal-vs-current-state split:
+[README — Recording in git](../README.md#recording-in-git).
 
 Example (ship-light, slice mode):
 

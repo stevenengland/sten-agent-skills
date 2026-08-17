@@ -778,22 +778,77 @@ On `concept_sha256` drift (existing mechanism):
 The anchor has no checksum of its own; append-only + strikethrough
 semantics make it inherently stable under concurrent writes.
 
-### Three-tier model (local, published, committed)
+### Four-tier model (local, recorded, published, committed)
 
 - **Local:** `.stenswf/<N>/decisions.md` (full, per-developer; excluded via `.git/info/exclude`, see `bootstrap`).
+- **Recorded in git:** `Decision:` / `Rationale:` / `Touches:` trailers on
+  the commits themselves, emitted by `publish-decisions.sh trailer` at every
+  commit site. This is the tier that puts decisions **in the repo** — it
+  survives the merge, the branch deletion, and the machine, under any merge
+  method. Append-only journal; see *Recording in git* below.
 - **Published:** a marker-delimited `## Decisions` block in the PR body
   and the wrap-up issue comment, rendered by
   [scripts/publish-decisions.sh](scripts/publish-decisions.sh). All
-  active entries, unfiltered. See *Publication* below.
+  active entries, unfiltered. This tier is the **current state** — superseded
+  entries vanish. See *Publication* below.
 - **Committed excerpt:** `docs/stenswf/decisions/prd-<N>.md`, written
   by `apply` PRD-mode at PRD close after a `(y)/(e)/(n)` confirmation.
   Curation filter: `Category ∈ {arch, decision}` ∧ not-superseded ∧
   `Refs:` contains a concrete file path. Staged with message
   `docs(stenswf): curated decisions for PRD #<N>`.
 
-Solo-slice flows (no PRD) skip the committed excerpt by default; the
-published tier covers them. Manual recipe in
+Solo-slice flows (no PRD) skip the committed excerpt; the git and published
+tiers cover them. Manual recipe in
 [docs/stenswf/decisions/README.md](../../docs/stenswf/decisions/README.md).
+
+### Recording in git
+
+The PR body does **not** reach `git log`. A squash commit's default body is
+the concatenated commit messages, a merge commit's is the PR title, and a
+rebase merge has neither; only a repo configured with
+`squash_merge_commit_message = PR_BODY` would carry it, and only for squash.
+stenswf never runs the merge — `references/pr-ci-merge.md` waits for a human
+— so it can neither pass `--body` nor pin the method. The commits are the
+only surface stenswf controls that ends up in the repository.
+
+So every commit site appends the decisions this branch has not recorded yet:
+
+```bash
+DEC=$(bash ../../scripts/publish-decisions.sh trailer "$ARGUMENTS")
+git commit -m "<type>(<scope>): <subject>" \
+           -m "$(printf 'Refs: #%s\n%s' "$ARGUMENTS" "$DEC")"
+```
+
+- **The branch history is the record.** `trailer` subtracts the keys already
+  present in `git log <merge-base>..HEAD`, so the first commit carries the
+  whole plan-time backlog and later ones only what was added since. There is
+  no state file to drift, and a rebase re-derives correctly because the
+  rewritten log is what the next call scans.
+- **Never recompute on `git commit --amend`.** The scan runs *before* the
+  rewrite, so HEAD still contains the commit being amended: the call returns
+  empty and re-passing it drops the trailers the original message carried.
+  Amend with `--amend --no-edit`, or edit the subject while leaving the
+  trailer block in place.
+- **Keys are issue-qualified** (`#<issue>/D<n>`). Anchor ids are local to an
+  issue, so a bare `D1` would be ambiguous the moment two issues' commits
+  share a history — and the failure mode is silent under-emission.
+- **Same paragraph as `Refs:`.** Git parses only the last paragraph, so a
+  blank line between them demotes `Refs:` to body text.
+- **Query with grep, not `git interpret-trailers`.** Individual commits parse
+  cleanly, but a squash concatenates several messages and the trailer parser
+  only ever looks at the last paragraph of the result:
+
+  ```bash
+  git log --grep='^Decision: #12/'            # one issue's decisions
+  git log --grep='^Decision:' --format='%h %s'
+  ```
+- **It is a journal, not a current-state view.** An entry superseded later
+  keeps its trailer on the commit that was made on its basis; the superseding
+  entry names what it retired. For current state, read the PR body block or
+  the issue comment.
+- **Parked entries are not recorded** — an open question is not a decision.
+  It joins the journal when it resolves and the flag comes off.
+- **Weight:** ~200–300 bytes per decision, spread across a slice's commits.
 
 ### Publication
 
@@ -811,6 +866,10 @@ machine — invisible to CI, to a second clone, and to everyone else.
 | `apply-loop` | both, refreshed | End-of-session, both converged and cap paths |
 | `apply` PRD-mode | committed excerpt (`--excerpt`) | Phase 3 |
 | `review`, `review-loop` | none | reviewers never write or publish anchors |
+
+Every skill that commits also records the trailers (`ship`, `ship-light`,
+`apply`, `apply-loop`) — see *Recording in git* above. The planners commit
+nothing, so their decisions reach git with the first implementation commit.
 
 Rules:
 
@@ -873,6 +932,15 @@ grep -hE '^### D[0-9]+ ' .stenswf/*/decisions.md
 
 This works because every file-implicating decision lists the file paths
 in its `Refs:` field — a hard schema rule.
+
+Those commands need the local anchor. From a fresh clone, or after the
+branch is gone, read the git tier instead — same information, no
+`.stenswf/` required:
+
+```bash
+git log --grep='^Decision:' --format='%h %ad%n%b' --date=short
+git log --grep='^Touches:.*path/to/file'   # who decided what about a file
+```
 
 ---
 

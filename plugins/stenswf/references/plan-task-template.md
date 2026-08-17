@@ -62,6 +62,11 @@ After all tests in the slice are green:
   git add <paths>
   git commit -m "<commit attribute verbatim>" -m "Refs: #$ARGUMENTS T<id>"
   ```
+      If your prompt carried a `COMMIT TRAILERS` section, append those
+      lines to the same paragraph as `Refs:` — verbatim, no blank line.
+      Never call `publish-decisions.sh` from here: this file is executed
+      by a subagent whose CWD is the repo root, with no skill directory
+      to resolve a relative script path against.
 
 </task>
 ```

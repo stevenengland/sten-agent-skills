@@ -22,6 +22,22 @@ manifest's `tasks[].acs[].behavior_change` mirror per
 The flags are per-task (NOT in `stable-prefix.md`) so the cached prefix
 stays identical across all tasks; only the tail varies.
 
+**Compute the decision trailers here, in the orchestrator**, and paste the
+result into the tail. The subagent cannot run the script itself: skill-relative
+paths resolve against the skill directory, and a dispatched subagent has no
+skill-directory context — its CWD is the repo root, where `../../scripts/`
+points outside the repo entirely. It would fail silently, the commit would
+succeed with a bare `Refs:`, and the report format is silent on success, so
+the whole heavy path would record nothing.
+
+```bash
+DEC=$(bash ../../scripts/publish-decisions.sh trailer "$ARGUMENTS")
+```
+
+Recompute per dispatch — task N+1 must not repeat what task N's commit
+already recorded, and the script derives that from the log the previous
+subagent just wrote to.
+
 ```
 $(cat .stenswf/$ARGUMENTS/stable-prefix.md)
 
@@ -39,6 +55,9 @@ LOCAL-ID RULE: Never write AC<n>/F<n>/D<n> codes into source, comments,
       test names, or the commit subject — they are local-only and
       unresolvable to a later reader. Describe the behavior in plain
       language. Codes are allowed only in commit trailers (Refs:, etc.).
+--- COMMIT TRAILERS ---
+<the $DEC block computed above, verbatim; omit this whole section when empty>
+
 RE-VALIDATE: Before writing any test, re-evaluate AC tags against
       the Done-when text and the files you have read. The current
       tag for each AC is derivable from the lists above
@@ -63,6 +82,11 @@ commit-message spec at
 
   git add <paths from Files>
   git commit -m "<commit attribute verbatim>" -m "Refs: #$ARGUMENTS T<id>"
+
+If your prompt carried a COMMIT TRAILERS section, append those lines to
+the SAME paragraph as `Refs:` — no blank line between them, or `Refs:`
+stops being a trailer. Write them verbatim; do not invent, renumber, or
+reword them.
 
 REPORT FORMAT — silent on success, loud on failure.
 

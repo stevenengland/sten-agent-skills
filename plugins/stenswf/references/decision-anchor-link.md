@@ -31,6 +31,14 @@ gitignored. Renderer:
 publishes where is stated once, in
 [the Publication section](../README.md#publication).
 
+Recording is a third contract again: every skill that **commits** also emits
+`Decision:` / `Rationale:` / `Touches:` trailers for whatever this branch has
+not recorded yet. Form:
+[conventional-commits.md](conventional-commits.md); rationale:
+[Recording in git](../README.md#recording-in-git). A **parked** entry is
+written and published but deliberately **not** recorded — an open question is
+not a decision.
+
 ASK-resolved and parked forks come from
 [decision-escalation.md](decision-escalation.md); HITL escape-hatch resolutions
 from [hitl-escape-hatch.md](hitl-escape-hatch.md). Provenance stays with the
