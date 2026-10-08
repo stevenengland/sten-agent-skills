@@ -247,6 +247,11 @@ Dispatch ONE `Explore` subagent (thoroughness: thorough, ≤500 words):
 > Backward trace from the symptom in #$ARGUMENTS to its origin.
 > Cite `file:line` for both the origin and the symptom site.
 >
+> For each design decision the fix must make, gather grounding
+> evidence: code analogs, docs, conventions, tests, or active
+> `.stenswf/**/decisions.md` anchors. Cite `file:line` per source.
+> Report evidence only; do not decide.
+>
 > Return a ≤500-word report with these fields verbatim:
 >
 >   confirmed_root_cause: <≤3 sentences, falsifiable>
@@ -254,17 +259,48 @@ Dispatch ONE `Explore` subagent (thoroughness: thorough, ≤500 words):
 >   symptom: <file:line>
 >   affected_files: <≤15 file paths, one per line>
 >   fix_shape_summary: <≤3 sentences, no code>
->   judgment_calls: <list of design decisions the fix would touch, or "none">
+>   candidate_judgment_calls: <one block per call, or "none">
+>
+> Each `candidate_judgment_calls` entry, verbatim shape:
+>
+>   - decision: <what the fix must decide, one sentence>
+>     evidence: <grounding citations as file:line, or "none found">
 >
 > Do not write code. Do not paste file contents beyond cited line numbers.
 > Thoroughness: thorough.
 
-Where the `judgment_calls` expose competing fix shapes, weigh them per
+Where the `candidate_judgment_calls` expose competing fix shapes, weigh
+them per
 [../../references/decision-weighting.md](../../references/decision-weighting.md)
 — prefer the fix that best serves quality and long-term maintainability, not
 the cheapest patch.
 
-Persist to `/tmp/triage-$ARGUMENTS-rca.md` for Phase 5.
+Persist to `/tmp/triage-$ARGUMENTS-rca.md` for Phase 3.1 and Phase 5.
+
+---
+
+## Phase 3.1 — Ground the judgment calls (parent)
+
+The subagent gathered evidence; **you classify.** Per
+`candidate_judgment_calls` entry, apply
+[../../references/decision-escalation.md](../../references/decision-escalation.md):
+**resolve easy calls, preserve heavy calls.**
+
+- **easy** → **resolve now.** Fold the decided rule into the bug-brief
+  `## Implementation Decisions`; cite the evidence in the
+  `decisions.md` anchor (Phase 5.5). Not HITL.
+- **heavy** → it **survives** as an open judgment call.
+
+**Goal: zero HITL slices except heavy calls.** A slice is HITL **iff
+≥1 call survives.** Write to `/tmp/triage-$ARGUMENTS-rca.md`:
+
+```
+open_judgment_calls: <survivors, or "none">
+resolved_judgment_calls: <call → decided rule (evidence file:line), or "none">
+```
+
+Do **not** interview the user here — survivors stay deferred to the
+`plan-light` / `ship-light` HITL escape hatch.
 
 ---
 
@@ -285,7 +321,7 @@ Repro status:         <confirmed | likely | cannot-locate>
 Root cause:           <one-line summary | n/a>
 Affected modules:     <comma list>
 Affected files:       <count> (<≤15 ideal>)
-Judgment calls:       <list | none>
+Judgment calls:       <N open (M resolved from evidence) | none>
 
 Available outcomes:
 
@@ -387,7 +423,7 @@ Required body sections (copy verbatim shape, fill from earlier phases):
 
 - `## Problem Statement` — one paragraph paraphrased from the bug body.
 - `## Root Cause` — from Phase 3 (`confirmed_root_cause`, `origin`, `symptom`).
-- `## Implementation Decisions` — `fix_shape_summary` + module list. No code, no file paths.
+- `## Implementation Decisions` — `fix_shape_summary` + module list, plus each Phase 3.1 `resolved_judgment_calls` decided rule. No code, no file paths (the evidence `file:line` lives in the `decisions.md` anchor).
 - `## Invariants Preserved` — explicit list (e.g. "public API stable", "existing green tests stay green", "no schema change").
 - `## Conventions` — new rules introduced to prevent recurrence, or `None — slice-local decisions only.`
 - `## Out of Scope` — adjacent defects observed but deferred.
@@ -454,6 +490,8 @@ EOF
   rationale = origin/symptom citation.
 - One `decision` entry per item in `## Conventions` of the bug-brief
   (skip if `None — slice-local decisions only.`).
+- One `decision` entry per Phase 3.1 `resolved_judgment_calls` item —
+  resolution as title, its evidence `file:line` as rationale.
 
 Use the canonical append snippet from the Decision Anchor Contract.
 
@@ -476,8 +514,8 @@ bug_ref: <ARGUMENTS>
 
 `type` selection:
 
-- `slice — HITL` if Phase 3 reported `judgment_calls` ≠ none, **or** if
-  Phase 4 had a `user_override` for forced-CONVERT.
+- `slice — HITL` if Phase 3.1 grounding left ≥1 `open_judgment_calls`,
+  **or** if Phase 4 had a `user_override` for forced-CONVERT.
 - `slice — AFK` otherwise.
 
 `lite_eligible` follows the existing envelope from
@@ -496,8 +534,10 @@ blocker, and `hitl-cat3` means "HITL is the only one":
   over-envelope must show both.
 - no envelope blocker → emit `disqualifier: hitl-cat3`.
 
-**Emit `## Open judgment calls` (required).** One entry per call that
-made this slice HITL, from Phase 3's `judgment_calls`:
+**HITL slices only — emit `## Open judgment calls` (required).** One
+entry per surviving call, from Phase 3.1's `open_judgment_calls`
+(resolved calls went into the bug-brief and do not appear here). On an
+AFK slice this section is omitted:
 
 ```markdown
 ## Open judgment calls
@@ -642,8 +682,9 @@ Per
 >
 > - Did Phase 2's `repro_status` actually rule out a duplicate I missed
 >   (e.g. same symptom, different root cause)?
-> - Is the `judgment_calls` list really empty, or did I quietly defer a
->   design decision into the slice that should be a HITL signal?
+> - Is every surviving open call genuinely heavy per
+>   `decision-escalation.md`, and did each resolved call cite its
+>   evidence?
 > - Did Phase 3's `affected_files` exceed 15 silently, which should
 >   force `lite_eligible: false`?
 > - Have I conflated symptom with root cause? (Look for "X happens
