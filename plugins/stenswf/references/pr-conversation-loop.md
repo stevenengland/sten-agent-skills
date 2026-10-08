@@ -3,7 +3,9 @@
 The coordination contract for the paired `review-loop` (reviewer) and
 `apply-loop` (implementer) skills. Both loops talk **only** through a
 live GitHub PR — its review threads are the shared medium; there is no
-shared orchestrator and no shared working tree (PRD #12).
+shared orchestrator and no shared working tree (PRD #12). The one opt-in
+exception is a peer deliberation, which needs both loops in one checkout —
+see [When a thread cannot be settled](#when-a-thread-cannot-be-settled--deliberation).
 
 > **Canonical plumbing.** The reviewer-side functions that wrap the
 > GraphQL below live in
@@ -50,8 +52,9 @@ signal for the identity they have.
 The **implementer (`apply-loop`) is the sole git writer**: it is the
 only party that commits, pushes, and resolves threads. The **reviewer
 (`review-loop`) is read-only against git**: it fetches, reads, posts
-review threads, and submits approvals — it never edits code, commits,
-pushes, or resolves a thread (PRD #12, D4). This is what makes the two
+review threads, re-raises a left-open thread it still disputes, and submits
+approvals — it never edits code, commits, pushes, or resolves a thread
+(PRD #12, D4). This is what makes the two
 loops safe to run in separate harnesses against the same PR.
 
 ## Where the state lives
@@ -84,7 +87,7 @@ The cache's schema:
   "cycle": 3,
   "last_reviewed_sha": "<sha>",
   "threads": {
-    "<node-id>": { "disposition": "resolved|left-open|none",
+    "<node-id>": { "disposition": "resolved|left-open|disputed|none",
                    "fp": "<hash>", "sha": "<fixing sha>" }
   }
 }
@@ -103,10 +106,14 @@ marker on its own trailing line:
 ```
 
 The implementer may append a reply and (when it acts as sole writer)
-resolve the thread, or leave it open with a disposition marker:
+resolve the thread, or leave it open with a disposition marker. Three
+markers can follow in replies, and **the latest one decides** the thread's
+disposition:
 
 ```
-<!-- stenswf-left-open: <reason> -->
+<!-- stenswf-left-open: <reason> -->   implementer: verified, judged invalid
+<!-- stenswf-reraise: <fp> -->         reviewer: disputes that reason
+<!-- stenswf-delib: <id> -->           implementer: took the dispute into a deliberation
 ```
 
 ## Fingerprint scheme
@@ -151,22 +158,50 @@ not enough — the loop's whole purpose is to wait, and `head-advanced` is
 one of the things it waits for. Being the sole *agent* writer never meant
 being the only writer.
 
+## When a thread cannot be settled — deliberation
+
+A left-open thread the reviewer still disputes is not a handling problem; it is
+two harnesses holding opposed positions, and another cycle of reply-and-reread
+moves neither. The reviewer says so **explicitly** — `reraise_thread` posts a
+reply carrying `<!-- stenswf-reraise: <fp> -->` — and never by merely
+commenting: a "thanks" or a human's aside is not a dispute. `list_reraised <pr>`
+lists re-raised threads not yet taken up, derived from the PR rather than from
+either loop's cache. It is one of the two triggers that let `apply-loop` open a
+peer deliberation (the other being a fix that is *heavy* per
+[decision-escalation.md](decision-escalation.md)).
+
+The deliberation runs on local files, not on the PR — contract in
+[deliberation-loop.md](deliberation-loop.md), *PR-loop mode*. That is why it is
+the exception to "no shared working tree": it requires **one checkout for both
+loops**, opted into with `STENSWF_DELIB_SHARED_CHECKOUT=1` and validated by
+`delib_pr_peer_ready`. Without both, a dispute goes straight to ASK / PARK.
+
+The implementer stops pushing while it argues, so it marks the thread with
+`<!-- stenswf-delib: <id> -->` — which wakes the reviewer's `wait_for_change` —
+and the reviewer then argues as the peer before it reviews anything. It **must
+not `signal_convergence` while a deliberation is open**: approving would bless
+code whose disputed question has no answer. Every deliberation ends — agreed,
+escalated, parked or cancelled — so this never strands either loop.
+
 ## "Handled" definition
 
 A thread is **handled** when it is either:
 
 - **resolved** (the implementer verified the finding and fixed it, or
   it was a duplicate), or
-- left **open** carrying a `<!-- stenswf-left-open: <reason> -->` reply
-  (the implementer verified it and judged it invalid or out of scope).
+- left **open** with a `<!-- stenswf-left-open: <reason> -->` reply as its
+  latest marker (the implementer verified it and judged it invalid or out
+  of scope).
 
-Every left-open thread is listed in the end-of-session summary so the
-user can adjudicate. A thread with no such disposition is **not**
-handled.
+A thread whose latest marker is `reraise` or `delib` is **disputed** — not
+handled, so the reviewer cannot converge over it — until a deliberation, a
+human, or a new left-open settles it. Every left-open and disputed thread
+is listed in the end-of-session summary so the user can adjudicate. A
+thread with no marker is **not** handled.
 
 **Handled is read, not remembered.** `list_threads` computes this as a
-`disposition` column (`resolved` | `left-open` | `none`) — no caller
-re-derives it, and neither loop needs local memory to know where a thread
+`disposition` column (`resolved` | `left-open` | `disputed` | `none`) — no
+caller re-derives it, and neither loop needs local memory to know where a thread
 stands. This is why the thread query fetches replies and not just the
 root comment: the left-open marker arrives as a *later* reply, so a
 root-only read cannot distinguish a disputed-but-handled thread from an
@@ -247,10 +282,11 @@ wrong:
   accumulated more threads than the page size, and the loops then report
   convergence over threads they never saw.
 - **It reads both ends of a thread.** `root` carries the fingerprint;
-  `recent` is where the left-open disposition lands. See
+  `recent` is where the disposition markers land, and the newest page
+  holds the latest marker whenever it holds any. See
   ["Handled" definition](#handled-definition). `totalCount` says whether
-  `recent` covered the whole thread — when it did not and no disposition
-  was found, that one thread's comments are re-fetched with their own
+  `recent` covered the whole thread — when it did not and no marker was
+  found, that one thread's comments are re-fetched with their own
   pagination, so a marker buried under a hundred later replies is still
   seen. Only a thread that deep pays for the extra round trip.
 
@@ -306,13 +342,17 @@ gh pr view "$pr" --json reviewDecision -q .reviewDecision
 # assert_can_approve <pr> — 0 when `gh`'s login differs from the PR author
 ```
 
+**Re-raise a thread** — `reraise_thread <thread-id> <fp> <body>`, the
+reviewer's only reply: the body ends in `<!-- stenswf-reraise: <fp> -->`.
+
 The next two are **implementer-side** (`apply-loop`) — the sole writer.
-The reviewer never calls them.
+The reviewer never calls them directly.
 
 **Reply to a thread** — `add_reply <thread-id> <body>` (keyed on the
 thread node id, so it survives a moving diff). The body references the
-fixing commit SHA, or carries a `<!-- stenswf-left-open: <reason> -->`
-marker when the finding is left open:
+fixing commit SHA, carries a `<!-- stenswf-left-open: <reason> -->`
+marker when the finding is left open, or a `<!-- stenswf-delib: <id> -->`
+marker when a dispute is taken into a deliberation:
 
 ```graphql
 mutation($threadId:ID!,$body:String!){

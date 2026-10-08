@@ -29,6 +29,7 @@ a fresh clone.
 │   │   acceptance-criteria.md, file-structure.md, review-step.md
 │   ├── tasks/T10.md, T20.md, …
 │   ├── plan-light.md / plan-light.json (plan-light artifacts)
+│   ├── deliberations/<id>/    (peer-deliberation files; see below)
 │   ├── review/slice.md OR review/prd-review.xml
 │   ├── apply-state.json
 │   └── log.jsonl              (append-only audit events)
@@ -73,6 +74,14 @@ grep -l 'path/to/file' \
 Each matching decision entry lists the implicated paths in its
 `Refs:` field — this is the reverse-lookup primitive. No index file,
 no staleness risk.
+
+## Peer deliberations (`deliberations/<id>/`)
+
+One directory per `deliberate` / `deliberate-peer` exchange: numbered,
+immutable move files (`00-A-tension.md`, `01-B-turn.md`, … `NN-A-agreed.md`).
+Working material, not the record — the *outcome* lands in `decisions.md` and
+rides the four tiers from there. Contract:
+[plugins/stenswf/references/deliberation-loop.md](../plugins/stenswf/references/deliberation-loop.md).
 
 ## When in doubt
 

@@ -252,6 +252,8 @@ parent session invokes them — no separate routing.
 | `/stenswf:tdd` | Red-green-refactor; integration-style tests |
 | `/stenswf:lint-escape` | Tiered protocol for unresolvable lint/type errors |
 | `/stenswf:architecture` | Architectural decision guidance |
+| `/stenswf:deliberate` | Work a blocking tension out with a peer agent (agent A) |
+| `/stenswf:deliberate-peer` | Take up the deliberation at a given path as the challenger (agent B) |
 | `/stenswf:brevity` | Plain-English brevity for internal reasoning (full prose for artifacts) |
 
 > Refactor-focused skills (`plan-reviewer`, `test-file-compaction`, etc.) moved to the sibling [`stenswr`](../stenswr/) plugin. Invoke them explicitly as `/stenswr:<skill>` when needed — `stenswf` no longer invokes them implicitly.
@@ -332,6 +334,7 @@ STEN-AGENT-SKILLS/                       ← Repo root
 │       │   ├── brevity-load.md
 │       │   ├── context-hygiene.md
 │       │   ├── decision-anchor-link.md
+│       │   ├── deliberation-loop.md
 │       │   ├── pr-ci-merge.md
 │       │   ├── feedback-log.md
 │       │   ├── feedback-session.md
@@ -351,9 +354,11 @@ STEN-AGENT-SKILLS/                       ← Repo root
 │       │   ├── inherit-decisions.sh
 │       │   ├── extractors.sh
 │       │   ├── pr-threads.sh
+│       │   ├── deliberation.sh
 │       │   └── wayfinder.sh
 │       ├── tests/                       ← Behavior suites + fixtures
 │       │   ├── pr-threads.test.sh
+│       │   ├── deliberation.test.sh
 │       │   ├── wayfinder.test.sh
 │       │   └── fixtures/
 │       ├── skills/                      ← All plugin skills
@@ -364,6 +369,8 @@ STEN-AGENT-SKILLS/                       ← Repo root
 │       │   ├── slice-e2e/
 │       │   ├── review/
 │       │   ├── apply/
+│       │   ├── deliberate/
+│       │   ├── deliberate-peer/
 │       │   ├── wayfinder/
 │       │   ├── grill-me/
 │       │   ├── prd-from-grill-me/
@@ -694,6 +701,8 @@ needs splitting."* No hard cap.
 | `review-loop` | **no** | — | — | 0 |
 | `apply` | yes | Phase 2 override implementation | matches superseded | 0–N |
 | `apply-loop` | yes | via the borrowed `apply` engine | matches superseded | 0–N |
+| `deliberate` | yes | always, on an accepted proposal | decision, arch | 1–3 |
+| `deliberate-peer` | **no** | — (peers argue; A records) | — | 0 |
 
 Writers never ask the user for confirmation of routine anchor
 operations. Truncation warnings are informational. Supersession is
@@ -865,7 +874,8 @@ machine — invisible to CI, to a second clone, and to everyone else.
 | `apply` slice-mode | both, refreshed | Phase 3, after supersessions land |
 | `apply-loop` | both, refreshed | End-of-session, both converged and cap paths |
 | `apply` PRD-mode | committed excerpt (`--excerpt`) | Phase 3 |
-| `review`, `review-loop` | none | reviewers never write or publish anchors |
+| `deliberate` | host seam's surfaces, refreshed | after the contradiction gate clears |
+| `review`, `review-loop`, `deliberate-peer` | none | peers and reviewers never write or publish anchors |
 
 Every skill that commits also records the trailers (`ship`, `ship-light`,
 `apply`, `apply-loop`) — see *Recording in git* above. The planners commit
@@ -943,6 +953,25 @@ git log --grep='^Touches:.*path/to/file'   # who decided what about a file
 ```
 
 ---
+
+## Peer Deliberation Contract
+
+A heavy decision otherwise has two outcomes — **ASK** a human, **PARK** when no
+human is reachable ([decision-escalation.md](references/decision-escalation.md)).
+**Deliberation** is the third: `deliberate` (agent **A**, who hit the wall) and
+`deliberate-peer` (agent **B**, in a separate harness) argue over numbered move
+files in `.stenswf/<issue>/deliberations/<id>/` until B accepts a complete
+proposal. It ends `agreed` — recorded as an ordinary anchor, `Source:` the host
+seam, `delib#<issue>-<id>` in `Refs:` — or `escalated` / `parked` / `cancelled`,
+which fall back to the existing ASK / PARK. Contradicting a decision already on
+record still needs a human.
+
+Entry is explicit, with one exception: `apply-loop` may open one on a thread the
+reviewer re-raised, or a heavy fix, with `review-loop` as the peer — only when
+both run in one checkout (`STENSWF_DELIB_SHARED_CHECKOUT=1`).
+
+Contract: [references/deliberation-loop.md](references/deliberation-loop.md).
+Plumbing: [scripts/deliberation.sh](scripts/deliberation.sh).
 
 ## Known limitations
 

@@ -68,8 +68,32 @@ see [decision-weighting.md](decision-weighting.md).)
 | **Easy** | decide + record-if-alt-rejected | decide + record-if-alt-rejected |
 | **Heavy** | **ASK** | **PARK** |
 
-> **Zero autonomous heavy decisions, ever.** A skill never picks between two
-> heavy alternatives on its own. If it cannot ask, it parks.
+> **No *unilateral* heavy decisions, ever.** A skill never picks between two
+> heavy alternatives on its own judgement alone. If it cannot ask, it parks.
+
+"Unilateral", not "autonomous": what the rule forbids is one agent deciding by
+itself, not a decision reached without a human. A heavy question argued to a
+written, verifiable agreement with a peer
+([deliberation-loop.md](deliberation-loop.md)) satisfies the rule — two agents
+that reasoned it out on the code have done more than a single agent guessing,
+and more than a human answering a question they hold less context for. What
+still requires a human is contradicting a decision or invariant already on
+record.
+
+### DELIBERATE — the third way out, by request
+
+`deliberate` (the stuck agent) and `deliberate-peer` (a peer in a separate
+harness) argue to an accepted proposal, which is then recorded as an ordinary
+anchor entry. It is **not** a classifier outcome and the table above is
+unchanged — nothing routes there automatically:
+
+- **explicitly**, when the user runs `/stenswf:deliberate`; or
+- **by `apply-loop`**, the one skill permitted to enter on its own, on a
+  re-raised left-open thread or a heavy fix.
+
+A deliberation that does not reach agreement — round cap, two stalls, an absent
+peer, a contradiction nobody signs off — ends `escalated`, `parked` or
+`cancelled`, and falls back to the ASK and PARK defined here.
 
 `ROUTE_HEAVY` is **not** an outcome of this classifier. ASK fires **before**
 `ROUTE_HEAVY`: a single fork the user can resolve in one answer is an ASK, and
@@ -215,6 +239,7 @@ execute); `DECISION_NEEDED` is a healthy stop at a heavy fork.
 | Easy, no alternative | nothing |
 | Heavy, answered via ASK | `decision` anchor (chosen + rejected) |
 | Heavy, parked | pending `decision` anchor (`status: parked`) + tracker block |
+| Heavy, deliberated to an accepted proposal | `decision` / `arch` anchor + `delib#` ref |
 
 Provenance stays with the host seam (`plan` / `plan-light` / `ship` /
 `ship-light` / `apply`); there is no `decision-escalation` source. See
