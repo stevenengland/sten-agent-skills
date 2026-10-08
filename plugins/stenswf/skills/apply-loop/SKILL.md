@@ -32,12 +32,11 @@ through [../../scripts/pr-threads.sh](../../scripts/pr-threads.sh)
 of the decision block at end of session (see below), ordinary
 `git commit`/`push` on the PR branch, and the disposable
 `.stenswf/<issue>/loop-state.implementer.json` cache, and — when a thread
-escalates to a peer deliberation (Phase 1) — that deliberation's `A`-role
-files. The body refresh is listed here because it is a PR write and
-sole-writer has to enumerate them all; `review-loop` never performs it.
-The deliberation files are listed for the same reason, and they are the
-only thing the peer writes back: it never touches the tree, the anchor,
-or git.
+escalates to a peer deliberation (Phase 1) — A's moves in it. The body
+refresh is listed here because it is a PR write and sole-writer has to
+enumerate them all; `review-loop` never performs it. The deliberation is
+listed for the same reason; the reviewer's moves in it are the only thing
+it writes back, and it never touches the tree, the anchor, or git.
 `assert_pr_branch` enforces the "on the PR branch" half of that at Phase
 0 — being the sole writer is only safe if it is also the *right* tree —
 and `sync_to_pr_head` enforces the "current" half at the top of **every**
@@ -146,50 +145,64 @@ For each remaining thread — **regardless of author** (the paired reviewer
    unresolved and unhandled — a rollback until the shared approval gate
    decides it, a missing safe remedy as a blocker.
 
-A thread is **handled** when it is resolved OR carries a left-open
-reply — and `list_threads` reports that as its `disposition`, so the
-question is answered by reading the PR, never by trusting local memory.
+A thread is **handled** when it is resolved OR its latest marker is a
+left-open reply — and `list_threads` reports that as its `disposition`, so
+the question is answered by reading the PR, never by trusting local memory.
+A `disputed` thread (the reviewer re-raised it) is not handled; the next
+section is how it gets settled.
 Cache each node-id's disposition in `$STATE` to save re-verification
 work; correctness must not depend on it.
 
-### Escalate to a peer deliberation when another cycle cannot help
+### Escalate when another cycle cannot help
 
 Two situations are not thread-handling problems — they are heavy decisions
 wearing a thread's clothes, and looping harder on them only burns cycles:
 
-```bash
-list_reraised "$PR"    # threads you left open that the reviewer answered back
-```
+1. **A re-raised thread.** You left it open; the reviewer disputed your reason
+   with `reraise_thread`. Its `disposition` is `disputed` and it is listed by:
 
-1. **A re-raised left-open thread.** You verified the finding and judged
-   it invalid; the reviewer disagreed and said so. Two harnesses now hold
-   opposed positions, and neither changes the other's mind by repeating
-   itself in a reply.
+   ```bash
+   list_reraised "$PR"
+   ```
 2. **A finding whose correct fix is heavy** per
    [../../references/decision-escalation.md](../../references/decision-escalation.md)
    — irreversible, architectural, or with no tiebreaker in the codebase.
 
-In either case open a deliberation and follow
-[../../references/deliberation-loop.md](../../references/deliberation-loop.md)
-as agent **A** — write the tension, exchange turns, propose until the peer
-accepts, run the contradiction gate, record the anchor, then resume this
-pass with the decision in hand:
+**Deliberate only where the reviewer can see it.** The deliberation is local
+files, so it needs both loops in one checkout
+([../../references/deliberation-loop.md](../../references/deliberation-loop.md),
+*PR-loop mode*):
 
 ```bash
 source ../../scripts/deliberation.sh
-DIR=$(delib_new "$ISSUE")     # write tension.md, then delib_turn_write "$DIR" 0 A
+delib_pr_peer_ready "$ISSUE" || <the existing ASK / PARK — no deliberation>
 ```
 
-`review-loop` is the peer: the party that disagrees is the party that
-should have to argue, and it already holds the finding's full context. It
-picks the deliberation up from `.stenswf/$ISSUE/deliberations/` on its
-next pass, which is also why it will not approve the PR while one is open.
+When it passes, run [../deliberate/SKILL.md](../deliberate/SKILL.md) as agent
+**A**, with `apply-loop` as the tension's host seam and the thread's node id in
+`## Evidence`. Right after `delib_new`, wake the reviewer — it waits on the PR,
+which is quiet while you argue:
 
-**Do not hang on an absent peer.** `delib_wait`'s `DELIB_PEER_TIMEOUT`
-(1800s) and `delib_round_guard`'s `DELIB_MAX_ROUNDS` (6) both fall back to
-the ordinary **ASK** when a human is reachable and **PARK** when
-unattended, carrying both positions as the alternatives. No peer is a
-reason to ask a human; it is never a reason to wait forever.
+```bash
+add_reply <node-id> "Taken into peer deliberation $(basename "$DIR"): <one line>.
+
+<!-- stenswf-delib: $(basename "$DIR") -->"
+```
+
+and make your **first** wait the handshake — no reviewer move by then means it
+is not here, so `cancelled`, then ASK / PARK:
+
+```bash
+delib_wait "$DIR" A "${DELIB_HANDSHAKE_TIMEOUT:-600}"
+```
+
+Apply the outcome to the thread, citing `delib#$ISSUE-<id>`:
+
+- **`agreed`** (or an ASK answered) — implement the decision as in steps 2–3
+  above: fix, reply and resolve; or reply with a
+  `<!-- stenswf-left-open: delib#<issue>-<id> <reason> -->` marker.
+- **`parked`** — leave the thread `disputed`. It blocks convergence, as an
+  unsettled dispute should, and the end-of-session summary lists it.
 
 You remain the **sole git writer** throughout. The peer argues; you commit.
 
@@ -246,8 +259,9 @@ untouched), so running it every session is safe.
 
 Then, whether the loop converged or hit the cap, print every thread
 **deliberately left open**, each with its node-id, author, and
-`<!-- stenswf-left-open: <reason> -->` reason, so the user can
-adjudicate the disputes. A converged run with nothing left open says so
+`<!-- stenswf-left-open: <reason> -->` reason, and every thread still
+**disputed**, with its deliberation's outcome, so the user can adjudicate
+the disputes. A converged run with nothing left open says so
 explicitly.
 
 State **how** it converged. `converged` means the reviewer shared the PR

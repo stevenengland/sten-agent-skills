@@ -22,19 +22,18 @@ Dev-only. Not packaged for end users.
   skills call the script, that every commit site records, and that
   `review-loop` does neither.
 - [`deliberation.test.sh`](deliberation.test.sh) — behavior tests for the peer
-  deliberation protocol (`scripts/deliberation.sh`). Deliberately small: it pins
-  the four mechanics whose failure is silent — turns cannot be overwritten, A
-  hands B an exact path, a modified proposal invalidates acceptance, and a
-  rejected proposal can be revised and retried — plus the state transitions
-  those rest on and a regression guard for derived paths expanding empty inside
-  a single `local`.
+  deliberation protocol (`scripts/deliberation.sh`): moves are immutable and
+  taken in order, whose move it is, every way a deliberation ends (`agreed`,
+  `parked`, `escalated`, `cancelled`), a round cap that counts every move,
+  role-aware waits that never wake on their own move, a stale acceptance, the
+  PR-loop shared-checkout gate, the installed-skill bootstrap, and a
+  contradiction gate that matches literally, reaches root-level names, and drops
+  nothing silently — plus the skills' wiring to all of it.
 
   **Not covered — by design:** the research, the argument, the convergence, and
   the contradiction judgement. No shell assertion distinguishes a restatement
   from an argument, which is also why the two-stall rule is documented as the
-  agents' judgement rather than claimed as enforcement. Those are forward-tested
-  by running real agents; a green run says the protocol cannot lose a turn or
-  forge an acceptance, and nothing about whether the two agents reasoned well.
+  agents' judgement rather than claimed as enforcement.
 - [`apply-verification.test.sh`](apply-verification.test.sh) — wiring checks
   that `apply`/`apply-loop` load `references/review-finding-validation.md`
   and that its links resolve.

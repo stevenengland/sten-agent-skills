@@ -473,6 +473,41 @@ assert_match "add_reply carries a left-open marker" "$(cat "$REPLIED")" "<!-- st
 assert_eq "a left-open reply is visible to a later list" "$(disp_of RT_human)" "left-open"
 assert_nomatch "a plain reply does not mark a thread handled" "$(disp_of RT_open)" "left-open"
 
+# --- a dispute is an explicit marker, and the LATEST marker decides ---------
+# Any comment after a left-open used to read as the reviewer re-raising it,
+# so a "thanks" opened a peer deliberation.
+add_reply RT_human "thanks, makes sense" >/dev/null
+assert_eq "a plain follow-up leaves a left-open thread left-open" "$(disp_of RT_human)" "left-open"
+assert_nomatch "a plain follow-up is not a re-raise" "$(list_reraised 77)" "RT_human"
+assert_nomatch "chatter after a deep left-open is not a re-raise" "$(list_reraised 77)" "RT_deep"
+
+reraise_thread RT_human deadbeef0002 "the guard is still missing at src/a.ts:42" >/dev/null
+assert_match "reraise_thread carries the re-raise marker" "$(cat "$REPLIED")" "<!-- stenswf-reraise: deadbeef0002 -->"
+assert_eq "a re-raised thread is disputed, not handled" "$(disp_of RT_human)" "disputed"
+assert_match "list_reraised reports it" "$(list_reraised 77)" "RT_human"
+
+add_reply RT_human "Opened peer deliberation 7f3a1c.
+
+<!-- stenswf-delib: 7f3a1c -->" >/dev/null
+assert_eq "a thread in deliberation stays disputed" "$(disp_of RT_human)" "disputed"
+assert_nomatch "a thread already in deliberation is not re-listed" "$(list_reraised 77)" "RT_human"
+
+add_reply RT_human "Deliberated: intended behavior.
+
+<!-- stenswf-left-open: delib#121-7f3a1c intended-behavior -->" >/dev/null
+assert_eq "a new left-open settles the dispute" "$(disp_of RT_human)" "left-open"
+
+# The latest marker can sit behind a full page of chatter, too.
+reraise_thread RT_deep deadbeef0004 "out of scope is wrong: the caller is in this PR" >/dev/null
+add_reply RT_deep "ack" >/dev/null; add_reply RT_deep "and one more" >/dev/null
+assert_eq "a re-raise behind a full comment page is still the latest marker" "$(disp_of RT_deep)" "disputed"
+assert_match "and the deep re-raise is listed" "$(list_reraised 77)" "RT_deep"
+
+# --- wiring: the reviewer will not converge over a dispute ----------------
+RL=$(cat "$HERE/../skills/review-loop/SKILL.md")
+assert_match "review-loop counts disputed threads as unhandled" "$RL" '$4=="disputed"'
+assert_match "review-loop re-raises through the plumbing" "$RL" "reraise_thread"
+
 # --- resolve_thread marks the thread resolved -----------------------------
 assert_eq "resolve_thread reports the thread resolved" "$(resolve_thread RT_open)" "true"
 [ -f "$RESOLVED" ] && ok "resolve_thread invoked resolveReviewThread" || fail "resolve_thread invoked resolveReviewThread"

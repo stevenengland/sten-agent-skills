@@ -4,322 +4,265 @@
 # Sourced, not executed. From a skill directory:
 #   source ../../scripts/deliberation.sh
 #
-# Contract and turn schemas live in ../references/deliberation-loop.md.
-# Function bodies below are the single source of truth — do not duplicate
-# them.
+# Contract, move rules and the reasons behind them live in
+# ../references/deliberation-loop.md. Function bodies below are the single
+# source of truth — do not duplicate them.
 #
-# The protocol is files in one directory. A creates the directory and
-# hands B its exact path; there is no discovery, no search, and no
-# environment variable, because every one of those turns "which
-# deliberation is this?" into a question that can be answered wrongly.
-#
-# Two rules the functions enforce rather than document:
-#
-#   1. Turn and proposal files are IMMUTABLE. A write that would clobber
-#      an existing file fails. A transcript you can rewrite is not
-#      evidence of anything, and a rejected proposal has to stay readable
-#      next to the one that replaced it.
-#   2. Acceptance is verified by RECOMPUTING the proposal's hash, never
-#      by comparing two stored signatures. Otherwise editing an accepted
-#      proposal leaves the acceptance looking valid.
+# State is one directory of numbered moves, `NN-<role>-<kind>.md`. The
+# highest NN is the latest move, and nothing else records state:
+# `delib_status` derives everything from it and `delib_move` is the only
+# writer.
 
-# Create a new deliberation and print its path.
+# The plugin root, resolved from this file's own location so the
+# bootstrap can name an installed skill without a hardcoded layout.
+_DELIB_HOME=$(CDPATH= cd -- "$(dirname -- "${BASH_SOURCE[0]:-.}")/.." 2>/dev/null && pwd -P)
+
+_DELIB_TERMINAL=' agreed parked escalated cancelled '
+
+_delib_err() { printf 'delib: %s\n' "$*" >&2; }
+
+# Six hex chars from the kernel's RNG. A function so a test can force a
+# collision.
+_delib_id() { od -An -N3 -tx1 /dev/urandom | tr -d ' \n'; }
+
+# The latest move's file name, or nothing for an empty directory.
+_delib_last_file() {
+  local f last=""
+  for f in "$1"/[0-9][0-9]-[AB]-*.md; do [ -e "$f" ] && last=${f##*/}; done
+  printf '%s' "$last"
+}
+
+# The latest move as `<seq> <role> <kind>`, or nothing.
+_delib_last() {
+  local base rest
+  base=$(_delib_last_file "$1"); base=${base%.md}
+  [ -n "$base" ] || return 0
+  rest=${base#*-}
+  printf '%s %s %s\n' "${base%%-*}" "${rest%%-*}" "${rest#*-}"
+}
+
+# One line: `open A` | `open B` | `capped` | `ended <outcome>` | `none`.
 #
-# The id makes a second deliberation on the same issue a sibling rather
-# than a collision — a slice can hit more than one wall, and the second
-# must not overwrite the first's transcript.
-#   delib_new <issue>
+# Whose move it is follows from who moved last. `capped` means the round
+# cap is spent and only a terminal move remains; an owed verdict, and the
+# `agreed` an acceptance makes possible, are still allowed past the cap.
+#   delib_status <dir>
+delib_status() {
+  local seq role kind max="${DELIB_MAX_ROUNDS:-6}"
+  read -r seq role kind <<EOF
+$(_delib_last "$1")
+EOF
+  [ -n "$seq" ] || { printf 'none\n'; return 0; }
+  case "$_DELIB_TERMINAL" in *" $kind "*) printf 'ended %s\n' "$kind"; return 0 ;; esac
+  case "$kind" in
+    turn|reject|tension)
+      [ $((10#$seq)) -ge $((2 * max)) ] && { printf 'capped\n'; return 0; } ;;
+  esac
+  [ "$role" = A ] && printf 'open B\n' || printf 'open A\n'
+}
+
+# Write the next move and print its path. The only writer.
+#
+#   kind       who    when
+#   tension    A      move 00, once
+#   turn       A|B    their move; not owed a verdict
+#   proposal   A      A's move
+#   accept     B      the latest move is a proposal (src ignored: the
+#   reject     B        hash is computed here)
+#   agreed     A      the latest move is an accept that still verifies
+#   parked     A      any time
+#   escalated  A      any time
+#   cancelled  A|B    any time
+#
+# Returns 1 when the move is not allowed, 2 on bad arguments, and 3 when
+# the round cap is spent — close it with a terminal move.
+#   delib_move <dir> <A|B> <kind> [source-file]
+delib_move() {
+  local dir="$1" role="$2" kind="$3" src="${4:-}"
+  local status seq lrole lkind next dest
+  case "$role" in A|B) ;; *) _delib_err "role must be A or B, got $role"; return 2 ;; esac
+  status=$(delib_status "$dir")
+  read -r seq lrole lkind <<EOF
+$(_delib_last "$dir")
+EOF
+  case "$status" in
+    ended*) _delib_err "$dir is $status — a deliberation ends once"; return 1 ;;
+    none)   [ "$kind" = tension ] || { _delib_err "no tension in $dir"; return 1; } ;;
+  esac
+
+  case "$kind" in
+    tension)
+      [ "$status" = none ] && [ "$role" = A ] \
+        || { _delib_err "the tension is A's move 00, once"; return 1; } ;;
+    turn|proposal|accept|reject)
+      [ "$status" = capped ] && {
+        _delib_err "round cap (${DELIB_MAX_ROUNDS:-6}) reached — close with parked, escalated or cancelled"; return 3; }
+      [ "$status" = "open $role" ] || { _delib_err "not $role's move ($status)"; return 1; }
+      case "$kind" in
+        turn)     [ "$lkind" != proposal ] || { _delib_err "proposal $seq is owed a verdict, not a turn"; return 1; } ;;
+        proposal) [ "$role" = A ] || { _delib_err "only A proposes"; return 1; } ;;
+        *)        [ "$role" = B ] && [ "$lkind" = proposal ] \
+                    || { _delib_err "only B judges, and only a proposal that is the latest move"; return 1; } ;;
+      esac ;;
+    agreed)
+      [ "$role" = A ] && [ "$lkind" = accept ] \
+        || { _delib_err "agreed needs B's accept as the latest move"; return 1; }
+      [ "$(proposal_verify "$dir")" = accepted ] \
+        || { _delib_err "the proposal changed after B accepted it (stale)"; return 1; } ;;
+    parked|escalated)
+      [ "$role" = A ] || { _delib_err "only A escalates or parks"; return 1; } ;;
+    cancelled) ;;
+    *) _delib_err "unknown kind: $kind"; return 2 ;;
+  esac
+  [ "$kind" = accept ] || [ -f "$src" ] || { _delib_err "no source file: $src"; return 2; }
+
+  [ -n "$seq" ] && next=$(printf '%02d' $((10#$seq + 1))) || next=00
+  dest="$dir/$next-$role-$kind.md"
+  # mkdir is atomic: two sides racing for the same number cannot both win.
+  mkdir "$dir/.seq-$next" 2>/dev/null \
+    || { _delib_err "move $next was taken concurrently — re-read the state"; return 1; }
+  if [ "$kind" = accept ]; then
+    printf -- '- **Proposal:** %s\n- **Hash:** %s\n' \
+      "$seq-$lrole-$lkind.md" "$(proposal_hash "$dir/$seq-$lrole-$lkind.md")" > "$dest.tmp"
+  else
+    cp "$src" "$dest.tmp"
+  fi && mv "$dest.tmp" "$dest" || { rmdir "$dir/.seq-$next"; return 1; }
+  printf '%s\n' "$dest"
+}
+
+# Open a deliberation with A's tension as move 00 and print its path.
+# A fresh id per wall, and never a directory that already exists.
+#   delib_new <issue> <tension-file>
 delib_new() {
-  local issue="$1" id
-  id=$(date +%s%N 2>/dev/null | sha256sum | cut -c1-6)
-  [ -n "$id" ] || id=$$
-  local dir=".stenswf/$issue/deliberations/$id"
-  mkdir -p "$dir" || return 1
-  printf '%s\n' "$dir"
-}
-
-# The highest turn number present. `tension.md` is turn 0; turn files are
-# `NN-<role>.md`. Prints -1 when the directory holds no tension at all,
-# so "not a deliberation" is distinguishable from "opened, unanswered".
-#   delib_turn <dir>
-delib_turn() {
-  local dir="$1" n=-1 f base r
-  [ -f "$dir/tension.md" ] || { printf '%s\n' "$n"; return 0; }
-  n=0
-  for f in "$dir"/[0-9][0-9]-[AB].md; do
-    [ -e "$f" ] || continue
-    base=${f##*/}; r=${base%%-*}
-    r=$((10#$r))
-    [ "$r" -gt "$n" ] && n=$r
-  done
-  printf '%s\n' "$n"
-}
-
-# Whose turn it is: A opens at turn 0, so odd turns are B's and even are
-# A's. Prints nothing once `result.md` exists — that, and only that, ends
-# a deliberation.
-#
-# Deliberately NOT keyed on the presence of a proposal: a proposal awaits
-# a verdict, so the exchange is still live. Ending it there is what makes
-# a proposal impossible to reject.
-#   delib_next_role <dir>
-delib_next_role() {
-  local dir="$1" n p
-  [ -f "$dir/result.md" ] && return 0
-  n=$(delib_turn "$dir")
-  [ "$n" -lt 0 ] && return 0
-  # Once a proposal exists it, not the turn parity, says whose move it is.
-  # Turn parity is only meaningful during the free-form exchange: a
-  # proposal and its verdict are moves of their own, and letting parity
-  # answer over them puts the wrong agent on both ends of the handover.
-  p=$(delib_proposal_version "$dir")
-  if [ "$p" -gt 0 ]; then
-    # A verdict of EITHER kind returns control to A — to revise after a
-    # rejection, or to run the contradiction gate and finalize after an
-    # acceptance. Only an unjudged proposal is B's move.
-    if [ -f "$dir/proposal-$p.accepted-B" ] || [ -f "$dir/proposal-$p.rejected-B.md" ]; then
-      printf 'A\n'
-    else
-      printf 'B\n'
-    fi
+  local base=".stenswf/$1/deliberations" src="$2" dir i
+  [ -f "$src" ] || { _delib_err "no tension file: $src"; return 2; }
+  mkdir -p "$base" || return 1
+  for i in 1 2 3 4 5; do
+    dir="$base/$(_delib_id)"
+    mkdir "$dir" 2>/dev/null || continue
+    delib_move "$dir" A tension "$src" >/dev/null || return 1
+    printf '%s\n' "$dir"
     return 0
-  fi
-  if [ $(( n % 2 )) -eq 0 ]; then printf 'B\n'; else printf 'A\n'; fi
-}
-
-# Write turn <n> for <role>, atomically and only once.
-#
-# Refuses rather than overwrites: the temp-then-mv closes the half-written
-# read, and the existence check closes the rewritten-history one.
-#   delib_turn_write <dir> <n> <A|B> <source-file>
-delib_turn_write() {
-  local dir="$1" n="$2" role="$3" src="$4" dest
-  case "$role" in A|B) ;; *) printf 'delib: role must be A or B, got %s\n' "$role" >&2; return 2 ;; esac
-  mkdir -p "$dir"
-  if [ "$n" -eq 0 ]; then dest="$dir/tension.md"; else dest=$(printf '%s/%02d-%s.md' "$dir" "$n" "$role"); fi
-  [ -e "$dest" ] && { printf 'delib: %s already exists — turns are immutable\n' "$dest" >&2; return 1; }
-  cp "$src" "$dest.tmp" && mv "$dest.tmp" "$dest"
-}
-
-# The highest proposal version present, or 0 when there is none.
-#   delib_proposal_version <dir>
-delib_proposal_version() {
-  local dir="$1" n=0 f base r
-  for f in "$dir"/proposal-*.md; do
-    [ -e "$f" ] || continue
-    base=${f##*/}; r=${base#proposal-}; r=${r%.md}
-    case "$r" in ''|*[!0-9]*) continue ;; esac
-    [ "$r" -gt "$n" ] && n=$r
   done
-  printf '%s\n' "$n"
+  _delib_err "could not allocate a fresh id under $base"; return 1
 }
 
-# Write the next complete proposal and print its version. A only.
-#
-# Versioned rather than edited in place: a rejection has to leave the
-# rejected text standing next to its replacement, or "B rejected clause 3"
-# refers to something no longer readable.
-#   delib_propose <dir> <source-file>
-delib_propose() {
-  local dir="$1" src="$2" n dest
-  n=$(( $(delib_proposal_version "$dir") + 1 ))
-  dest="$dir/proposal-$n.md"
-  [ -e "$dest" ] && { printf 'delib: %s already exists\n' "$dest" >&2; return 1; }
-  cp "$src" "$dest.tmp" && mv "$dest.tmp" "$dest" || return 1
-  printf '%s\n' "$n"
-}
-
-# The 12-hex digest of a proposal's text.
-#
-# Normalisation (CRLF, trailing whitespace, blank-line runs) forgives an
-# editor and nothing else: a reworded clause always changes the digest.
+# The 12-hex digest of a proposal's text. Normalises CRLF, trailing
+# whitespace and blank-line runs; any rewording changes it.
 #   proposal_hash <file>
 proposal_hash() {
   tr -d '\r' < "$1" | sed 's/[[:space:]]*$//' | cat -s | sha256sum | cut -c1-12
 }
 
-# B accepts proposal <n> by recording the hash IT computed. B only.
-#
-# A's acceptance is its authorship — it wrote the proposal — so there is
-# no counterpart file for A and nothing for A to sign.
-#   delib_accept <dir> <n>
-delib_accept() {
-  # Derived paths get their own statement: a single `local` does not
-  # reliably see the variables it is itself declaring, and the failure is
-  # silent — the path expands to `/proposal-.md` and the guard below
-  # reports a missing proposal that is sitting right there.
-  local dir="$1" n="$2"
-  local f="$dir/proposal-$n.md" dest="$dir/proposal-$n.accepted-B"
-  [ -f "$f" ] || { printf 'delib: no proposal-%s.md\n' "$n" >&2; return 1; }
-  [ -e "$dest" ] && { printf 'delib: proposal %s is already accepted\n' "$n" >&2; return 1; }
-  # A verdict is as immutable as a turn. Accepting a version already
-  # rejected would leave the proposal carrying both verdicts, and every
-  # reader — `delib_next_role`, `delib_finish`, a human — would have to
-  # guess which one counts. B revises its mind by accepting A's next
-  # version, not by overwriting its last answer.
-  [ -e "$dir/proposal-$n.rejected-B.md" ] && { printf 'delib: proposal %s is already rejected\n' "$n" >&2; return 1; }
-  proposal_hash "$f" > "$dest.tmp" && mv "$dest.tmp" "$dest"
-}
-
-# B rejects proposal <n>, naming the clauses that fail. B only.
-#
-# A rejection needs a machine-readable artifact for the same reason an
-# acceptance does: prose in a turn file tells a reader that B disagreed,
-# but nothing in the protocol can see it, so the proposal stays "awaiting
-# a verdict" forever and control never returns to A.
-#   delib_reject <dir> <n> <source-file>
-delib_reject() {
-  local dir="$1" n="$2" src="$3"
-  local f="$dir/proposal-$n.md" dest="$dir/proposal-$n.rejected-B.md"
-  [ -f "$f" ] || { printf 'delib: no proposal-%s.md\n' "$n" >&2; return 1; }
-  [ -e "$dir/proposal-$n.accepted-B" ] && { printf 'delib: proposal %s is already accepted\n' "$n" >&2; return 1; }
-  [ -e "$dest" ] && { printf 'delib: proposal %s is already rejected\n' "$n" >&2; return 1; }
-  cp "$src" "$dest.tmp" && mv "$dest.tmp" "$dest"
-}
-
-# Whether proposal <n> stands accepted RIGHT NOW. Prints
-# `accepted` | `stale` | `pending`; returns non-zero for the latter two.
-#
-# `stale` is the case worth having: the proposal was accepted and has
-# since changed, so the acceptance no longer covers what the file says.
-# Comparing two stored hashes would call that `accepted` forever.
-#   proposal_verify <dir> <n>
+# Whether the latest acceptance still covers its proposal, by RECOMPUTING
+# the hash. Prints `accepted` | `stale` | `pending`; non-zero unless accepted.
+#   proposal_verify <dir>
 proposal_verify() {
-  local dir="$1" n="$2"
-  local f="$dir/proposal-$n.md" a="$dir/proposal-$n.accepted-B" live stored
-  [ -f "$f" ] || { printf 'pending\n'; return 1; }
-  [ -f "$a" ] || { printf 'pending\n'; return 1; }
-  live=$(proposal_hash "$f")
-  stored=$(tr -d '[:space:]' < "$a")
-  [ "$live" = "$stored" ] && { printf 'accepted\n'; return 0; }
+  local f a="" prop stored
+  for f in "$1"/[0-9][0-9]-B-accept.md; do [ -e "$f" ] && a=$f; done
+  [ -n "$a" ] || { printf 'pending\n'; return 1; }
+  prop=$(sed -n 's/^- \*\*Proposal:\*\* //p' "$a")
+  stored=$(sed -n 's/^- \*\*Hash:\*\* //p' "$a")
+  [ -f "$1/$prop" ] || { printf 'pending\n'; return 1; }
+  [ "$(proposal_hash "$1/$prop")" = "$stored" ] && { printf 'accepted\n'; return 0; }
   printf 'stale\n'; return 1
 }
 
-# Block until the peer moves, then print ONE line:
-#   turn <n> | proposal <n> | accepted <n> | result | timeout
+# Block until it is <role>'s move or the deliberation ends, then print ONE
+# line: the status and the latest move's file, or `timeout`. A is also
+# woken by `capped`, since only A can close a capped deliberation.
 #
-# Waits on a condition rather than a duration, and everything it polls
-# stays in this subprocess, so a deliberation costs one short line of
-# context per round however long the turns are.
-#
-# The timeout is the peer-absent bound: a peer that never arrives is a
-# different failure from a peer that argues to a standstill, and the
-# caller must not mistake the first for progress.
-#   delib_wait <dir> <after-turn> <after-proposal> [timeout] [interval]
+# Role-aware, so there is no cursor to pass: a side never wakes on its own
+# move, and never sleeps through the other side's.
+#   delib_wait <dir> <A|B> [timeout] [interval]
 delib_wait() {
-  local dir="$1" at="$2" ap="$3"
-  local timeout="${4:-${DELIB_PEER_TIMEOUT:-1800}}" interval="${5:-${DELIB_WAIT_INTERVAL:-5}}"
-  local deadline t p
+  local dir="$1" role="$2"
+  local timeout="${3:-${DELIB_PEER_TIMEOUT:-1800}}" interval="${4:-${DELIB_WAIT_INTERVAL:-5}}"
+  local deadline status
   deadline=$(( $(date +%s) + timeout ))
   while :; do
-    [ -f "$dir/result.md" ] && { printf 'result\n'; return 0; }
-    p=$(delib_proposal_version "$dir")
-    if [ "$p" -gt "$ap" ]; then printf 'proposal %s\n' "$p"; return 0; fi
-    if [ "$p" -gt 0 ] && [ -f "$dir/proposal-$p.accepted-B" ]; then
-      printf 'accepted %s\n' "$p"; return 0
-    fi
-    if [ "$p" -gt 0 ] && [ -f "$dir/proposal-$p.rejected-B.md" ]; then
-      printf 'rejected %s\n' "$p"; return 0
-    fi
-    t=$(delib_turn "$dir")
-    if [ "$t" -gt "$at" ]; then printf 'turn %s\n' "$t"; return 0; fi
-    if [ "$(date +%s)" -ge "$deadline" ]; then printf 'timeout\n'; return 0; fi
+    status=$(delib_status "$dir")
+    case "$status" in
+      none) _delib_err "no deliberation at $dir"; return 1 ;;
+      "open $role"|ended*) printf '%s %s\n' "$status" "$(_delib_last_file "$dir")"; return 0 ;;
+      capped) [ "$role" = A ] && { printf 'capped %s\n' "$(_delib_last_file "$dir")"; return 0; } ;;
+    esac
+    [ "$(date +%s)" -ge "$deadline" ] && { printf 'timeout\n'; return 0; }
     sleep "$interval"
   done
 }
 
-# Enforce the round cap. Prints the current turn count; returns non-zero
-# once it exceeds `DELIB_MAX_ROUNDS` (default 6), so the bound is an exit
-# status the caller handles rather than a rule it is trusted to remember.
-#   delib_round_guard <dir>
-delib_round_guard() {
-  local dir="$1" max="${DELIB_MAX_ROUNDS:-6}" n
-  n=$(delib_turn "$dir")
-  printf '%s\n' "$n"
-  [ "$n" -le "$max" ]
-}
-
-# Close the deliberation with its result. A only.
-#
-# The presence of `result.md` is what every other function treats as
-# "this is over", so producing it is a state transition and not a file
-# write. Guarded, because each way it can be wrong is silent: a result
-# over an unaccepted proposal records a decision the peer never agreed
-# to; a result over a superseded version records the one B rejected; and
-# a second result would quietly replace the first.
-#
-# `delib_wait` reports `result`, so a peer still waiting learns the
-# deliberation ended rather than timing out.
-#   delib_finish <dir> <proposal-number> <result-source>
-delib_finish() {
-  local dir="$1" n="$2" src="$3"
-  local dest="$dir/result.md" latest
-  [ -e "$dest" ] && { printf 'delib: %s already exists — a deliberation ends once\n' "$dest" >&2; return 1; }
-  proposal_verify "$dir" "$n" >/dev/null 2>&1 || {
-    printf 'delib: proposal %s is %s, not accepted — nothing to finish\n' \
-      "$n" "$(proposal_verify "$dir" "$n" 2>/dev/null)" >&2; return 1; }
-  latest=$(delib_proposal_version "$dir")
-  [ "$n" = "$latest" ] || {
-    printf 'delib: proposal %s is not the latest (%s) — finish the version B accepted last\n' \
-      "$n" "$latest" >&2; return 1; }
-  cp "$src" "$dest.tmp" && mv "$dest.tmp" "$dest"
-}
-
-# Open deliberations for one issue, one path per line.
-#
-# Scoped to an issue on purpose. The standalone skills never call this —
-# A hands B an exact path. It exists for the PR loop pair, where the two
-# harnesses share a repository and an issue number but have no other way
-# to pass one to each other.
-#   delib_open_for_issue <issue>
+# Deliberations for one issue that have not ended, one path per line. With
+# a host seam, only those whose tension names it — so `review-loop` never
+# answers a deliberation that was opened for some other peer.
+#   delib_open_for_issue <issue> [host-seam]
 delib_open_for_issue() {
   local d
   for d in ".stenswf/$1/deliberations"/*; do
-    [ -d "$d" ] && [ -f "$d/tension.md" ] && [ ! -f "$d/result.md" ] && printf '%s\n' "$d"
+    [ -d "$d" ] || continue
+    case "$(delib_status "$d")" in none|ended*) continue ;; esac
+    if [ -n "${2:-}" ]; then
+      grep -Eq "^- \*\*Host seam:\*\*[[:space:]]*\`?$2\`?[[:space:]]*\$" "$d/00-A-tension.md" || continue
+    fi
+    printf '%s\n' "$d"
   done
   return 0
 }
 
-# Candidate conflicts between a decision and what is already on record.
-#
-# Prints one `<tier>\t<evidence>` line per candidate. These are
-# CANDIDATES: grep narrows the field, the caller judges. Whether one
-# decision contradicts another is a question about meaning, and a path
-# match cannot answer it.
-#
-# Anchor hits name the ENTRY whose own `Refs:` carries the path, not every
-# active header in a file that happens to mention it — pointing a
-# sign-off request at ten unrelated decisions is how a real contradiction
-# gets waved through.
-#   delib_contradictions <issue> <file-with-refs>
-delib_contradictions() {
-  local issue="$1" src="$2" refs p f hit
-  refs=$(awk '/^#+ Refs[[:space:]]*$/{flag=1;next} /^#+ /{flag=0} flag' "$src" \
-         | tr ',' '\n' | sed 's/^[[:space:]]*//; s/[[:space:]]*$//' \
-         | grep -E '/|\.' | grep -v '^delib#' | grep -v '^$' || true)
-  [ -n "$refs" ] || return 0
+# The lines A hands over so B can be started in another harness: the
+# installed skill first, the resolved skill file for a harness without the
+# plugin. Paths are absolute — B's working directory is not A's concern.
+#   delib_bootstrap <dir>
+delib_bootstrap() {
+  local abs skill="$_DELIB_HOME/skills/deliberate-peer/SKILL.md"
+  abs=$(CDPATH= cd -- "$1" 2>/dev/null && pwd -P) || { _delib_err "no directory: $1"; return 1; }
+  printf 'Start the peer in the other harness with:\n\n  /stenswf:deliberate-peer %s\n' "$abs"
+  [ -f "$skill" ] && printf '\nWhere that harness has no stenswf plugin:\n\n  Read %s and follow it.\n  Deliberation: %s\n' "$skill" "$abs"
+  return 0
+}
 
+# Whether `review-loop` can be the peer: the user opted in to a shared
+# checkout, and the reviewer's own state file is present in this tree.
+#   delib_pr_peer_ready <issue>
+delib_pr_peer_ready() {
+  [ "${STENSWF_DELIB_SHARED_CHECKOUT:-}" = 1 ] || {
+    _delib_err "STENSWF_DELIB_SHARED_CHECKOUT is not 1 — review-loop is not known to share this checkout"; return 1; }
+  [ -f ".stenswf/$1/loop-state.reviewer.json" ] || {
+    _delib_err "no .stenswf/$1/loop-state.reviewer.json here — review-loop is not running in this checkout"; return 1; }
+}
+
+# The `## Refs` paths of a proposal, one per line, normalised: list
+# bullets, backticks and quotes, a leading `./` and a trailing `:12` or
+# `#L12` are stripped; `delib#…` and `none` are dropped.
+_delib_refs() {
+  awk '/^#+ Refs[[:space:]]*$/{f=1;next} /^#+ /{f=0} f' "$1" \
+    | tr ',' '\n' | tr -d "\`\"'" \
+    | sed -E 's/^[[:space:]]*([-*][[:space:]]+)?//; s/[[:space:]]*$//; s#^\./##; s/:[0-9]+(-[0-9]+)?$//; s/#L[0-9]+(-L?[0-9]+)?$//' \
+    | grep -vE '^$|^delib#|^none$|^\(none\)$' || true
+}
+
+# Candidate conflicts between a proposal and what is already on record,
+# one `<tier>\t<evidence>` line each. Candidates only: A judges which are
+# real. Paths match literally, every hit is printed, and a git-tier
+# overflow is announced rather than dropped. The house tier is always
+# printed.
+#   delib_contradictions <issue> <proposal-file>
+delib_contradictions() {
+  local issue="$1" p f log n max="${DELIB_GIT_HITS:-20}"
   while IFS= read -r p; do
     [ -n "$p" ] || continue
 
+    # Active entries (`### D<n> `, so strikethrough is excluded) whose own
+    # body carries the path. `index()`, not `~`: a path is a literal.
     for f in .stenswf/*/decisions.md .stenswf/.archive/*/decisions.md; do
       [ -f "$f" ] || continue
-      # Per entry: active header (strikethrough is already retired and
-      # cannot be contradicted) whose own body cites this path.
-      #
-      # `index()`, not `~`: a path is a literal string, and matching it as
-      # a regex silently loses every real path containing regex
-      # metacharacters — `app/[id]/page.tsx`, `pages/(group)/x.ts`,
-      # `lib/a+b.ts`. The path comes in through ENVIRON rather than -v so
-      # awk does not process backslash escapes in it either.
-      hit=$(dl_path="$p" awk '
+      dl_path="$p" awk '
         function cites(h, b) { return h ~ /^### D[0-9]+ / && index(b, ENVIRON["dl_path"]) > 0 }
-        /^### /   { if (hdr != "" && cites(hdr, body)) print hdr
-                    hdr = $0; body = ""; next }
-                  { body = body "\n" $0 }
-        END       { if (hdr != "" && cites(hdr, body)) print hdr }
-      ' "$f" | head -3 | tr '\n' ';')
-      [ -n "$hit" ] && printf 'anchor\t%s — %s\n' "$f" "$hit"
+        function out()       { if (hdr != "" && cites(hdr, body)) print "anchor\t" FILENAME " — " hdr }
+        /^### / { out(); hdr = $0; body = ""; next }
+                { body = body "\n" $0 }
+        END     { out() }
+      ' "$f"
     done
 
     for f in docs/stenswf/decisions/*.md; do
@@ -327,18 +270,18 @@ delib_contradictions() {
       grep -Fq -- "$p" "$f" && printf 'committed\t%s references %s\n' "$f" "$p"
     done
 
-    # Grep, never `git interpret-trailers`: a squash concatenates messages
-    # and the trailer parser only reads the last paragraph.
-    #
-    # `--fixed-strings`, so the whole pattern is literal — which means the
-    # `^Touches:` anchor goes with it and this matches the path anywhere
-    # in a commit message, not only in a trailer. That is the right trade:
-    # over-reporting costs A one judgement call, while under-reporting
-    # walks a real contradiction past a mandatory human sign-off.
-    hit=$(git log --fixed-strings --grep="$p" --format='%h %s' 2>/dev/null | head -3 | tr '\n' ';')
-    [ -n "$hit" ] && printf 'git\t%s in commit message — %s\n' "$p" "$hit"
+    # Whole messages, not just `Touches:` trailers: a literal pattern
+    # cannot carry the `^Touches:` anchor, and a squash buries trailers.
+    log=$(git log --fixed-strings --grep="$p" --format='%h %s' 2>/dev/null || true)
+    [ -n "$log" ] || continue
+    n=$(printf '%s\n' "$log" | wc -l | tr -d ' ')
+    printf '%s\n' "$log" | head -n "$max" | while IFS= read -r f; do
+      printf 'git\t%s in commit message — %s\n' "$p" "$f"
+    done
+    [ "$n" -gt "$max" ] && printf 'git\t%s: %s more not shown — git log --fixed-strings --grep=%q\n' \
+      "$p" "$((n - max))" "$p"
   done <<EOF
-$refs
+$(_delib_refs "$2")
 EOF
 
   for f in CLAUDE.md AGENTS.md ".stenswf/$issue/conventions.md"; do

@@ -22,14 +22,15 @@ Read it before proceeding.
 
 `review` runs **plan-only** (no writes outside `.stenswf/<issue>/review/`).
 This skill **overrules that contract in exactly one direction**: it MAY
-post PR review threads and submit a PR approval. It gains **no** other
-write power — it MUST NOT edit source/test files, `git add/commit/push`,
-or resolve threads. The implementer (`apply-loop`) is the **sole git
-writer** (D4). Restate before loading the engine sub-file: **reviewer is
-read-only against git; the only new writes are `add_thread` and
-`signal_convergence` via
-[../../scripts/pr-threads.sh](../../scripts/pr-threads.sh), plus the
-disposable `.stenswf/<issue>/loop-state.reviewer.json` cache.**
+post PR review threads, re-raise a left-open one, and submit a PR approval.
+It gains **no** other write power — it MUST NOT edit source/test files,
+`git add/commit/push`, or resolve threads. The implementer (`apply-loop`) is
+the **sole git writer** (D4). Restate before loading the engine sub-file:
+**reviewer is read-only against git; the only new writes are `add_thread`,
+`reraise_thread` and `signal_convergence` via
+[../../scripts/pr-threads.sh](../../scripts/pr-threads.sh), B's moves in a
+deliberation `apply-loop` opened, and the disposable
+`.stenswf/<issue>/loop-state.reviewer.json` cache.**
 
 ## Phase 0 — Resolve target + mode
 
@@ -60,27 +61,26 @@ its output from local artifacts to PR threads (below):
 - `MODE == prd` → [../review/prd.md](../review/prd.md).
 - `MODE` is a slice → [../review/slice.md](../review/slice.md).
 
-## Phase 1 — Peer turn first, then the delta pass
+## Phase 1 — Open deliberations first, then the delta pass
 
-The implementer may have escalated a thread to a peer deliberation
-([../../references/deliberation-loop.md](../../references/deliberation-loop.md)).
-It stops pushing while it argues, so a pass that went straight to the delta
-would review a head it has already seen:
+The implementer may have taken a disputed thread into a peer deliberation
+([../../references/deliberation-loop.md](../../references/deliberation-loop.md),
+*PR-loop mode*). It stops pushing while it argues, so a pass that went straight
+to the delta would review a head it has already seen. Take every one it opened,
+in turn, before anything else:
 
 ```bash
-DDIR=$(delib_open_for_issue "$ISSUE" | head -1)
-[ -n "$DDIR" ] && [ "$(delib_next_role "$DDIR")" = "B" ] && PEER_TURN=1
+delib_open_for_issue "$ISSUE" apply-loop    # one directory per line
 ```
 
-When it is your turn, **switch roles**: load
-[../deliberate-peer/SKILL.md](../deliberate-peer/SKILL.md), answer as agent
-**B** for `$DDIR`, and start the next pass. The argument is the work — there is
-nothing new to review while the implementer waits on you.
+For each, **switch roles**: load
+[../deliberate-peer/SKILL.md](../deliberate-peer/SKILL.md) with that directory as
+`$ARGUMENTS` and run its loop as agent **B** until the deliberation has ended.
+The argument is the work — there is nothing new to review while the implementer
+waits on you. Answering as B does not relax the read-only constraint: a move is
+not a git write.
 
-Answering as B does not relax the read-only constraint. A turn file is not a git
-write, and B never edits source, commits, or resolves a thread.
-
-Otherwise, start the pass by fetching the PR's head — the loop wakes on the
+Then start the pass by fetching the PR's head — the loop wakes on the
 *remote* head moving, so reviewing the local working tree would review the
 commit the last pass already saw:
 
@@ -110,30 +110,44 @@ do not resolve (resolving is the implementer's job).
 
 ## Phase 2 — Converge or self-schedule
 
-Read the handled state straight off the PR — column 4 of `list_threads`
-is the `disposition` (`resolved` | `left-open` | `none`):
+**Re-raise what you still dispute.** For each thread of yours the implementer
+left open — `disposition` `left-open`, with a fingerprint:
 
 ```bash
-UNHANDLED=$(list_threads "$PR" | awk -F'\t' '$4=="none"' | wc -l)
+list_threads "$PR" | awk -F'\t' '$4=="left-open" && $5!=""'
 ```
 
-**Never converge or exit while a deliberation is open.** An open deliberation
-means a thread is unsettled by definition, so approving the PR would bless code
-whose disputed question has no answer yet — and stopping would strand the
-implementer on a peer that has gone home. This one guard covers both exits:
+Verify its `<!-- stenswf-left-open: <reason> -->` against your finding per
+[../../references/review-finding-validation.md](../../references/review-finding-validation.md).
+If the finding still holds, say why the reason fails, with evidence:
 
 ```bash
-DELIB_OPEN=$(delib_open_for_issue "$ISSUE" | head -1)
+reraise_thread <node-id> <fingerprint> "<the evidence the reason misses>"
 ```
 
-- If `$DELIB_OPEN` is non-empty, skip both stop conditions below — do not
-  `signal_convergence`, and do not stop on the cycle cap. Wait on the
-  deliberation rather than the PR, since the PR is quiet by design:
+Do not re-raise a reason that cites a deliberation (`delib#…`) or a human
+decision — that dispute was already settled by the mechanism built for it.
+Otherwise a left-open thread you accept stays handled, and you say nothing.
 
-  ```bash
-  delib_wait "$DELIB_OPEN" "$(delib_turn "$DELIB_OPEN")" \
-             "$(delib_proposal_version "$DELIB_OPEN")"
-  ```
+Then read the handled state straight off the PR — column 4 of `list_threads`
+is the `disposition` (`resolved` | `left-open` | `disputed` | `none`), and a
+`disputed` thread is **not** handled:
+
+```bash
+UNHANDLED=$(list_threads "$PR" | awk -F'\t' '$4=="none" || $4=="disputed"' | wc -l)
+```
+
+**Never converge or exit while a deliberation is open.** Approving would bless
+code whose disputed question has no answer yet, and stopping would strand the
+implementer on a peer that has gone home:
+
+```bash
+[ -z "$(delib_open_for_issue "$ISSUE" apply-loop)" ] || <start the next pass now>
+```
+
+Phase 1 takes it up; the pass does not count toward the cycle cap. Every
+deliberation ends — its round cap and timeouts see to that — so this cannot
+loop forever.
 
 - If this fresh delta pass produced **zero new findings** AND
   `$UNHANDLED` is 0:

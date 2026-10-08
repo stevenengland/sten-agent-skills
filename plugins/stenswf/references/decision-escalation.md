@@ -91,8 +91,9 @@ unchanged — nothing routes there automatically:
 - **by `apply-loop`**, the one skill permitted to enter on its own, on a
   re-raised left-open thread or a heavy fix.
 
-Every way a deliberation can fail — round cap, two stalls, no peer — falls back
-to the ASK and PARK defined here.
+A deliberation that does not reach agreement — round cap, two stalls, an absent
+peer, a contradiction nobody signs off — ends `escalated`, `parked` or
+`cancelled`, and falls back to the ASK and PARK defined here.
 
 `ROUTE_HEAVY` is **not** an outcome of this classifier. ASK fires **before**
 `ROUTE_HEAVY`: a single fork the user can resolve in one answer is an ASK, and

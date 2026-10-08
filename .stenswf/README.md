@@ -77,22 +77,9 @@ no staleness risk.
 
 ## Peer deliberations (`deliberations/<id>/`)
 
-Files from a `deliberate` / `deliberate-peer` exchange — the two agents' shared
-medium, and the only thing they share. One directory per wall, so a slice that
-hits two does not overwrite the first.
-
-```
-deliberations/7f3a1c/
-├── tension.md                agent A, turn 0
-├── 01-B.md  02-A.md          alternating turns, immutable
-├── proposal-1.md             A's complete proposal
-├── proposal-1.rejected-B.md  B's verdict: the clauses that fail
-├── proposal-2.md             A's revision
-├── proposal-2.accepted-B     B's verdict: the hash B computed
-└── result.md                 closes it (written by delib_finish)
-```
-
-Working material, not the record: the *outcome* lands in `decisions.md` and
+One directory per `deliberate` / `deliberate-peer` exchange: numbered,
+immutable move files (`00-A-tension.md`, `01-B-turn.md`, … `NN-A-agreed.md`).
+Working material, not the record — the *outcome* lands in `decisions.md` and
 rides the four tiers from there. Contract:
 [plugins/stenswf/references/deliberation-loop.md](../plugins/stenswf/references/deliberation-loop.md).
 

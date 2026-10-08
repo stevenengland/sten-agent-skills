@@ -10,8 +10,9 @@
 #
 # The file hosts both sides, but the sole-writer rule still binds by
 # caller (PRD #12, D4): the reviewer-side functions (fetch, read, post
-# threads, approve) NEVER commit, push, or resolve; only the implementer
-# (`apply-loop`) calls the implementer-side functions (reply, resolve).
+# threads, re-raise, approve) NEVER commit, push, or resolve; only the
+# implementer (`apply-loop`) calls the implementer-side functions (reply,
+# resolve).
 #
 # All GitHub access goes through the `gh` CLI so the host is swappable
 # and the functions are testable by injecting a fake `gh` on PATH.
@@ -111,6 +112,22 @@ _pr_node_id() {
 # then cannot converge from PR state alone.
 _THREADS_QUERY='query($owner:String!,$name:String!,$pr:Int!,$cursor:String){repository(owner:$owner,name:$name){pullRequest(number:$pr){reviewThreads(first:50,after:$cursor){pageInfo{hasNextPage endCursor}nodes{id isResolved root:comments(first:1){nodes{author{login} body}} recent:comments(last:100){totalCount nodes{body}}}}}}}'
 
+# The three disposition markers a thread can carry in its replies; the
+# LATEST one decides the disposition. `left-open` is the implementer's
+# verdict, `reraise` the reviewer's dispute of it, and `delib` the
+# implementer taking that dispute into a peer deliberation.
+_MARKER_RE='<!-- stenswf-(left-open|reraise|delib):'
+
+# jq prelude: `disposition` maps a row's `resolved` + `marker` onto the
+# contract's four values. `disputed` is not handled — it blocks
+# convergence until a deliberation, a human, or a new disposition settles it.
+_DISPOSITION_JQ='def disposition: .disposition = (
+    if .resolved then "resolved"
+    elif .marker == "left-open" then "left-open"
+    elif .marker == "reraise" or .marker == "delib" then "disputed"
+    else "none" end);
+'
+
 # Every comment on ONE thread, paginated. Only reached for a thread
 # deeper than a single comment page — see `_threads_json`.
 _THREAD_COMMENTS_QUERY='query($id:ID!,$cursor:String){node(id:$id){... on PullRequestReviewThread{comments(first:100,after:$cursor){pageInfo{hasNextPage endCursor}nodes{body}}}}}'
@@ -133,9 +150,11 @@ _thread_reply_bodies() {
 }
 
 # Every review thread on a PR as one compact JSON object per line:
-#   {id, resolved, author, fp, disposition, replies, body}
-# `disposition` is resolved | left-open | none — the "handled" test from
-# the contract, computed once here so no caller re-derives it.
+#   {id, resolved, author, fp, marker, disposition, replies, total, body}
+# `marker` is the kind of the thread's LATEST stenswf marker (`left-open`,
+# `reraise`, `delib`, or empty), and `disposition` follows from it:
+# resolved | left-open | disputed | none — the "handled" test from the
+# contract, computed once here so no caller re-derives it.
 #
 # Pages until `hasNextPage` is false: a PR that accumulates more than one
 # page of threads must not silently truncate, or the loops report false
@@ -156,26 +175,21 @@ _threads_json() {
     # backslashes (a literal `"` became `\\"`), so any thread quoting HTML
     # or code corrupted the whole listing (#17). The consumers all re-parse
     # each line as JSON, so NDJSON needs no unwrapping.
-    rows=$(printf '%s' "$page" | jq -c '
+    rows=$(printf '%s' "$page" | jq -c --arg re "$_MARKER_RE" "$_DISPOSITION_JQ"'
       .data.repository.pullRequest.reviewThreads.nodes[]
       | (.root.nodes[0].body // "")            as $root
       | ([$root | scan("<!-- stenswf-fp: ([0-9a-f]+) -->")] | flatten | first // "") as $fp
-      | ([.recent.nodes[]?.body // "" | test("<!-- stenswf-left-open:")] | any) as $left
-      | ((.recent.nodes | last | .body // "")
-         | test("<!-- stenswf-left-open:") | not) as $tail_clean
+      | ([.recent.nodes[]? | (.body // "") | scan($re) | .[0]] | last // "") as $marker
       | {
           id,
           resolved: .isResolved,
           author: (.root.nodes[0].author.login // "unknown"),
           fp: $fp,
-          disposition: (if .isResolved then "resolved"
-                        elif $left      then "left-open"
-                        else                 "none" end),
+          marker: $marker,
           replies: (.recent.nodes | length),
           total: (.recent.totalCount // 0),
-          tail_clean: $tail_clean,
           body: $root
-        }') || return 1
+        } | disposition') || return 1
 
     # Read from a here-doc, not a pipe: a `while` fed by a pipeline runs in
     # a subshell, and a failure to page a thread's comments could not then
@@ -186,23 +200,22 @@ _threads_json() {
     # the writer and makes `gh` spray broken-pipe errors.
     #
     # `deep` is derived from the row itself — the object already carries
-    # `total` and `replies`. A thread deeper than one comment page may be
-    # hiding its left-open marker behind the newest replies, and only such
-    # a thread should pay for a second round trip.
+    # `total` and `replies`. The newest page holds the latest marker
+    # whenever it holds any, so only a thread deeper than one page with no
+    # marker in it may be hiding one, and only such a thread should pay
+    # for a second round trip.
     while IFS= read -r obj; do
       [ -n "$obj" ] || continue
       deep=$(printf '%s' "$obj" \
-        | jq -r 'if .disposition == "none" and .total > .replies then "1" else "0" end')
+        | jq -r 'if .marker == "" and .total > .replies then "1" else "0" end')
       if [ "$deep" = "1" ]; then
         tid=$(printf '%s' "$obj" | jq -r '.id')
         bodies=$(_thread_reply_bodies "$tid") || {
           printf 'THREAD_COMMENTS: could not page comments for %s\n' "$tid" >&2
           return 1
         }
-        case "$bodies" in
-          *'<!-- stenswf-left-open:'*)
-            obj=$(printf '%s' "$obj" | jq -c '.disposition = "left-open"') ;;
-        esac
+        obj=$(printf '%s' "$obj" | jq -c --arg b "$bodies" --arg re "$_MARKER_RE" \
+          "$_DISPOSITION_JQ"'.marker = ([$b | scan($re) | .[0]] | last // "") | disposition')
       fi
       printf '%s\n' "$obj"
     done <<EOF
@@ -241,24 +254,18 @@ list_fingerprints() {
   _threads_json "$1" | jq -r 'select(.fp != "") | .fp'
 }
 
-# Node ids of threads the implementer left open and the reviewer has since
-# **replied to again** — the two harnesses actively disagreeing, which is
-# one of the two triggers for a peer deliberation
-# (../references/deliberation-loop.md).
+# Node ids of open threads whose latest marker is the reviewer's
+# `stenswf-reraise` — a left-open disposition the reviewer explicitly
+# disputed and no deliberation has taken up yet. One of the two triggers
+# for a peer deliberation (../references/deliberation-loop.md).
 #
-# Derived entirely from GitHub: a left-open thread whose NEWEST comment is
-# not the left-open marker has been answered after the disposition landed.
-# Reading it off `loop-state.implementer.json` instead would make the
-# trigger depend on a file the reference calls disposable, and a deleted
-# cache would silently stop detecting deadlock — the failure mode being a
-# loop that grinds to its cap instead of asking for help.
-#
-# `.recent` is `comments(last:100)`, so the newest comment is always in it
-# no matter how deep the thread — the tail test needs no second round trip.
+# An explicit marker, not "any later comment": a "thanks", a human aside or
+# the implementer's own clarification is not a dispute. Derived from
+# GitHub, never from the disposable loop-state cache.
 #   list_reraised <pr>
 list_reraised() {
   _threads_json "$1" \
-    | jq -r 'select(.disposition == "left-open" and .tail_clean) | .id'
+    | jq -r 'select(.resolved == false and .marker == "reraise") | .id'
 }
 
 # Post a resolvable review thread on a PR line. The fingerprint marker is
@@ -274,6 +281,17 @@ add_thread() {
     -f query='mutation($prId:ID!,$body:String!,$path:String!,$line:Int!){addPullRequestReviewThread(input:{pullRequestId:$prId,body:$body,path:$path,line:$line,subjectType:LINE}){thread{id}}}' \
     -f prId="$pr_id" -f body="$full" -f path="$path" -F line="$line" \
     | jq -r '.data.addPullRequestReviewThread.thread.id'
+}
+
+# Dispute a left-open disposition: reply with the evidence the implementer's
+# reason misses, ending in a `<!-- stenswf-reraise: <fp> -->` marker. The
+# reviewer's only reply, and only for a thread whose latest marker is
+# `left-open`; the thread then reads `disputed` until it is settled.
+#   reraise_thread <thread-id> <fingerprint> <body>
+reraise_thread() {
+  add_reply "$1" "$3
+
+<!-- stenswf-reraise: $2 -->"
 }
 
 # Submit a PR approval — the cross-harness "nothing more to say" signal
@@ -504,12 +522,15 @@ loop_cycle_bump() {
 
 # --- Implementer-side (apply-loop) ---------------------------------------
 # The implementer is the sole git writer (PRD #12, D4): only apply-loop
-# calls the two functions below. The reviewer never replies or resolves.
+# calls the two functions below. The reviewer never resolves, and replies
+# only through `reraise_thread`.
 
 # Post a reply to an existing review thread, keyed on its node id. The
 # body may reference the fixing commit SHA (a verified-valid finding that
-# was fixed) or carry a `<!-- stenswf-left-open: <reason> -->` marker (a
-# finding left open after verification). Prints the new comment's id.
+# was fixed), carry a `<!-- stenswf-left-open: <reason> -->` marker (a
+# finding left open after verification), or a `<!-- stenswf-delib: <id> -->`
+# marker (a disputed thread taken into a peer deliberation). Prints the new
+# comment's id.
 #   add_reply <thread-id> <body>
 add_reply() {
   local thread_id="$1" body="$2"
