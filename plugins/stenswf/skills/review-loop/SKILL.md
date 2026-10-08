@@ -42,6 +42,7 @@ PR=$(resolve_pr "$ARGUMENTS")          # arg (number/URL) or current branch's PR
 
 ISSUE=$(resolve_issue "$PR") || exit 1  # via closingIssuesReferences; loud on 0 or >1
 STATE=".stenswf/$ISSUE/loop-state.reviewer.json"   # role-partitioned: see reference
+source ../../scripts/deliberation.sh
 
 # GitHub refuses an approval from the PR's own author. Say so once, up
 # front, rather than discovering it at the stop condition.
@@ -59,9 +60,27 @@ its output from local artifacts to PR threads (below):
 - `MODE == prd` → [../review/prd.md](../review/prd.md).
 - `MODE` is a slice → [../review/slice.md](../review/slice.md).
 
-## Phase 1 — Delta pass
+## Phase 1 — Peer turn first, then the delta pass
 
-Start every pass by fetching the PR's head — the loop wakes on the
+The implementer may have escalated a thread to a peer deliberation
+([../../references/deliberation-loop.md](../../references/deliberation-loop.md)).
+It stops pushing while it argues, so a pass that went straight to the delta
+would review a head it has already seen:
+
+```bash
+DDIR=$(delib_open_for_issue "$ISSUE" | head -1)
+[ -n "$DDIR" ] && [ "$(delib_next_role "$DDIR")" = "B" ] && PEER_TURN=1
+```
+
+When it is your turn, **switch roles**: load
+[../deliberate-peer/SKILL.md](../deliberate-peer/SKILL.md), answer as agent
+**B** for `$DDIR`, and start the next pass. The argument is the work — there is
+nothing new to review while the implementer waits on you.
+
+Answering as B does not relax the read-only constraint. A turn file is not a git
+write, and B never edits source, commits, or resolves a thread.
+
+Otherwise, start the pass by fetching the PR's head — the loop wakes on the
 *remote* head moving, so reviewing the local working tree would review the
 commit the last pass already saw:
 
@@ -98,6 +117,24 @@ is the `disposition` (`resolved` | `left-open` | `none`):
 UNHANDLED=$(list_threads "$PR" | awk -F'\t' '$4=="none"' | wc -l)
 ```
 
+**Never converge or exit while a deliberation is open.** An open deliberation
+means a thread is unsettled by definition, so approving the PR would bless code
+whose disputed question has no answer yet — and stopping would strand the
+implementer on a peer that has gone home. This one guard covers both exits:
+
+```bash
+DELIB_OPEN=$(delib_open_for_issue "$ISSUE" | head -1)
+```
+
+- If `$DELIB_OPEN` is non-empty, skip both stop conditions below — do not
+  `signal_convergence`, and do not stop on the cycle cap. Wait on the
+  deliberation rather than the PR, since the PR is quiet by design:
+
+  ```bash
+  delib_wait "$DELIB_OPEN" "$(delib_turn "$DELIB_OPEN")" \
+             "$(delib_proposal_version "$DELIB_OPEN")"
+  ```
+
 - If this fresh delta pass produced **zero new findings** AND
   `$UNHANDLED` is 0:
 
@@ -128,7 +165,9 @@ listing still-open threads and stop — never loop forever.
 ## Out of scope (deliberate)
 
 No code edits, no commits, no pushes, no thread resolution (all belong
-to `apply-loop`, the sole git writer). No new review axes — the critique
+to `apply-loop`, the sole git writer) — including while acting as the
+deliberation peer, where the temptation to just fix the thing you are
+arguing about is strongest. No new review axes — the critique
 is exactly what `review/slice.md` / `review/prd.md` produce; this skill
 only changes where the findings land and adds the loop.
 

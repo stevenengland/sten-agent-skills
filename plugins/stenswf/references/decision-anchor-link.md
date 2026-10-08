@@ -22,7 +22,9 @@ Write contract by skill (one-line summary):
 | `review` | no | — | — |
 | `review-loop` | no | — | — |
 | `apply` | yes | Phase 2 override, ASK-resolved or parked fork | matches superseded |
-| `apply-loop` | yes | via the `apply` engine | matches superseded |
+| `apply-loop` | yes | via the `apply` engine; deliberated agreements | matches superseded |
+| `deliberate` | yes | always, on an accepted proposal | decision, arch |
+| `deliberate-peer` | no | — (peers argue; agent A records) | — |
 
 Publishing an entry is a separate contract from writing one — it is what
 makes the entry survive the machine it was made on, since `.stenswf/` is
@@ -41,8 +43,12 @@ not a decision.
 
 ASK-resolved and parked forks come from
 [decision-escalation.md](decision-escalation.md); HITL escape-hatch resolutions
-from [hitl-escape-hatch.md](hitl-escape-hatch.md). Provenance stays with the
-host seam — there is no `decision-escalation` or `hitl-escape-hatch` source.
+from [hitl-escape-hatch.md](hitl-escape-hatch.md); peer-deliberated agreements
+from [deliberation-loop.md](deliberation-loop.md). Provenance stays with the
+host seam — there is no `decision-escalation`, `hitl-escape-hatch`, or
+`deliberate` source. A deliberated entry is marked instead by a
+`delib#<issue>-<id>` token in `Refs:`, which points at the transcript without
+spending `Source:` on the mechanism rather than the seam.
 
 ## Parked decisions
 

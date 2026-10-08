@@ -161,6 +161,8 @@ _threads_json() {
       | (.root.nodes[0].body // "")            as $root
       | ([$root | scan("<!-- stenswf-fp: ([0-9a-f]+) -->")] | flatten | first // "") as $fp
       | ([.recent.nodes[]?.body // "" | test("<!-- stenswf-left-open:")] | any) as $left
+      | ((.recent.nodes | last | .body // "")
+         | test("<!-- stenswf-left-open:") | not) as $tail_clean
       | {
           id,
           resolved: .isResolved,
@@ -171,6 +173,7 @@ _threads_json() {
                         else                 "none" end),
           replies: (.recent.nodes | length),
           total: (.recent.totalCount // 0),
+          tail_clean: $tail_clean,
           body: $root
         }') || return 1
 
@@ -236,6 +239,26 @@ list_open_threads() {
 # deliberately does not filter on `isResolved`.
 list_fingerprints() {
   _threads_json "$1" | jq -r 'select(.fp != "") | .fp'
+}
+
+# Node ids of threads the implementer left open and the reviewer has since
+# **replied to again** — the two harnesses actively disagreeing, which is
+# one of the two triggers for a peer deliberation
+# (../references/deliberation-loop.md).
+#
+# Derived entirely from GitHub: a left-open thread whose NEWEST comment is
+# not the left-open marker has been answered after the disposition landed.
+# Reading it off `loop-state.implementer.json` instead would make the
+# trigger depend on a file the reference calls disposable, and a deleted
+# cache would silently stop detecting deadlock — the failure mode being a
+# loop that grinds to its cap instead of asking for help.
+#
+# `.recent` is `comments(last:100)`, so the newest comment is always in it
+# no matter how deep the thread — the tail test needs no second round trip.
+#   list_reraised <pr>
+list_reraised() {
+  _threads_json "$1" \
+    | jq -r 'select(.disposition == "left-open" and .tail_clean) | .id'
 }
 
 # Post a resolvable review thread on a PR line. The fingerprint marker is

@@ -29,6 +29,7 @@ a fresh clone.
 │   │   acceptance-criteria.md, file-structure.md, review-step.md
 │   ├── tasks/T10.md, T20.md, …
 │   ├── plan-light.md / plan-light.json (plan-light artifacts)
+│   ├── deliberations/<id>/    (peer-deliberation files; see below)
 │   ├── review/slice.md OR review/prd-review.xml
 │   ├── apply-state.json
 │   └── log.jsonl              (append-only audit events)
@@ -73,6 +74,27 @@ grep -l 'path/to/file' \
 Each matching decision entry lists the implicated paths in its
 `Refs:` field — this is the reverse-lookup primitive. No index file,
 no staleness risk.
+
+## Peer deliberations (`deliberations/<id>/`)
+
+Files from a `deliberate` / `deliberate-peer` exchange — the two agents' shared
+medium, and the only thing they share. One directory per wall, so a slice that
+hits two does not overwrite the first.
+
+```
+deliberations/7f3a1c/
+├── tension.md                agent A, turn 0
+├── 01-B.md  02-A.md          alternating turns, immutable
+├── proposal-1.md             A's complete proposal
+├── proposal-1.rejected-B.md  B's verdict: the clauses that fail
+├── proposal-2.md             A's revision
+├── proposal-2.accepted-B     B's verdict: the hash B computed
+└── result.md                 closes it (written by delib_finish)
+```
+
+Working material, not the record: the *outcome* lands in `decisions.md` and
+rides the four tiers from there. Contract:
+[plugins/stenswf/references/deliberation-loop.md](../plugins/stenswf/references/deliberation-loop.md).
 
 ## When in doubt
 

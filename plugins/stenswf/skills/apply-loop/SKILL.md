@@ -31,9 +31,13 @@ through [../../scripts/pr-threads.sh](../../scripts/pr-threads.sh)
 (`add_reply`, `resolve_thread`) plus one `gh pr edit --body-file` refresh
 of the decision block at end of session (see below), ordinary
 `git commit`/`push` on the PR branch, and the disposable
-`.stenswf/<issue>/loop-state.implementer.json` cache. The body refresh is
-listed here because it is a PR write and sole-writer has to enumerate
-them all; `review-loop` never performs it.
+`.stenswf/<issue>/loop-state.implementer.json` cache, and — when a thread
+escalates to a peer deliberation (Phase 1) — that deliberation's `A`-role
+files. The body refresh is listed here because it is a PR write and
+sole-writer has to enumerate them all; `review-loop` never performs it.
+The deliberation files are listed for the same reason, and they are the
+only thing the peer writes back: it never touches the tree, the anchor,
+or git.
 `assert_pr_branch` enforces the "on the PR branch" half of that at Phase
 0 — being the sole writer is only safe if it is also the *right* tree —
 and `sync_to_pr_head` enforces the "current" half at the top of **every**
@@ -147,6 +151,47 @@ reply — and `list_threads` reports that as its `disposition`, so the
 question is answered by reading the PR, never by trusting local memory.
 Cache each node-id's disposition in `$STATE` to save re-verification
 work; correctness must not depend on it.
+
+### Escalate to a peer deliberation when another cycle cannot help
+
+Two situations are not thread-handling problems — they are heavy decisions
+wearing a thread's clothes, and looping harder on them only burns cycles:
+
+```bash
+list_reraised "$PR"    # threads you left open that the reviewer answered back
+```
+
+1. **A re-raised left-open thread.** You verified the finding and judged
+   it invalid; the reviewer disagreed and said so. Two harnesses now hold
+   opposed positions, and neither changes the other's mind by repeating
+   itself in a reply.
+2. **A finding whose correct fix is heavy** per
+   [../../references/decision-escalation.md](../../references/decision-escalation.md)
+   — irreversible, architectural, or with no tiebreaker in the codebase.
+
+In either case open a deliberation and follow
+[../../references/deliberation-loop.md](../../references/deliberation-loop.md)
+as agent **A** — write the tension, exchange turns, propose until the peer
+accepts, run the contradiction gate, record the anchor, then resume this
+pass with the decision in hand:
+
+```bash
+source ../../scripts/deliberation.sh
+DIR=$(delib_new "$ISSUE")     # write tension.md, then delib_turn_write "$DIR" 0 A
+```
+
+`review-loop` is the peer: the party that disagrees is the party that
+should have to argue, and it already holds the finding's full context. It
+picks the deliberation up from `.stenswf/$ISSUE/deliberations/` on its
+next pass, which is also why it will not approve the PR while one is open.
+
+**Do not hang on an absent peer.** `delib_wait`'s `DELIB_PEER_TIMEOUT`
+(1800s) and `delib_round_guard`'s `DELIB_MAX_ROUNDS` (6) both fall back to
+the ordinary **ASK** when a human is reachable and **PARK** when
+unattended, carrying both positions as the alternatives. No peer is a
+reason to ask a human; it is never a reason to wait forever.
+
+You remain the **sole git writer** throughout. The peer argues; you commit.
 
 ## Phase 2 — Converge or wait
 

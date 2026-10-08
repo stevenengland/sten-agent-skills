@@ -252,6 +252,8 @@ parent session invokes them — no separate routing.
 | `/stenswf:tdd` | Red-green-refactor; integration-style tests |
 | `/stenswf:lint-escape` | Tiered protocol for unresolvable lint/type errors |
 | `/stenswf:architecture` | Architectural decision guidance |
+| `/stenswf:deliberate` | Work a blocking tension out with a peer agent (agent A) |
+| `/stenswf:deliberate-peer` | Take up the deliberation at a given path as the challenger (agent B) |
 | `/stenswf:brevity` | Plain-English brevity for internal reasoning (full prose for artifacts) |
 
 > Refactor-focused skills (`plan-reviewer`, `test-file-compaction`, etc.) moved to the sibling [`stenswr`](../stenswr/) plugin. Invoke them explicitly as `/stenswr:<skill>` when needed — `stenswf` no longer invokes them implicitly.
@@ -332,6 +334,7 @@ STEN-AGENT-SKILLS/                       ← Repo root
 │       │   ├── brevity-load.md
 │       │   ├── context-hygiene.md
 │       │   ├── decision-anchor-link.md
+│       │   ├── deliberation-loop.md
 │       │   ├── pr-ci-merge.md
 │       │   ├── feedback-log.md
 │       │   ├── feedback-session.md
@@ -351,9 +354,11 @@ STEN-AGENT-SKILLS/                       ← Repo root
 │       │   ├── inherit-decisions.sh
 │       │   ├── extractors.sh
 │       │   ├── pr-threads.sh
+│       │   ├── deliberation.sh
 │       │   └── wayfinder.sh
 │       ├── tests/                       ← Behavior suites + fixtures
 │       │   ├── pr-threads.test.sh
+│       │   ├── deliberation.test.sh
 │       │   ├── wayfinder.test.sh
 │       │   └── fixtures/
 │       ├── skills/                      ← All plugin skills
@@ -364,6 +369,8 @@ STEN-AGENT-SKILLS/                       ← Repo root
 │       │   ├── slice-e2e/
 │       │   ├── review/
 │       │   ├── apply/
+│       │   ├── deliberate/
+│       │   ├── deliberate-peer/
 │       │   ├── wayfinder/
 │       │   ├── grill-me/
 │       │   ├── prd-from-grill-me/
@@ -694,6 +701,8 @@ needs splitting."* No hard cap.
 | `review-loop` | **no** | — | — | 0 |
 | `apply` | yes | Phase 2 override implementation | matches superseded | 0–N |
 | `apply-loop` | yes | via the borrowed `apply` engine | matches superseded | 0–N |
+| `deliberate` | yes | always, on an accepted proposal | decision, arch | 1–3 |
+| `deliberate-peer` | **no** | — (peers argue; A records) | — | 0 |
 
 Writers never ask the user for confirmation of routine anchor
 operations. Truncation warnings are informational. Supersession is
@@ -865,7 +874,8 @@ machine — invisible to CI, to a second clone, and to everyone else.
 | `apply` slice-mode | both, refreshed | Phase 3, after supersessions land |
 | `apply-loop` | both, refreshed | End-of-session, both converged and cap paths |
 | `apply` PRD-mode | committed excerpt (`--excerpt`) | Phase 3 |
-| `review`, `review-loop` | none | reviewers never write or publish anchors |
+| `deliberate` | host seam's surfaces, refreshed | after the contradiction gate clears |
+| `review`, `review-loop`, `deliberate-peer` | none | peers and reviewers never write or publish anchors |
 
 Every skill that commits also records the trailers (`ship`, `ship-light`,
 `apply`, `apply-loop`) — see *Recording in git* above. The planners commit
@@ -943,6 +953,92 @@ git log --grep='^Touches:.*path/to/file'   # who decided what about a file
 ```
 
 ---
+
+## Peer Deliberation Contract
+
+A heavy decision otherwise has two outcomes — **ASK** a human, **PARK** when no
+human is reachable ([decision-escalation.md](references/decision-escalation.md)).
+Both hand the problem to someone with less context than the agent that stopped.
+
+**Deliberation** is the third: `deliberate` (agent **A**, who hit the wall)
+states the tension with its evidence and options; `deliberate-peer` (agent **B**,
+in a *separate harness* — Claude Code, Codex, anything with a shell and a
+checkout) studies the code, docs, history and issues, then argues for the best
+solution, which may be none of A's. They exchange turns until B accepts a
+complete proposal.
+
+Full contract: [references/deliberation-loop.md](references/deliberation-loop.md).
+Plumbing: [scripts/deliberation.sh](scripts/deliberation.sh). The essentials:
+
+- **The governing rule is "no *unilateral* heavy decisions", not "no autonomous"
+  ones.** Two agents that argued to a written, verifiable agreement have done
+  more than one agent guessing. What still needs a human is contradicting the
+  record.
+- **A hands B an exact directory path.** No discovery, no search, no environment
+  variable — each turns "which deliberation is this?" into a question that can
+  be answered wrongly, and the id in the path lets one issue hit two walls
+  without the second overwriting the first.
+
+  ```
+  .stenswf/<issue>/deliberations/<id>/
+  ├── tension.md   01-B.md   02-A.md
+  ├── proposal-1.md   proposal-1.rejected-B.md
+  ├── proposal-2.md   proposal-2.accepted-B
+  └── result.md
+  ```
+- **Turns and proposals are immutable**; the writers refuse to clobber. A
+  transcript you can rewrite is not evidence, and "B rejected clause 3" must
+  keep pointing at readable text.
+- **Acceptance recomputes the hash.** `proposal_verify` hashes the proposal
+  *now* and compares it with what B recorded, so editing an accepted proposal
+  reads `stale`. Comparing two stored signatures would read `accepted` forever —
+  a decoration, not a countersignature. A's acceptance is its authorship; there
+  is nothing for A to sign.
+- **Both verdicts are artifacts.** `delib_accept` records the hash B computed;
+  `delib_reject` records the clauses that fail. A rejection written only as
+  prose in a turn is invisible to the protocol, so the proposal stays unjudged
+  and control never returns to A. Verdicts are immutable — B changes its mind by
+  answering A's *next* version, not by overwriting its last answer.
+- **Once a proposal exists it, not turn parity, says whose move it is.** An
+  unjudged proposal is B's; a verdict of either kind returns control to A — to
+  revise, or to run the gate and finalize. Parity only orders the free-form
+  exchange.
+- **`result.md` alone closes a deliberation, and only `delib_finish` writes it.**
+  A proposal awaits a verdict, so ending it there is what makes rejection
+  impossible. Closing is guarded because each way it goes wrong is silent: a
+  result over an unaccepted proposal records a decision the peer never agreed
+  to, over a superseded version records the one B rejected, and a second result
+  quietly replaces the first.
+- **Bounds are exit statuses**, not reminders: `delib_round_guard`
+  (`DELIB_MAX_ROUNDS`, 6) and `delib_wait` (`DELIB_PEER_TIMEOUT`, 1800s) both
+  fall back to ASK / PARK. The two-stall rule is the agents' judgement — no
+  assertion distinguishes a restatement from an argument, so it is not enforced
+  and the tests do not pretend otherwise.
+- **Only a contradiction needs a human.** `delib_contradictions` searches the
+  local anchors (naming the *entry* whose `Refs:` carries the path),
+  `docs/stenswf/decisions/`, the commit trailers and the house rules; A judges
+  which are real, then routes those through the ordinary ASK contract. Paths are
+  matched **literally** — `app/[id]/page.tsx` is a path, not a character class,
+  and a regex match would find nothing while reporting success, walking a real
+  contradiction past a mandatory sign-off. The search errs toward extra
+  candidates for the same reason.
+  `Scope impact: issue-rework` does **not** pass this gate — it is recorded and
+  handed back to the host workflow for re-planning.
+- **A always records an anchor** before resuming. A wall two agents argued to an
+  agreement is by definition something a `git blame` reader would ask about.
+  `Source:` is the host seam; `Refs:` carries `delib#<N>-<id>`. No new tier.
+- **Transport is offline; research is not.** B needs no `gh` to exchange turns,
+  but reading open issues does. Where B cannot reach a source it says so in
+  `## Read` rather than skipping it silently.
+
+### Entry points
+
+Explicit invocation only. The **one** exception is `apply-loop`, which may enter
+on its own when a thread it left open is re-raised (`list_reraised`) or when a
+finding's fix is heavy. Its peer is `review-loop` — the party that disagrees is
+the party that should have to argue — which picks the deliberation up from
+`.stenswf/<N>/deliberations/` and **will not approve the PR or stop on its cycle
+cap while one is open**.
 
 ## Known limitations
 

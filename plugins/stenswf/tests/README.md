@@ -21,6 +21,20 @@ Dev-only. Not packaged for end users.
   suppressing this one's, silently) — plus wiring checks that the publishing
   skills call the script, that every commit site records, and that
   `review-loop` does neither.
+- [`deliberation.test.sh`](deliberation.test.sh) — behavior tests for the peer
+  deliberation protocol (`scripts/deliberation.sh`). Deliberately small: it pins
+  the four mechanics whose failure is silent — turns cannot be overwritten, A
+  hands B an exact path, a modified proposal invalidates acceptance, and a
+  rejected proposal can be revised and retried — plus the state transitions
+  those rest on and a regression guard for derived paths expanding empty inside
+  a single `local`.
+
+  **Not covered — by design:** the research, the argument, the convergence, and
+  the contradiction judgement. No shell assertion distinguishes a restatement
+  from an argument, which is also why the two-stall rule is documented as the
+  agents' judgement rather than claimed as enforcement. Those are forward-tested
+  by running real agents; a green run says the protocol cannot lose a turn or
+  forge an acceptance, and nothing about whether the two agents reasoned well.
 - [`apply-verification.test.sh`](apply-verification.test.sh) — wiring checks
   that `apply`/`apply-loop` load `references/review-finding-validation.md`
   and that its links resolve.

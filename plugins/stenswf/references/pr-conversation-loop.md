@@ -151,6 +151,24 @@ not enough — the loop's whole purpose is to wait, and `head-advanced` is
 one of the things it waits for. Being the sole *agent* writer never meant
 being the only writer.
 
+## When a thread cannot be settled — deliberation
+
+A thread the implementer left open and the reviewer then **replied to again** is
+not a handling problem; it is two harnesses holding opposed positions, and
+another cycle of reply-and-reread moves neither. `list_reraised <pr>` reports
+those, derived from the PR rather than from either loop's cache, and it is one
+of the two triggers that let `apply-loop` open a peer deliberation (the other
+being a fix that is *heavy* per
+[decision-escalation.md](decision-escalation.md)).
+
+The deliberation itself runs on files, not on the PR — contract in
+[deliberation-loop.md](deliberation-loop.md). What matters *here* is that the
+implementer stops pushing while it argues, so the PR is quiet by design. The
+reviewer therefore **must not `signal_convergence` or stop on the cycle cap
+while a deliberation is open**: approving would bless code whose disputed
+question has no answer, and stopping would strand the implementer on a peer that
+has gone home. It waits on the deliberation instead of the PR for the duration.
+
 ## "Handled" definition
 
 A thread is **handled** when it is either:
