@@ -267,5 +267,45 @@ seed_body
 ( cd "$WORK" && bash "$PRBODY" pr 77 "$REGION" "$DESC" && bash "$PUBLISH" pr 901 77 ) >/dev/null
 check_combined "region then decisions"
 
+# --- 2. Standalone guard: workflow-issue.sh ---------------------------------
+GUARD="$ROOT/skills/visual-pr/scripts/workflow-issue.sh"
+GREPO="$WORK/guard-repo"
+git init -q -b master "$GREPO"
+gitc()  { git -C "$GREPO" -c user.name=t -c user.email=t@example.com "$@"; }
+guard() { ( cd "$GREPO" && bash "$GUARD" ); }
+art()   { mkdir -p "$GREPO/.stenswf/$1" && printf '%s\n' "$3" > "$GREPO/.stenswf/$1/$2"; }   # art <N> <file> <json>
+gitc commit -q --allow-empty -m "chore: base"
+
+art 42 manifest.json '{"kind":"slice","branch":"feature/custom"}'
+gitc checkout -q -b feature/custom master
+assert_eq "a branch recorded in a heavy manifest belongs to ship" "$(guard)" "ship 42"
+
+art 43 plan-light.json '{"issue":43}'
+gitc checkout -q -b impl/43-lite-thing master
+assert_eq "a Lite impl branch with plan-light.json belongs to ship-light" "$(guard)" "ship-light 43"
+
+gitc checkout -q -b impl/44-direct master
+assert_eq "a direct ship-light run (no artifacts yet) belongs to ship-light" "$(guard)" "ship-light 44"
+
+art 45 manifest.json '{"kind":"slice","branch":null}'
+gitc checkout -q -b impl/45-heavy master
+assert_eq "an impl branch with a heavy manifest belongs to ship" "$(guard)" "ship 45"
+
+gitc checkout -q -b prd/50-cleanup master
+assert_eq "a PRD cleanup branch belongs to apply" "$(guard)" "apply 50"
+
+art 46 anchor.json '{"issue":46}'
+gitc checkout -q -b feature/notes master
+gitc commit -q --allow-empty -m "feat(stenswf): add thing" -m "Refs: #46 T10"
+assert_eq "a Refs trailer on an unrelated branch is not ownership" "$(guard)" ""
+
+art 28 manifest.json '{"kind":"prd"}'
+gitc checkout -q -b feature/prd-followup master
+gitc commit -q --allow-empty -m "docs: follow-up for #28"
+assert_eq "a mention of a PRD is not ownership (no route to apply)" "$(guard)" ""
+
+gitc checkout -q -b impl/notanumber master
+assert_eq "a non-numeric impl branch is not a workflow branch" "$(guard)" ""
+
 printf '\n1..%d\n# pass %d fail %d\n' "$((PASS + FAIL))" "$PASS" "$FAIL"
 [ "$FAIL" -eq 0 ]
