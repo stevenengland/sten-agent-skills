@@ -405,5 +405,28 @@ assert_match "apply PRD-mode keeps its PR title" "$AP" '**PR title:** `fix(PRD):
 assert_match "apply PRD-mode points PR_BODY_FILE at the visual-pr output" "$AP" 'PR_BODY_FILE=".stenswf/$ARGUMENTS/pr-description.md"'
 assert_match "apply PRD-mode appends the decisions render" "$AP" 'publish-decisions.sh render "$ARGUMENTS" >> "$PR_BODY_FILE"'
 
+# --- 6. Slice template: optional Change outline + extractors -----------------------
+source "$ROOT/scripts/extractors.sh"
+export ARGUMENTS=0
+FIX="$HERE/fixtures/issue-slice-change-outline.md"
+sed '/^## Change outline$/,/^## Conventions (from PRD)$/{/^## Conventions (from PRD)$/!d}' "$FIX" > "$WORK/no-outline.md"
+assert_eq "the fixture has a Change outline" "$(grep -c '^## Change outline$' "$FIX")" "1"
+assert_eq "the stripped copy lacks it" "$(grep -c '^## Change outline$' "$WORK/no-outline.md")" "0"
+extract_section 'What to build' "$FIX" > "$WORK/wtb.with"; extract_section 'What to build' "$WORK/no-outline.md" > "$WORK/wtb.without"
+assert_eq "What to build is unchanged by a Change outline after it" "$(same "$WORK/wtb.with" "$WORK/wtb.without")" "same"
+extract_acs "$FIX" > "$WORK/acs.with"; extract_acs "$WORK/no-outline.md" > "$WORK/acs.without"
+assert_eq "AC records are unchanged by a Change outline" "$(same "$WORK/acs.with" "$WORK/acs.without")" "same"
+assert_eq "both ACs still parse" "$(wc -l < "$WORK/acs.with" | tr -d ' ')" "2"
+assert_match "the outline itself is extractable" "$(extract_section 'Change outline' "$FIX")" "healthz.ts"
+IT="$ROOT/references/issue-template.md"
+assert_eq "the slice template puts the outline right after What to build" \
+  "$(grep -E '^## (What to build|Change outline|Conventions \(from PRD\))$' "$IT" | tr '\n' '|')" \
+  "## What to build|## Change outline|## Conventions (from PRD)|"
+assert_match "the slice template makes the outline optional" "$(cat "$IT")" "Optional — include it when it clarifies the slice's shape."
+assert_match "the slice template says outlines add no obligations" "$(cat "$IT")" "it adds no obligations"
+P2I=$(cat "$ROOT/skills/prd-to-issues/SKILL.md")
+assert_match "prd-to-issues adds an outline when it clarifies" "$P2I" "When it clarifies a slice's shape, give the slice body a \`## Change outline\`"
+assert_match "prd-to-issues trims it from the PRD outline" "$P2I" "extract_section 'Change outline'"
+
 printf '\n1..%d\n# pass %d fail %d\n' "$((PASS + FAIL))" "$PASS" "$FAIL"
 [ "$FAIL" -eq 0 ]

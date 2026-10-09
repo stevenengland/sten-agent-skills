@@ -204,6 +204,16 @@ For each approved slice, create an issue using the template at
 [../../references/issue-template.md](../../references/issue-template.md).
 Inline the Conventions file where indicated.
 
+When it clarifies a slice's shape, give the slice body a `## Change outline`
+right after `## What to build` (Load `show-me` for the views). Trim the
+PRD's outline to the views the slice touches; the outline illustrates and
+adds no obligations. No slice needs one by default.
+
+```bash
+extract_section 'Change outline' /tmp/prd-<prd-number>.md \
+  > /tmp/prd-<prd-number>-outline.md   # empty when the PRD has none
+```
+
 Create in dependency order (blockers first) so real issue numbers can
 be referenced in `blocked_by` front-matter.
 
