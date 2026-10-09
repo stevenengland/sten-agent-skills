@@ -30,8 +30,10 @@ This is the entry mode used when the user runs
 ```bash
 if printf '%s' "${ARGUMENTS:-}" | grep -Eq '^[0-9]+$'; then
   ORIG="$ARGUMENTS"
+  source ../../scripts/extractors.sh
   gh issue view "$ORIG" --json title,body,state \
     -q '"# " + .title + "\n\n" + .body' > /tmp/req-$ORIG.md
+  get_comments "$ORIG" >> /tmp/req-$ORIG.md
 
   # Refuse retriage / replanning of an already-shaped issue.
   if head -10 /tmp/req-$ORIG.md | grep -q '^<!-- stenswf:v1'; then

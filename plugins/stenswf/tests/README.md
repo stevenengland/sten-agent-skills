@@ -34,6 +34,13 @@ Dev-only. Not packaged for end users.
   the contradiction judgement. No shell assertion distinguishes a restatement
   from an argument, which is also why the two-stall rule is documented as the
   agents' judgement rather than claimed as enforcement.
+- [`issue-comments.test.sh`](issue-comments.test.sh) — behavior tests for
+  `get_comments` (`scripts/extractors.sh`): every comment prints, compact and
+  in order — none filtered, since any comment may carry a design marker — and
+  nothing prints when there are none. Plus wiring checks that every content
+  read of an issue calls it, that no hashed body file (`concept.md`, drift
+  check) receives comments, and that the conflict rule the header names exists
+  in `references/decision-escalation.md`.
 - [`apply-verification.test.sh`](apply-verification.test.sh) — wiring checks
   that `apply`/`apply-loop` load `references/review-finding-validation.md`
   and that its links resolve.

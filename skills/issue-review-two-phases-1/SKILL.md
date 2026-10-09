@@ -42,6 +42,9 @@ testable software on its own.
 Before asking any interview questions, explore the codebase to ground your
 recommendations. Complete all items:
 
+- [ ] Read the issue body and all comments (`gh issue view $ARGUMENTS --comments`).
+  A comment conflicting with the body: check the code; if it does not settle
+  it, raise it in the interview.
 - [ ] Locate the test runner config (`pytest.ini`, `pyproject.toml`, `Makefile`,
   or equivalent). Note the test command and any markers.
 - [ ] Find the test file most analogous to the issue's affected module. Note

@@ -25,6 +25,9 @@ first.
 
 ## Prerequisites (complete before any task)
 
+- [ ] Read the issue body and all comments (`gh issue view $ARGUMENTS --comments`).
+  A comment conflicting with the body or plan: check the code; if it does not
+  settle it, ask the user.
 - [ ] Read `CLAUDE.md` and note all hard constraints: untouchable files,
   forbidden suppressions, required tooling, enforced commands. These
   constraints are non-negotiable and supersede all other instructions.

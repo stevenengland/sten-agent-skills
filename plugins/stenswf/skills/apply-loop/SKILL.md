@@ -74,6 +74,7 @@ assert_pr_branch "$PR" || exit 1        # sole writer: never commit to another b
 ISSUE=$(resolve_issue "$PR") || exit 1  # via closingIssuesReferences; loud on 0 or >1
 STATE=".stenswf/$ISSUE/loop-state.implementer.json"   # role-partitioned: see reference
 gh issue view "$ISSUE" --json body -q .body > /tmp/al-$ISSUE.md
+get_comments "$ISSUE"
 TYPE=$(get_fm type /tmp/al-$ISSUE.md)
 parse_type                              # sets MODE (prd | slice)
 ```

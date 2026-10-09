@@ -53,6 +53,7 @@ else
         && extract_section 'Conventions' /tmp/prd-$PRD_REF.md
     fi
   } > "$SYNTH"
+  [ -n "$PRD_REF" ] && get_comments "$PRD_REF"   # lite path's only PRD comment read
 
   CONV_FILE="$SYNTH"
   bash ../../scripts/log-issue.sh missing_artifact \
