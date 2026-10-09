@@ -57,6 +57,7 @@ Fetch the issue and read front-matter via
 source ../../scripts/extractors.sh
 gh issue view $ARGUMENTS --json body -q .body > /tmp/slice-$ARGUMENTS.md
 wc -l /tmp/slice-$ARGUMENTS.md   # confirm; do not cat
+get_comments $ARGUMENTS
 
 TYPE=$(get_fm type /tmp/slice-$ARGUMENTS.md)
 PRD_REF=$(get_fm prd_ref /tmp/slice-$ARGUMENTS.md)
@@ -75,6 +76,7 @@ Record:
 
       ```bash
       gh issue view $PRD_REF --json body -q .body > /tmp/prd-$PRD_REF.md
+      get_comments $PRD_REF
       PARENT_CLASS=$(get_fm class /tmp/prd-$PRD_REF.md)
       case "$PARENT_CLASS" in
         bug-brief)

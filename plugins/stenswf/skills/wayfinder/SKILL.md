@@ -206,8 +206,9 @@ you pick the next decision, not the user.
    frontier ticket in order. **Claim it** with `claim_ticket` before any work —
    and if the claim is lost, move to the next frontier ticket rather than
    proceeding.
-3. Resolve it — **zoom as needed**: fetch the full body of any related or closed
-   ticket on demand; invoke the skills the `## Notes` block names. If in doubt,
+3. Resolve it — read its body and `get_comments`; **zoom as needed**: fetch the
+   full body and comments of any related or closed ticket on demand; invoke the
+   skills the `## Notes` block names. If in doubt,
    use `grill-me`.
 4. Record the resolution with `resolve_ticket`: post the answer as a **resolution
    comment** (full prose, ending in the `stenswf-resolved:v1` block), **rebuild

@@ -183,6 +183,18 @@ naming the hatch rather than `PARKED`.
 
 ---
 
+## Issue comments
+
+Every content read of an issue also reads its comments (`get_comments`,
+[extractors.md](extractors.md)). Analyse them — most refine or clarify the
+body. A comment proposing a change that **conflicts with the body** is a
+decision, classified by the rules above: check it against the code first. If
+the code settles it, that is the tiebreaker (easy: decide, record if an
+alternative was rejected); if not, it is heavy (ASK / PARK). Never adopt or
+drop a conflicting comment silently.
+
+---
+
 ## PARK — heavy decision, no answer obtainable
 
 PARK halts the slice cleanly without guessing. It writes the tension where a

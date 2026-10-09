@@ -51,6 +51,7 @@ assert_can_approve "$PR" \
   || echo "note: this identity authored the PR — convergence will be signalled by comment"
 
 gh issue view "$ISSUE" --json body -q .body > /tmp/rl-$ISSUE.md
+get_comments "$ISSUE"
 TYPE=$(get_fm type /tmp/rl-$ISSUE.md)
 parse_type                              # sets MODE (prd | slice)
 ```

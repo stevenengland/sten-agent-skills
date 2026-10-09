@@ -93,8 +93,10 @@ command -v gh >/dev/null 2>&1 || {
 ### 0.2 Fetch the issue
 
 ```bash
-gh issue view "$ARGUMENTS" --json number,title,body,state,author,comments \
+source ../../scripts/extractors.sh
+gh issue view "$ARGUMENTS" --json number,title,body,state,author \
   > /tmp/triage-$ARGUMENTS.json
+get_comments "$ARGUMENTS" > /tmp/triage-$ARGUMENTS-comments.md
 gh issue view "$ARGUMENTS" --json body -q .body > /tmp/triage-$ARGUMENTS-body.md
 gh issue view "$ARGUMENTS" --json title -q .title > /tmp/triage-$ARGUMENTS-title.txt
 wc -l /tmp/triage-$ARGUMENTS-body.md   # confirm fetch; do not cat
@@ -121,7 +123,7 @@ Per
 (*step-back* template):
 
 > Before running dedup or reproduction, step back and identify what
-> *type* of issue this is. Read the title and body. Classify as one of:
+> *type* of issue this is. Read the title, body and comments. Classify as one of:
 > **bug** (broken behavior described), **feature/refactor request**
 > (new capability or structural change requested), **support/question**
 > (user needs help, not a code change), or **noise**.
@@ -212,7 +214,7 @@ candidates are not based on title-noun overlap alone.
 Dispatch ONE `Explore` subagent (thoroughness: medium, ≤300 words):
 
 > Read GitHub issue #$ARGUMENTS body and comments at
-> `/tmp/triage-$ARGUMENTS.json`. Attempt to identify the failing code
+> `/tmp/triage-$ARGUMENTS.json` and `/tmp/triage-$ARGUMENTS-comments.md`. Attempt to identify the failing code
 > path from the report.
 >
 > Return a ≤300-word report with these fields verbatim:

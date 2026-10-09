@@ -25,6 +25,19 @@ gh issue view $ARGUMENTS --json body -q .body > /tmp/slice-$ARGUMENTS.md
 wc -l /tmp/slice-$ARGUMENTS.md   # confirm; do not cat
 ```
 
+## `get_comments <issue>`
+
+Prints every comment, oldest first, as `@login:` + body under a
+`## Comments` header that carries the conflict rule
+([decision-escalation.md § Issue comments](decision-escalation.md#issue-comments));
+prints nothing when there are none. Unfiltered — any comment may carry a
+design marker. Call it at every content read of an issue; never write it into
+a parsed or hashed body file (`concept.md`, drift check).
+
+```bash
+get_comments $ARGUMENTS
+```
+
 ## Version-guard
 
 Abort if the body lacks the expected opener:

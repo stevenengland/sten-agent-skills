@@ -44,6 +44,7 @@ Fetch the issue body and read front-matter via
 ```bash
 source ../../scripts/extractors.sh
 gh issue view $ARGUMENTS --json body -q .body > /tmp/slice-$ARGUMENTS.md
+get_comments $ARGUMENTS
 # Version guard + key reads per extractors.md
 TYPE=$(get_fm type /tmp/slice-$ARGUMENTS.md)
 LITE=$(get_fm lite_eligible /tmp/slice-$ARGUMENTS.md)

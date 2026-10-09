@@ -27,6 +27,18 @@ extract_section() {
   ' "$body"
 }
 
+# Print an issue's discussion for reading: every comment, oldest first, as
+# `@login:` + body under a header carrying the conflict rule; nothing when the
+# issue has no comments. Unfiltered — any comment may carry a design marker.
+# Never write it into a parsed or hashed body file (concept.md, drift check).
+get_comments() {
+  gh issue view "$1" --json comments -q '
+    .comments | if length == 0 then empty else
+      "## Comments — analyse; a change conflicting with the body: check the code, else escalate (decision-escalation.md § Issue comments)",
+      (.[] | "\n@\(.author.login // "ghost"):\n\(.body)")
+    end'
+}
+
 # AC-tag extractor (TDD-as-lens). Reads `## Acceptance criteria`,
 # assigns positional IDs (AC1, AC2, …) and emits one TSV record per
 # AC: <id>\t<tag>\t<text>. Untagged ACs are a hard error: the

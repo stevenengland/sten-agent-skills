@@ -27,8 +27,8 @@ Break a PRD into independently-grabbable issues using vertical slices
 skip fetch — note the issue number and continue.
 
 Otherwise, ask the user for the PRD or bug-brief issue number. Fetch
-via `gh issue view` (or `glab`/`tea`). If no CLI, ask the user for
-content.
+body + comments (`get_comments`) via `gh issue view` (or `glab`/`tea`).
+If no CLI, ask the user for content.
 
 Read `class:` from front-matter (per
 [../../references/extractors.md](../../references/extractors.md)). If

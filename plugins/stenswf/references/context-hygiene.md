@@ -19,7 +19,8 @@ first BLOCKER / exit report; do not retry per turn.
 - `git diff` / patches: `wc -l` first. If > ~500 lines, read ranged
   slices (`sed -n 'A,Bp'`) or split by path.
 - `gh issue view`: already scoped via `--json body`. Do not `view` twice;
-  persist to `/tmp/slice-$ARGUMENTS.md` and re-read.
+  persist to `/tmp/slice-$ARGUMENTS.md` and re-read. Comments via
+  `get_comments` (compact), never raw `--json comments`.
 - File reads for context: prefer `head`/`tail`/ranged reads over full file.
 
 ## 3. Pre-subtask compaction
