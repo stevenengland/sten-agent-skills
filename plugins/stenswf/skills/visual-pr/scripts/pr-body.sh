@@ -16,7 +16,8 @@
 #
 # compose  header, closing line, region block and evidence, one blank line
 #          apart; absent parts are omitted. The evidence is appended byte for
-#          byte, plus one newline only when it lacks a final one.
+#          byte, plus one newline only when it lacks a final one; missing or
+#          empty evidence is omitted.
 # file     replace the marked region in place. An unmarked body that follows
 #          upstream's template has its owned sections migrated; any other
 #          unmarked body gets the block prepended. Malformed markers (one alone, or out of order)
@@ -35,8 +36,10 @@ usage() {
   exit 2
 }
 
-# Drop trailing blank lines.
-trim() { sed -e :a -e '/^\n*$/{$d;N;ba' -e '}' "$1"; }
+# Drop trailing blank lines, and end on a newline even when the file does
+# not: agents often write files without one, and a marker glued onto a
+# closing fence would swallow everything after it into the code block.
+trim() { { cat "$1"; echo; } | sed -e :a -e '/^\n*$/{$d;N;ba' -e '}'; }
 
 block() {
   printf '%s\n' "$MARK_START"
@@ -60,16 +63,19 @@ compose() {
   [ $# -eq 0 ] && [ -n "$_out" ] && [ -n "$_region" ] || usage
 
   mkdir -p "$(dirname -- "$_out")"
+  # Missing or empty evidence is omitted, like every other absent part.
+  # Build beside the output and move it in, so a failure leaves nothing.
   {
     if [ -n "$_header" ]; then trim "$_header"; echo; fi
     if [ -n "$_closing" ]; then printf '%s\n\n' "$_closing"; fi
     block "$_region"
-    if [ -n "$_evidence" ]; then
+    if [ -n "$_evidence" ] && [ -s "$_evidence" ]; then
       echo
       cat "$_evidence"
-      if [ -s "$_evidence" ] && [ -n "$(tail -c1 "$_evidence")" ]; then echo; fi
+      if [ -n "$(tail -c1 "$_evidence")" ]; then echo; fi
     fi
-  } > "$_out"
+  } > "$_out.tmp"
+  mv "$_out.tmp" "$_out"
 }
 
 # legacy_span <body>: for an unmarked body that follows upstream's template,
@@ -116,6 +122,11 @@ legacy_span() {
   ' "$1"
 }
 
+# Bodies edited on the GitHub website arrive with CRLF line endings, where the
+# marker lines would not match and a second region would be prepended.
+# Normalise to LF, as publish-decisions.sh does.
+lf() { tr -d '\r' < "${1:-/dev/stdin}"; }
+
 # merge <body> <region>: merged body on stdout, or exit 1 on malformed markers.
 merge() {
   _starts=$(grep -cxF "$MARK_START" "$1" || true)
@@ -151,8 +162,9 @@ merge() {
 merge_file() {
   [ $# -eq 2 ] || usage
   _tmp=$(mktemp)
-  trap 'rm -f "$_tmp"' EXIT
-  merge "$1" "$2" > "$_tmp"
+  trap 'rm -f "$_tmp" "$_tmp.body"' EXIT
+  lf "$1" > "$_tmp.body"
+  merge "$_tmp.body" "$2" > "$_tmp"
   cat "$_tmp"
 }
 
@@ -160,13 +172,14 @@ refresh_pr() {
   [ $# -eq 3 ] || usage
   _pr=$1; _region=$2; _desc=$3
   _tmp=$(mktemp)
-  trap 'rm -f "$_tmp" "$_tmp.body" "$_tmp.merged"' EXIT
+  trap 'rm -f "$_tmp" "$_tmp.raw" "$_tmp.body" "$_tmp.merged"' EXIT
 
   gh pr view "$_pr" --json body > "$_tmp" \
-    && jq -j '.body // ""' "$_tmp" > "$_tmp.body" || {
+    && jq -j '.body // ""' "$_tmp" > "$_tmp.raw" || {
     echo "pr-body: cannot read PR $_pr" >&2
     exit 1
   }
+  lf "$_tmp.raw" > "$_tmp.body"
   merge "$_tmp.body" "$_region" > "$_tmp.merged"
   mkdir -p "$(dirname -- "$_desc")"
   cp "$_tmp.merged" "$_desc"

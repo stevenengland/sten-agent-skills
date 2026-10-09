@@ -148,7 +148,8 @@ Run the shared PR+CI+merge procedure with `CI_MAX_CYCLES=3` and
 [../../references/pr-ci-merge.md](../../references/pr-ci-merge.md).
 
 **PR body — built by `visual-pr`.** Write the evidence sections to
-`.stenswf/$ARGUMENTS/pr-evidence.md`, omitting any that would be empty:
+`.stenswf/$ARGUMENTS/pr-evidence.md`, omitting any that would be empty
+(create the file even when both are; empty evidence is skipped):
 
 - `## Lint escapes` — every `lint-escape` action, with its rationale.
 - `## Review-step absences` — each justified Review-Step absence.

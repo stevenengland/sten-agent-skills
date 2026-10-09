@@ -267,6 +267,29 @@ seed_body
 ( cd "$WORK" && bash "$PRBODY" pr 77 "$REGION" "$DESC" && bash "$PUBLISH" pr 901 77 ) >/dev/null
 check_combined "region then decisions"
 
+# 1g. robustness: unterminated inputs, CRLF bodies, missing evidence
+printf '## Why the change\n\nNo final newline.\n\n```text\nshape\n```' > "$WORK/region-nonl.md"
+printf '[#28](https://github.com/o/r/issues/28)' > "$WORK/header-nonl.md"
+bash "$PRBODY" compose --out "$WORK/nonl-region.md" --region "$WORK/region-nonl.md" \
+  --header "$WORK/header-nonl.md" --closing "Closes #901"
+assert_eq "a region without a final newline still gets its own end marker line" "$(grep -cxF "$END" "$WORK/nonl-region.md")" "1"
+assert_eq "the region's closing fence stays a fence line" "$(grep -cx '```' "$WORK/nonl-region.md")" "1"
+assert_eq "a header without a final newline stays on its own line" "$(sed -n 3p "$WORK/nonl-region.md")" "Closes #901"
+
+printf 'Closes #901\r\n\r\n%s\r\n## Why the change\r\n\r\nOld.\r\n%s\r\n\r\n## Tests added (red → green)\r\n- `t`\r\n' "$START" "$END" > "$WORK/crlf.md"
+bash "$PRBODY" file "$WORK/crlf.md" "$REGION" > "$WORK/crlf.out"; RC=$?
+assert_eq "a CRLF body refreshes" "$RC" "0"
+assert_eq "a CRLF body keeps one region" "$(grep -c "^$START" "$WORK/crlf.out")/$(grep -c "^$END" "$WORK/crlf.out")" "1/1"
+assert_nomatch "a CRLF body loses its old region" "$(cat "$WORK/crlf.out")" "Old."
+
+bash "$PRBODY" compose --out "$WORK/noev/pr-description.md" --region "$REGION" \
+  --closing "Closes #901" --evidence "$WORK/no-such-evidence.md"; RC=$?
+assert_eq "compose with a missing evidence file exits 0" "$RC" "0"
+assert_eq "compose with a missing evidence file ends with the region" "$(tail -1 "$WORK/noev/pr-description.md")" "$END"
+: > "$WORK/empty-evidence.md"
+bash "$PRBODY" compose --out "$WORK/emptyev.md" --region "$REGION" --evidence "$WORK/empty-evidence.md"
+assert_eq "compose with empty evidence ends with the region" "$(tail -1 "$WORK/emptyev.md")" "$END"
+
 # --- 2. Standalone guard: workflow-issue.sh ---------------------------------
 GUARD="$ROOT/skills/visual-pr/scripts/workflow-issue.sh"
 GREPO="$WORK/guard-repo"
