@@ -147,22 +147,35 @@ Run the shared PR+CI+merge procedure with `CI_MAX_CYCLES=3` and
 `WAIT_FOR_MERGE=yes`. Full recipe:
 [../../references/pr-ci-merge.md](../../references/pr-ci-merge.md).
 
-PR body must include:
-- One-sentence summary.
-- `Closes #$ARGUMENTS`.
-- Summary of any `lint-escape` actions, with rationale.
-- Any justified Review-Step absences.
-- The rendered decision block, appended **before** `gh pr create` so the
-  PR carries it from its first render:
+**PR body — built by `visual-pr`.** Write the evidence sections to
+`.stenswf/$ARGUMENTS/pr-evidence.md`, omitting any that would be empty:
 
-  ```bash
-  bash ../../scripts/publish-decisions.sh render "$ARGUMENTS" >> "$PR_BODY_FILE"
-  ```
+- `## Lint escapes` — every `lint-escape` action, with its rationale.
+- `## Review-step absences` — each justified Review-Step absence.
 
-  `.stenswf/` is gitignored and Phase 5 archives it, so this block plus
-  the wrap-up comment below are the only copies that outlive this
-  working copy. Empty anchor → nothing appended. Never hand-write the
-  block or edit inside its `<!-- stenswf:decisions:… -->` markers.
+Then Load `visual-pr` in body-only mode with these inputs:
+
+- issue context: `.stenswf/$ARGUMENTS/concept.md`
+- base ref: `origin/$DEFAULT` — the PR's target (`DEFAULT` is the repository's default branch, as in pr-ci-merge.md), never the execution checkpoint in `manifest.json`
+- evidence: `.stenswf/$ARGUMENTS/pr-evidence.md`
+- closing line: `Closes #$ARGUMENTS`
+- output: `.stenswf/$ARGUMENTS/pr-description.md`
+
+visual-pr writes the one-sentence **Why the change**, **Special things to
+note** and the **Change outline** (the change actually delivered) inside
+its marker region and appends the evidence byte for byte. Point
+`PR_BODY_FILE` at the output and append the rendered decision block
+**before** `gh pr create`, so the PR carries it from its first render:
+
+```bash
+PR_BODY_FILE=".stenswf/$ARGUMENTS/pr-description.md"
+bash ../../scripts/publish-decisions.sh render "$ARGUMENTS" >> "$PR_BODY_FILE"
+```
+
+`.stenswf/` is gitignored and Phase 5 archives it, so this block plus
+the wrap-up comment below are the only copies that outlive this
+working copy. Empty anchor → nothing appended. Never hand-write the
+block or edit inside its `<!-- stenswf:decisions:… -->` markers.
 
 ## Phase 5 — Wrap-up + archive
 

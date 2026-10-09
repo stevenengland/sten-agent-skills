@@ -384,5 +384,26 @@ E2E=$(grep 'SKILLS TO LOAD: ship-light' "$ROOT/skills/slice-e2e/SKILL.md")
 assert_match "slice-e2e loads visual-pr for ship-light" "$E2E" "visual-pr"
 assert_match "slice-e2e keeps tdd for ship-light" "$E2E" "tdd"
 
+# --- 5. Wiring: ship and apply PRD-mode -------------------------------------------
+SH=$(cat "$ROOT/skills/ship/post-dispatch.md")
+assert_match "ship loads visual-pr in body-only mode" "$SH" 'Load `visual-pr` in body-only mode'
+assert_match "ship passes the concept snapshot as issue context" "$SH" '- issue context: `.stenswf/$ARGUMENTS/concept.md`'
+assert_match "ship compares against the PR target" "$SH" '- base ref: `origin/$DEFAULT` — the PR'"'"'s target'
+assert_match "ship passes the closing line" "$SH" '- closing line: `Closes #$ARGUMENTS`'
+assert_match "ship hands over lint escapes as evidence" "$SH" '## Lint escapes'
+assert_match "ship hands over review-step absences as evidence" "$SH" '## Review-step absences'
+assert_match "ship points PR_BODY_FILE at the visual-pr output" "$SH" 'PR_BODY_FILE=".stenswf/$ARGUMENTS/pr-description.md"'
+assert_match "ship still appends the decisions render" "$SH" 'publish-decisions.sh render "$ARGUMENTS" >> "$PR_BODY_FILE"'
+AP=$(cat "$ROOT/skills/apply/prd.md")
+assert_match "apply PRD-mode loads visual-pr in body-only mode" "$AP" 'Load `visual-pr` in body-only mode'
+assert_match "apply PRD-mode passes the PRD snapshot as issue context" "$AP" '- issue context: `.stenswf/$ARGUMENTS/concept.md`'
+assert_match "apply PRD-mode keeps the capstone closing line" "$AP" '- closing line: `Closes #$ARGUMENTS (capstone cleanup).`'
+assert_match "apply PRD-mode hands over addressed findings" "$AP" '## Findings addressed'
+assert_match "apply PRD-mode hands over skipped findings" "$AP" '## Findings skipped'
+assert_match "apply PRD-mode names the decisions excerpt" "$AP" 'docs/stenswf/decisions/prd-$ARGUMENTS.md'
+assert_match "apply PRD-mode keeps its PR title" "$AP" '**PR title:** `fix(PRD): #$ARGUMENTS cleanup — capstone findings`.'
+assert_match "apply PRD-mode points PR_BODY_FILE at the visual-pr output" "$AP" 'PR_BODY_FILE=".stenswf/$ARGUMENTS/pr-description.md"'
+assert_match "apply PRD-mode appends the decisions render" "$AP" 'publish-decisions.sh render "$ARGUMENTS" >> "$PR_BODY_FILE"'
+
 printf '\n1..%d\n# pass %d fail %d\n' "$((PASS + FAIL))" "$PASS" "$FAIL"
 [ "$FAIL" -eq 0 ]
