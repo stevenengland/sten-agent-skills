@@ -307,5 +307,61 @@ assert_eq "a mention of a PRD is not ownership (no route to apply)" "$(guard)" "
 gitc checkout -q -b impl/notanumber master
 assert_eq "a non-numeric impl branch is not a workflow branch" "$(guard)" ""
 
+# --- 3. Skill files: tokens, descriptions, fidelity, contract -------------------
+SHOWME="$ROOT/skills/show-me/SKILL.md"
+VPR="$ROOT/skills/visual-pr/SKILL.md"
+VPR_REFS="$ROOT/skills/visual-pr/references"
+vpr() { cat "$VPR" 2>/dev/null; }
+
+( cd "$REPO_ROOT" && bash scripts/check-skill-descriptions.sh "$SHOWME" "$VPR" ) >/dev/null 2>&1; RC=$?
+assert_eq "both skills pass the one-line description check" "$RC" "0"
+assert_eq "show-me keeps the upstream description" "$(grep '^description:' "$SHOWME")" \
+  "description: Help the user understand the current topic visually with concise diagrams, code-shape sketches, and focused HTML artifacts."
+assert_eq "visual-pr carries the stenswf description" "$(grep '^description:' "$VPR" 2>/dev/null)" \
+  "description: Create or update a pull request description that explains why the change exists and shows its shape with show-me-style visual outlines."
+
+for F in "$SHOWME" "$VPR" "$VPR_REFS/pr_description_template.md" "$VPR_REFS/show-me.md" "$VPR_REFS/describe_pr_final_answer.md"; do
+  assert_eq "${F#"$ROOT/"} exists" "$([ -s "$F" ] && echo yes || echo no)" "yes"
+  for TOKEN in 'disable-model-invocation' '{SKILLBASE}' '.humanlayer/' 'task-artifact' '${CLAUDE_PLUGIN_ROOT}'; do
+    assert_nomatch "${F#"$ROOT/"} has no $TOKEN" "$(cat "$F" 2>/dev/null)" "$TOKEN"
+  done
+done
+for F in "$SHOWME" "$VPR"; do
+  assert_eq "${F#"$ROOT/"} has no \$-digit token (Claude Code expands it, #30)" \
+    "$(grep -cE '\$[0-9]|\$\{[0-9]' "$F" 2>/dev/null)" "0"
+done
+
+# Upstream sentences that must survive the port verbatim.
+assert_match "show-me keeps upstream's opening" "$(cat "$SHOWME")" "Pick the smallest view that makes the key point clear."
+assert_match "show-me keeps upstream's restraint rule" "$(cat "$SHOWME")" "it is unlikely you will use all of them"
+assert_match "visual-pr keeps the one-sentence rule" "$(vpr)" "Keep **Why the change** to exactly one sentence."
+assert_match "visual-pr keeps the voice rule" "$(vpr)" "Write as one human talking to another"
+assert_match "the template keeps upstream's story guidance" "$(cat "$VPR_REFS/pr_description_template.md" 2>/dev/null)" \
+  "Tell the story in the order that makes it easiest to understand."
+
+# The stenswf adaptations and contracts.
+TEMPLATE=$(cat "$VPR_REFS/pr_description_template.md" 2>/dev/null)
+assert_match "the template opens the visual-pr region" "$TEMPLATE" "$START"
+assert_match "the template closes the visual-pr region" "$TEMPLATE" "$END"
+assert_match "the template keeps the closing line" "$TEMPLATE" "Closes #{N}"
+assert_match "the template appends evidence byte for byte" "$TEMPLATE" "byte for byte"
+assert_match "standalone guards workflow branches" "$(vpr)" "bash scripts/workflow-issue.sh"
+assert_match "standalone ensures local state first" "$(vpr)" "bash ../../scripts/ensure-stenswf-dir.sh"
+assert_match "standalone refreshes through pr-body.sh pr" "$(vpr)" "bash scripts/pr-body.sh pr {number} {region-path} {description-path}"
+assert_match "a PR outline describes the delivered change" "$(vpr)" "Describe the change actually delivered."
+assert_match "a tiny change may get a prose outline" "$(vpr)" "one or two plain sentences are enough"
+assert_match "body-only compares against the PR target" "$(vpr)" "the same comparison GitHub shows"
+BODY_ONLY=$(sed -n '/^## Body-only mode/,$p' "$VPR" 2>/dev/null)
+for INPUT in '**issue context**' '**base ref**' '**evidence**' '**closing line**' '**output**'; do
+  assert_match "body-only mode names the input $INPUT" "$BODY_ONLY" "$INPUT"
+done
+assert_match "body-only mode composes through pr-body.sh" "$BODY_ONLY" "bash scripts/pr-body.sh compose"
+assert_match "body-only mode forbids gh calls" "$BODY_ONLY" "make no \`gh\` calls"
+assert_nomatch "body-only mode runs no gh pr command" "$BODY_ONLY" "gh pr "
+assert_nomatch "body-only mode runs no gh issue command" "$BODY_ONLY" "gh issue "
+assert_match "show-me opens HTML through the shared opener" "$(cat "$SHOWME")" "bash ../../scripts/open-html.sh"
+assert_match "show-me ensures local state first" "$(cat "$SHOWME")" "bash ../../scripts/ensure-stenswf-dir.sh"
+assert_match "visual-pr's show-me copy keeps HTML a local aside" "$(cat "$VPR_REFS/show-me.md" 2>/dev/null)" "bash ../../scripts/open-html.sh"
+
 printf '\n1..%d\n# pass %d fail %d\n' "$((PASS + FAIL))" "$PASS" "$FAIL"
 [ "$FAIL" -eq 0 ]
