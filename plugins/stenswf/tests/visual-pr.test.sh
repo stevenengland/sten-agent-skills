@@ -160,5 +160,112 @@ cp "$BODY" "$WORK/after-first"
 ( cd "$WORK" && bash "$PRBODY" pr 77 "$REGION" "$DESC" ) >/dev/null
 assert_eq "a second run with the same region changes no byte" "$(same "$BODY" "$WORK/after-first")" "same"
 
+# 1e. legacy upstream-template bodies: migrate owned content only, else prepend
+migrated() { [ "$(grep -cx '## Special things to note' "$1")" = 0 ] && echo migrated || echo kept; }   # REGION has no Special heading
+LEG="$WORK/legacy.md"
+cat > "$LEG" <<'EOF'
+[#28](https://github.com/o/r/issues/28)
+
+Closes #902
+
+## Why the change
+
+The old upstream reason.
+
+## Special things to note
+
+- None.
+
+## Change outline
+
+Shape before:
+
+~~~markdown
+## Not a heading — inside a fence
+~~~
+
+## Tests added (red → green)
+- `test_kept`
+
+<!-- stenswf:decisions:start -->
+## Decisions
+- kept
+<!-- stenswf:decisions:end -->
+EOF
+bash "$PRBODY" file "$LEG" "$REGION" > "$WORK/legacy.out"; RC=$?
+LOUT="$WORK/legacy.out"
+assert_eq "migration exits 0" "$RC" "0"
+assert_eq "an upstream-template body is migrated" "$(migrated "$LOUT")" "migrated"
+assert_eq "migration leaves one region" "$(grep -cxF "$START" "$LOUT")/$(grep -cxF "$END" "$LOUT")" "1/1"
+assert_nomatch "migration drops the old explanation" "$(cat "$LOUT")" "The old upstream reason."
+assert_nomatch "migration drops the old outline, fenced lines included" "$(cat "$LOUT")" "Not a heading"
+assert_eq "migration keeps the header and closing line" "$(head -3 "$LOUT")" "$(head -3 "$LEG")"
+sed -n '/^## Tests added/,$p' "$LEG" > "$WORK/leg-tail.before"
+sed -n '/^## Tests added/,$p' "$LOUT" > "$WORK/leg-tail.after"
+assert_eq "migration keeps evidence and decisions byte for byte" "$(same "$WORK/leg-tail.before" "$WORK/leg-tail.after")" "same"
+bash "$PRBODY" file "$LOUT" "$REGION" > "$WORK/legacy.again"
+assert_eq "a migrated body refreshes idempotently" "$(same "$LOUT" "$WORK/legacy.again")" "same"
+
+T3='## Why the change\n\nOld.\n\n## Special things to note\n\n- None.\n\n## Change outline\n\n'
+printf "$T3"'Old shape.\n\nCloses #29\n' > "$WORK/leg-closes.md"
+bash "$PRBODY" file "$WORK/leg-closes.md" "$REGION" > "$WORK/leg-closes.out"
+assert_eq "a trailing closing line ends the span (still migrated)" "$(migrated "$WORK/leg-closes.out")" "migrated"
+assert_eq "a trailing closing line survives migration" "$(grep -cx 'Closes #29' "$WORK/leg-closes.out")" "1"
+
+printf "$T3"'Old shape.\n\n<!-- stenswf:decisions:start -->\n## Decisions\n- kept\n<!-- stenswf:decisions:end -->\n' > "$WORK/leg2.md"
+bash "$PRBODY" file "$WORK/leg2.md" "$REGION" > "$WORK/leg2.out"
+sed -n '/^<!-- stenswf:decisions:start -->$/,$p' "$WORK/leg2.md" > "$WORK/leg2.before"
+sed -n '/^<!-- stenswf:decisions:start -->$/,$p' "$WORK/leg2.out" > "$WORK/leg2.after"
+assert_eq "an HTML comment ends the span" "$(same "$WORK/leg2.before" "$WORK/leg2.after")" "same"
+assert_nomatch "the span before the comment was replaced" "$(cat "$WORK/leg2.out")" "Old shape."
+
+printf "$T3"'````markdown\n```\n## inner, still fenced\n````\n\n## Validation\n- `kept`\n' > "$WORK/leg-fence4.md"
+bash "$PRBODY" file "$WORK/leg-fence4.md" "$REGION" > "$WORK/leg-fence4.out"
+sed -n '/^## Validation$/,$p' "$WORK/leg-fence4.md" > "$WORK/leg-fence4.before"
+sed -n '/^## Validation$/,$p' "$WORK/leg-fence4.out" > "$WORK/leg-fence4.after"
+assert_eq "a shorter fence run inside a longer fence does not close it" "$(migrated "$WORK/leg-fence4.out")" "migrated"
+assert_eq "the section after a four-backtick fence survives" "$(same "$WORK/leg-fence4.before" "$WORK/leg-fence4.after")" "same"
+
+for CASE in unclosed prose-keyword incomplete unrelated; do
+  case $CASE in
+    unclosed)      printf "$T3"'```text\nnever closed\n\n## Validation\n- kept\n' ;;
+    prose-keyword) printf '## Why the change\n\nThis fixes #12 for good.\n\n## Special things to note\n\n- None.\n\n## Change outline\n\nShape.\n' ;;
+    incomplete)    printf 'Closes #7\n\n## Why the change\n\nHand-written.\n\n## Notes\n- keep\n' ;;
+    unrelated)     printf '## Why the change\n\nA.\n\n## Notes\n\nB.\n\n## Special things to note\n\n- C.\n\n## Change outline\n\nD.\n' ;;
+  esac > "$WORK/amb-$CASE.md"
+  bash "$PRBODY" file "$WORK/amb-$CASE.md" "$REGION" > "$WORK/amb-$CASE.out"
+  assert_eq "ambiguous ($CASE): the region is prepended" "$(head -1 "$WORK/amb-$CASE.out")" "$START"
+  after_end "$WORK/amb-$CASE.out" > "$WORK/amb-$CASE.rest"
+  assert_eq "ambiguous ($CASE): the original bytes follow unchanged" "$(same "$WORK/amb-$CASE.rest" "$WORK/amb-$CASE.md")" "same"
+done
+
+# 1f. coexistence with the decisions block, both orders
+mkdir -p "$WORK/.stenswf/901"
+cat > "$WORK/.stenswf/901/decisions.md" <<'EOF'
+# Decisions — #901
+
+### D1 — Retry with exponential backoff
+
+- **Category:** decision
+- **Source:** ship-light
+- **Rationale:** Fixed retries hammer the API during an outage.
+- **Refs:** src/worker.py
+EOF
+
+check_combined() {   # check_combined <label>
+  assert_eq "$1: one visual-pr marker pair" "$(grep -cxF "$START" "$BODY")/$(grep -cxF "$END" "$BODY")" "1/1"
+  assert_eq "$1: one decisions marker pair" \
+    "$(grep -cxF '<!-- stenswf:decisions:start -->' "$BODY")/$(grep -cxF '<!-- stenswf:decisions:end -->' "$BODY")" "1/1"
+  assert_eq "$1: the decisions block is last" "$(grep -v '^[[:space:]]*$' "$BODY" | tail -1)" "<!-- stenswf:decisions:end -->"
+  assert_eq "$1: the region stays above the evidence" "$(region_position "$BODY")" "above"
+  assert_match "$1: the new region is in" "$(cat "$BODY")" "The new reason."
+}
+seed_body
+( cd "$WORK" && bash "$PUBLISH" pr 901 77 && bash "$PRBODY" pr 77 "$REGION" "$DESC" ) >/dev/null
+check_combined "decisions then region"
+seed_body
+( cd "$WORK" && bash "$PRBODY" pr 77 "$REGION" "$DESC" && bash "$PUBLISH" pr 901 77 ) >/dev/null
+check_combined "region then decisions"
+
 printf '\n1..%d\n# pass %d fail %d\n' "$((PASS + FAIL))" "$PASS" "$FAIL"
 [ "$FAIL" -eq 0 ]

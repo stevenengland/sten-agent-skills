@@ -17,8 +17,9 @@
 # compose  header, closing line, region block and evidence, one blank line
 #          apart; absent parts are omitted. The evidence is appended byte for
 #          byte, plus one newline only when it lacks a final one.
-# file     replace the marked region in place; an unmarked body gets the
-#          block prepended. Malformed markers (one alone, or out of order)
+# file     replace the marked region in place. An unmarked body that follows
+#          upstream's template has its owned sections migrated; any other
+#          unmarked body gets the block prepended. Malformed markers (one alone, or out of order)
 #          exit 1 and print nothing.
 # pr       fetch the body as JSON (never `-q .body`: the CLI appends a
 #          newline, so every refresh would grow the body), merge, save the
@@ -71,14 +72,66 @@ compose() {
   } > "$_out"
 }
 
+# legacy_span <body>: for an unmarked body that follows upstream's template,
+# print "<first line> <last line>" of the content visual-pr demonstrably owns
+# (Why / Special things / Change outline). Prints nothing when in doubt, and
+# the caller then prepends instead. Conservative by design:
+#   - CommonMark fences: nothing inside one counts; an unclosed fence is doubt.
+#   - The three headings occur once each, in order, outside fences.
+#   - The span stops before the first heading, HTML comment or closing-keyword
+#     line after the outline, so a trailing `Closes #N` survives.
+#   - An unrelated section or comment between the headings, or a closing
+#     keyword reference inside the span, is doubt.
+# No {n,m} intervals: mawk lacks them.
+legacy_span() {
+  awk '
+    function kw(l) { l = tolower(l)
+      return l ~ /(^|[^a-z0-9_])(close|closes|closed|fix|fixes|fixed|resolve|resolves|resolved):?[ \t]+([a-z0-9_.-]+\/[a-z0-9_.-]+)?#[0-9]+/ ||
+             l ~ /(^|[^a-z0-9_])(close|closes|closed|fix|fixes|fixed|resolve|resolves|resolved):?[ \t]+https?:\/\/[^ ]*\/issues\/[0-9]+/ }
+    { line = $0
+      if (infence) {
+        if (match(line, /^(   |  | )?(`+|~+)[ \t]*$/)) {
+          run = line; sub(/^ +/, "", run); sub(/[ \t]+$/, "", run)
+          if (substr(run, 1, 1) == fch && length(run) >= flen) infence = 0
+        }
+        if (cl && !stop) last = NR
+        next
+      }
+      if (match(line, /^(   |  | )?(```+|~~~+)/)) {
+        run = substr(line, RSTART, RLENGTH); sub(/^ +/, "", run)
+        fch = substr(run, 1, 1); flen = length(run)
+        if (!(fch == "`" && index(substr(line, RSTART + RLENGTH), "`"))) {
+          infence = 1; if (cl && !stop) last = NR; next }
+      }
+      if (line == "## Why the change")              { w++; if (!wl) wl = NR }
+      else if (line == "## Special things to note")  { s++; if (!sl) sl = NR }
+      else if (line == "## Change outline")          { c++; if (!cl) cl = NR }
+      else if (line ~ /^##? / || line ~ /^(   |  | )?<!--/ ||
+               tolower(line) ~ /^[ \t]*(close|closes|closed|fix|fixes|fixed|resolve|resolves|resolved):?[ \t]/) {
+        if (cl && !stop) stop = NR; else if (wl && !cl) other++ }
+      if (wl && !stop && kw(line)) keyword++
+      if (cl && !stop && line ~ /[^ \t]/) last = NR }
+    END { if (infence) exit
+          if (w == 1 && s == 1 && c == 1 && wl < sl && sl < cl && !other && !keyword) print wl, last }
+  ' "$1"
+}
+
 # merge <body> <region>: merged body on stdout, or exit 1 on malformed markers.
 merge() {
   _starts=$(grep -cxF "$MARK_START" "$1" || true)
   _ends=$(grep -cxF "$MARK_END" "$1" || true)
   if [ "$_starts" -eq 0 ] && [ "$_ends" -eq 0 ]; then
-    block "$2"
-    echo
-    cat "$1"
+    _span=$(legacy_span "$1")
+    if [ -n "$_span" ]; then
+      _w=${_span% *}; _last=${_span#* }
+      awk -v n=$((_w - 1)) 'NR <= n' "$1"
+      block "$2"
+      tail -n +$((_last + 1)) "$1"
+    else
+      block "$2"
+      echo
+      cat "$1"
+    fi
     return 0
   fi
   if [ "$_starts" -eq 1 ] && [ "$_ends" -eq 1 ]; then
