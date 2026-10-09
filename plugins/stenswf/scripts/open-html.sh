@@ -11,7 +11,7 @@
 #
 #   Darwin                    → open
 #   Linux on WSL              → wslview, else xdg-open
-#   other Linux               → xdg-open
+#   other Linux               → xdg-open, only with DISPLAY or WAYLAND_DISPLAY
 #   anything else             → none (path printed only)
 #
 # WSL is detected from ${STENSWF_PROC_VERSION:-/proc/version} (overridable
@@ -29,8 +29,12 @@ case "$(uname -s 2>/dev/null || echo unknown)" in
   Linux)
     if grep -qi microsoft "${STENSWF_PROC_VERSION:-/proc/version}" 2>/dev/null; then
       CANDIDATES="wslview xdg-open"
-    else
+    elif [ -n "${DISPLAY:-}${WAYLAND_DISPLAY:-}" ]; then
       CANDIDATES="xdg-open"
+    else
+      # No display, no browser: xdg-open would fall back to a text browser
+      # that holds the caller's terminal.
+      CANDIDATES=""
     fi ;;
   *) CANDIDATES="" ;;
 esac

@@ -91,7 +91,9 @@ opener() {     # opener <name> <exit code>: logs "<name> <args>" to $LOG
   chmod +x "$BIN/$1"
 }
 reset() { rm -f "$BIN/open" "$BIN/xdg-open" "$BIN/wslview" "$BIN/uname" "$LOG"; }
-run() { ( cd "$WORK" && PATH="$BIN" STENSWF_PROC_VERSION="$PROC" "$BASH" "$OPENER" "$@" ); }
+# The graphical session is the test's choice, never the developer's shell's.
+SESSION="DISPLAY=:0"   # empty = a headless box
+run() { ( unset DISPLAY WAYLAND_DISPLAY; cd "$WORK" && env $SESSION PATH="$BIN" STENSWF_PROC_VERSION="$PROC" "$BASH" "$OPENER" "$@" ); }
 opened() { cat "$LOG" 2>/dev/null; }
 
 # 2a. macOS
@@ -115,6 +117,20 @@ reset; platform Linux "Linux version 6.1.0-13-amd64 (Debian)"; opener open 0; op
 run "$PAGE" >/dev/null
 assert_eq "Linux opens with xdg-open" "$(opened)" "xdg-open $PAGE"
 assert_eq "Linux never runs open (openvt on Debian)" "$(grep -c '^open ' "$LOG" 2>/dev/null)" "0"
+reset; platform Linux "Linux version 6.1.0-13-amd64 (Debian)"; opener xdg-open 0
+SESSION="WAYLAND_DISPLAY=wayland-0" run "$PAGE" >/dev/null
+assert_eq "Linux under Wayland opens with xdg-open" "$(opened)" "xdg-open $PAGE"
+
+# 2c'. Headless: xdg-open would hand the page to a text browser that holds
+#      the caller's terminal, so a box with no display only gets the path
+reset; platform Linux "Linux version 6.1.0-13-amd64 (Debian)"; opener open 0; opener xdg-open 0
+OUT=$(SESSION="" run "$PAGE"); RC=$?
+assert_eq "headless Linux exits 0" "$RC" "0"
+assert_eq "headless Linux runs no opener" "$([ -e "$LOG" ] && opened || echo none)" "none"
+assert_eq "headless Linux prints the absolute path" "$OUT" "$PAGE"
+reset; platform Linux "$WSL"; opener wslview 0
+SESSION="" run "$PAGE" >/dev/null
+assert_eq "WSL needs no display for wslview" "$(opened)" "wslview $PAGE"
 
 # 2d. No opener, failing opener
 reset; platform Linux "Linux version 6.1.0-13-amd64 (Debian)"

@@ -114,10 +114,18 @@ function expandSkill(command: string): string {
 }
 ```
 
-- For a visual UI, layout, state comparison, or concept too dense for Mermaid, create one focused HTML artifact. Match the product's colors, type, spacing, and components; use real labels and data; support desktop and mobile; then keep it as a local aside — GitHub cannot render HTML in a PR body. Create the folder with `bash ../../scripts/ensure-stenswf-dir.sh <N>` (or `pr-{number}`), write `show-me-{description}.html` into it, open it for the author, never link it from the PR body, and list its path in your final report. In the body itself, use the closest view GitHub renders: Mermaid, `diff`, or `text`. Skip this entirely in body-only mode.
+- For a visual UI, layout, state comparison, or concept too dense for Mermaid, create one focused HTML artifact. Match the product's colors, type, spacing, and components; use real labels and data; support desktop and mobile; then keep it as a local aside — GitHub cannot render HTML in a PR body. Write it into the local state directory, creating it first:
 
 ```bash
-bash ../../scripts/open-html.sh .stenswf/<N>/show-me-{description}.html
+DIR=$(bash ../../scripts/ensure-stenswf-dir.sh <N>)   # <N> = the issue in play, otherwise .show-me
 ```
+
+Name the file `show-me-{description}.html` in either directory, then open it for the author:
+
+```bash
+bash ../../scripts/open-html.sh "$DIR/show-me-{description}.html"
+```
+
+Never link it from the PR body, and list its path in your final report. In the body itself, use the closest view GitHub renders: Mermaid, `diff`, or `text`. Skip this entirely in body-only mode.
 
 - Place each visual next to the short text it supports. Keep only the calls, files, props, states, and boundaries needed to answer the user's current question.

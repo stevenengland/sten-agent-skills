@@ -212,6 +212,22 @@ bash "$PRBODY" file "$WORK/leg-closes.md" "$REGION" > "$WORK/leg-closes.out"
 assert_eq "a trailing closing line ends the span (still migrated)" "$(migrated "$WORK/leg-closes.out")" "migrated"
 assert_eq "a trailing closing line survives migration" "$(grep -cx 'Closes #29' "$WORK/leg-closes.out")" "1"
 
+# A footer the tool appended is not visual-pr's, so it survives, whether a
+# thematic break sets it off or not.
+for CASE in attribution break; do
+  case $CASE in
+    attribution) FOOT='🤖 Generated with [Claude Code](https://claude.com/claude-code)' ;;
+    break)       FOOT='***' ;;
+  esac
+  printf "$T3"'Old shape.\n\n%s\n\nSigned off by a human.\n' "$FOOT" > "$WORK/leg-$CASE.md"
+  bash "$PRBODY" file "$WORK/leg-$CASE.md" "$REGION" > "$WORK/leg-$CASE.out"
+  assert_eq "a trailing footer ($CASE) ends the span (still migrated)" "$(migrated "$WORK/leg-$CASE.out")" "migrated"
+  assert_nomatch "a trailing footer ($CASE): the old outline is replaced" "$(cat "$WORK/leg-$CASE.out")" "Old shape."
+  grep -nxF -- "$FOOT" "$WORK/leg-$CASE.md" | cut -d: -f1 | { read -r N; tail -n +"$N" "$WORK/leg-$CASE.md"; } > "$WORK/leg-$CASE.before"
+  grep -nxF -- "$FOOT" "$WORK/leg-$CASE.out" | cut -d: -f1 | { read -r N; [ -n "$N" ] && tail -n +"$N" "$WORK/leg-$CASE.out"; } > "$WORK/leg-$CASE.after"
+  assert_eq "a trailing footer ($CASE) survives byte for byte" "$(same "$WORK/leg-$CASE.before" "$WORK/leg-$CASE.after")" "same"
+done
+
 printf "$T3"'Old shape.\n\n<!-- stenswf:decisions:start -->\n## Decisions\n- kept\n<!-- stenswf:decisions:end -->\n' > "$WORK/leg2.md"
 bash "$PRBODY" file "$WORK/leg2.md" "$REGION" > "$WORK/leg2.out"
 sed -n '/^<!-- stenswf:decisions:start -->$/,$p' "$WORK/leg2.md" > "$WORK/leg2.before"
@@ -282,10 +298,6 @@ assert_eq "a CRLF body refreshes" "$RC" "0"
 assert_eq "a CRLF body keeps one region" "$(grep -c "^$START" "$WORK/crlf.out")/$(grep -c "^$END" "$WORK/crlf.out")" "1/1"
 assert_nomatch "a CRLF body loses its old region" "$(cat "$WORK/crlf.out")" "Old."
 
-bash "$PRBODY" compose --out "$WORK/noev/pr-description.md" --region "$REGION" \
-  --closing "Closes #901" --evidence "$WORK/no-such-evidence.md"; RC=$?
-assert_eq "compose with a missing evidence file exits 0" "$RC" "0"
-assert_eq "compose with a missing evidence file ends with the region" "$(tail -1 "$WORK/noev/pr-description.md")" "$END"
 : > "$WORK/empty-evidence.md"
 bash "$PRBODY" compose --out "$WORK/emptyev.md" --region "$REGION" --evidence "$WORK/empty-evidence.md"
 assert_eq "compose with empty evidence ends with the region" "$(tail -1 "$WORK/emptyev.md")" "$END"
@@ -299,6 +311,17 @@ assert_match "compose with a missing region names the file" "$(cat "$WORK/err")"
 bash "$PRBODY" compose --out "$WORK/existing.md" --region "$REGION" --header "$WORK/no-such-header.md" 2>/dev/null; RC=$?
 assert_eq "compose with a missing header exits 1" "$RC" "1"
 assert_eq "compose with a missing header keeps the old output" "$(same "$WORK/existing.md" "$WORK/existing.before")" "same"
+# Every shipper creates its evidence file, empty or not, so a missing one is
+# a broken handoff: composing anyway would publish a PR without its
+# red → green evidence and no signal.
+bash "$PRBODY" compose --out "$WORK/existing.md" --region "$REGION" --evidence "$WORK/no-such-evidence.md" 2>"$WORK/err"; RC=$?
+assert_eq "compose with a missing evidence file exits 1" "$RC" "1"
+assert_eq "compose with a missing evidence file keeps the old output" "$(same "$WORK/existing.md" "$WORK/existing.before")" "same"
+assert_match "compose with a missing evidence file names the file" "$(cat "$WORK/err")" "no-such-evidence.md"
+mkdir -p "$WORK/evidence-dir.md"
+bash "$PRBODY" compose --out "$WORK/existing.md" --region "$REGION" --evidence "$WORK/evidence-dir.md" 2>/dev/null; RC=$?
+assert_eq "compose with unreadable evidence exits 1" "$RC" "1"
+assert_eq "compose with unreadable evidence leaves no temp file" "$([ -e "$WORK/existing.md.tmp" ] && echo left || echo none)" "none"
 OUT=$(bash "$PRBODY" file "$WORK/existing.md" "$WORK/no-such-region.md" 2>/dev/null); RC=$?
 assert_eq "file mode with a missing region exits 1 and prints nothing" "$RC/$OUT" "1/"
 seed_body; cp "$BODY" "$WORK/body.before"
@@ -316,6 +339,24 @@ sed -n '/^   ## Validation $/,$p' "$WORK/leg-indent.md" > "$WORK/leg-indent.befo
 sed -n '/^   ## Validation $/,$p' "$WORK/leg-indent.out" > "$WORK/leg-indent.after"
 assert_eq "an indented heading after the outline survives migration" "$(same "$WORK/leg-indent.before" "$WORK/leg-indent.after")" "same"
 assert_match "the indented heading's evidence survives" "$(cat "$WORK/leg-indent.out")" "kept evidence"
+
+# 1j. a region that quotes a marker line would publish a body the next refresh
+#     refuses as malformed, so it is refused up front and nothing is written
+printf '## Why the change\n\n```text\n%s\n```\n' "$END" > "$WORK/region-marker.md"
+bash "$PRBODY" compose --out "$WORK/existing.md" --region "$WORK/region-marker.md" 2>"$WORK/err"; RC=$?
+assert_eq "compose with a marker in the region exits 1" "$RC" "1"
+assert_eq "compose with a marker in the region keeps the old output" "$(same "$WORK/existing.md" "$WORK/existing.before")" "same"
+assert_match "compose with a marker in the region says why" "$(cat "$WORK/err")" "region contains a visual-pr marker"
+printf '## Why the change\r\n%s\r\n' "$START" > "$WORK/region-marker-crlf.md"
+printf 'Hand-written body.\n' > "$WORK/plain-body.md"
+OUT=$(bash "$PRBODY" file "$WORK/plain-body.md" "$WORK/region-marker-crlf.md" 2>/dev/null); RC=$?
+assert_eq "file mode with a CRLF marker line in the region exits 1 and prints nothing" "$RC/$OUT" "1/"
+seed_body; cp "$BODY" "$WORK/body.before"
+MARKER_DESC="$WORK/marker-region/pr-description.md"
+( cd "$WORK" && bash "$PRBODY" pr 77 "$WORK/region-marker.md" "$MARKER_DESC" ) >/dev/null 2>&1; RC=$?
+assert_eq "pr mode with a marker in the region exits 1" "$RC" "1"
+assert_eq "pr mode with a marker in the region never calls gh pr edit" "$([ -e "$EDITS" ] && echo edited || echo untouched)" "untouched"
+assert_eq "pr mode with a marker in the region writes no description" "$([ -e "$MARKER_DESC" ] && echo written || echo none)" "none"
 
 # --- 2. Standalone guard: workflow-issue.sh ---------------------------------
 GUARD="$ROOT/skills/visual-pr/scripts/workflow-issue.sh"
@@ -412,18 +453,40 @@ assert_nomatch "body-only mode runs no gh issue command" "$BODY_ONLY" "gh issue 
 assert_match "show-me opens HTML through the shared opener" "$(cat "$SHOWME")" "bash ../../scripts/open-html.sh"
 assert_match "show-me ensures local state first" "$(cat "$SHOWME")" "bash ../../scripts/ensure-stenswf-dir.sh"
 assert_match "visual-pr's show-me copy keeps HTML a local aside" "$(cat "$VPR_REFS/show-me.md" 2>/dev/null)" "bash ../../scripts/open-html.sh"
+# visual-pr carries its own copy of show-me (upstream's layout). Only the
+# HTML view may differ, and even there the file lands where show-me puts it.
+upto_html() { sed '/^- For a visual UI, layout, state comparison/,$d' "$1"; }
+upto_html "$SHOWME" > "$WORK/showme.head"; upto_html "$VPR_REFS/show-me.md" > "$WORK/vpr-showme.head"
+assert_eq "visual-pr's show-me copy matches show-me up to the HTML view" "$(same "$WORK/showme.head" "$WORK/vpr-showme.head")" "same"
+HTML_DIR='DIR=$(bash ../../scripts/ensure-stenswf-dir.sh <N>)   # <N> = the issue in play, otherwise .show-me'
+HTML_OPEN='bash ../../scripts/open-html.sh "$DIR/show-me-{description}.html"'
+for F in "$SHOWME" "$VPR_REFS/show-me.md"; do
+  assert_match "${F#"$ROOT/"} computes the HTML folder with the .show-me fallback" "$(cat "$F")" "$HTML_DIR"
+  assert_match "${F#"$ROOT/"} opens the computed HTML path" "$(cat "$F")" "$HTML_OPEN"
+done
 
-# --- 4. Wiring: ship-light and slice-e2e ----------------------------------------
-SL=$(cat "$ROOT/skills/ship-light/SKILL.md")
-assert_match "ship-light loads visual-pr in body-only mode" "$SL" 'Load `visual-pr` in body-only mode'
-assert_match "ship-light passes the issue context" "$SL" '- issue context: `/tmp/slice-$ARGUMENTS.md`'
-assert_match "ship-light passes the base ref" "$SL" '- base ref: `origin/$DEFAULT`'
-assert_match "ship-light passes its evidence file" "$SL" '- evidence: `.stenswf/$ARGUMENTS/pr-evidence.md`'
-assert_match "ship-light passes the closing line" "$SL" '- closing line: `Closes #$ARGUMENTS`'
-assert_match "ship-light passes the output path" "$SL" '- output: `.stenswf/$ARGUMENTS/pr-description.md`'
-assert_match "ship-light points PR_BODY_FILE at the visual-pr output" "$SL" 'PR_BODY_FILE=".stenswf/$ARGUMENTS/pr-description.md"'
-assert_match "ship-light still appends the decisions render" "$SL" 'publish-decisions.sh render "$ARGUMENTS" >> "$PR_BODY_FILE"'
+# --- 4. Wiring: the three shippers build their PR body with visual-pr ----------
+# One row per shipper: file | issue context | closing line. The other inputs,
+# PR_BODY_FILE and the decisions render are the same for all three.
+while IFS='|' read -r F CONTEXT CLOSING; do
+  C=$(cat "$ROOT/$F")
+  assert_match "$F loads visual-pr in body-only mode" "$C" 'Load `visual-pr` in body-only mode'
+  assert_match "$F passes the issue context" "$C" "- issue context: \`$CONTEXT\`"
+  assert_match "$F compares against the PR target" "$C" '- base ref: `origin/$DEFAULT`'
+  assert_match "$F passes its evidence file" "$C" '- evidence: `.stenswf/$ARGUMENTS/pr-evidence.md`'
+  assert_match "$F passes the closing line" "$C" "- closing line: \`$CLOSING\`"
+  assert_match "$F passes the output path" "$C" '- output: `.stenswf/$ARGUMENTS/pr-description.md`'
+  assert_match "$F points PR_BODY_FILE at the visual-pr output" "$C" 'PR_BODY_FILE=".stenswf/$ARGUMENTS/pr-description.md"'
+  assert_match "$F still appends the decisions render" "$C" 'publish-decisions.sh render "$ARGUMENTS" >> "$PR_BODY_FILE"'
+done <<'EOF'
+skills/ship-light/SKILL.md|/tmp/slice-$ARGUMENTS.md|Closes #$ARGUMENTS
+skills/ship/post-dispatch.md|.stenswf/$ARGUMENTS/concept.md|Closes #$ARGUMENTS
+skills/apply/prd.md|.stenswf/$ARGUMENTS/concept.md|Closes #$ARGUMENTS (capstone cleanup).
+EOF
+
+# Per-shipper evidence and extras.
 PB=$(cat "$ROOT/skills/ship-light/pr-body.md")
+assert_match "pr-body.md references visual-pr" "$PB" "visual-pr"
 assert_match "pr-body.md has the validation summary" "$PB" '## Validation'
 assert_match "pr-body.md keeps the TDD evidence heading" "$PB" '## Tests added (red → green)'
 assert_match "pr-body.md keeps Notable assumptions" "$PB" '## Notable assumptions'
@@ -433,27 +496,22 @@ assert_nomatch "pr-body.md drops the superseded Summary template" "$PB" '## Summ
 E2E=$(grep 'SKILLS TO LOAD: ship-light' "$ROOT/skills/slice-e2e/SKILL.md")
 assert_match "slice-e2e loads visual-pr for ship-light" "$E2E" "visual-pr"
 assert_match "slice-e2e keeps tdd for ship-light" "$E2E" "tdd"
-
-# --- 5. Wiring: ship and apply PRD-mode -------------------------------------------
 SH=$(cat "$ROOT/skills/ship/post-dispatch.md")
-assert_match "ship loads visual-pr in body-only mode" "$SH" 'Load `visual-pr` in body-only mode'
-assert_match "ship passes the concept snapshot as issue context" "$SH" '- issue context: `.stenswf/$ARGUMENTS/concept.md`'
-assert_match "ship compares against the PR target" "$SH" '- base ref: `origin/$DEFAULT` — the PR'"'"'s target'
-assert_match "ship passes the closing line" "$SH" '- closing line: `Closes #$ARGUMENTS`'
+assert_match "ship's base ref is the PR target, not the manifest checkpoint" "$SH" '- base ref: `origin/$DEFAULT` — the PR'"'"'s target'
 assert_match "ship hands over lint escapes as evidence" "$SH" '## Lint escapes'
 assert_match "ship hands over review-step absences as evidence" "$SH" '## Review-step absences'
-assert_match "ship points PR_BODY_FILE at the visual-pr output" "$SH" 'PR_BODY_FILE=".stenswf/$ARGUMENTS/pr-description.md"'
-assert_match "ship still appends the decisions render" "$SH" 'publish-decisions.sh render "$ARGUMENTS" >> "$PR_BODY_FILE"'
 AP=$(cat "$ROOT/skills/apply/prd.md")
-assert_match "apply PRD-mode loads visual-pr in body-only mode" "$AP" 'Load `visual-pr` in body-only mode'
-assert_match "apply PRD-mode passes the PRD snapshot as issue context" "$AP" '- issue context: `.stenswf/$ARGUMENTS/concept.md`'
-assert_match "apply PRD-mode keeps the capstone closing line" "$AP" '- closing line: `Closes #$ARGUMENTS (capstone cleanup).`'
 assert_match "apply PRD-mode hands over addressed findings" "$AP" '## Findings addressed'
 assert_match "apply PRD-mode hands over skipped findings" "$AP" '## Findings skipped'
 assert_match "apply PRD-mode names the decisions excerpt" "$AP" 'docs/stenswf/decisions/prd-$ARGUMENTS.md'
 assert_match "apply PRD-mode keeps its PR title" "$AP" '**PR title:** `fix(PRD): #$ARGUMENTS cleanup — capstone findings`.'
-assert_match "apply PRD-mode points PR_BODY_FILE at the visual-pr output" "$AP" 'PR_BODY_FILE=".stenswf/$ARGUMENTS/pr-description.md"'
-assert_match "apply PRD-mode appends the decisions render" "$AP" 'publish-decisions.sh render "$ARGUMENTS" >> "$PR_BODY_FILE"'
+
+# --- 5. Branch names the standalone guard depends on ------------------------------
+# workflow-issue.sh recognises a workflow branch by name alone; if a shipper
+# renamed its branches, standalone visual-pr could open a PR around it.
+assert_match "ship creates impl/<N>-<slug> branches" "$(cat "$ROOT/skills/ship/SKILL.md")" 'BR="impl/$ARGUMENTS-$SLUG"'
+assert_match "ship-light creates impl/<N>-<slug> branches" "$(cat "$ROOT/skills/ship-light/SKILL.md")" 'BR="impl/$ARGUMENTS-$SLUG"'
+assert_match "apply PRD-mode creates prd/<N>-cleanup branches" "$AP" 'git checkout -b "prd/$ARGUMENTS-cleanup"'
 
 # --- 6. Slice template: optional Change outline + extractors -----------------------
 source "$ROOT/scripts/extractors.sh"
@@ -498,7 +556,7 @@ assert_match "prd-to-issues quiz uses a view when it helps" "$P2I" "When a view 
 assert_match "prd-to-issues names the dependency graph as an example" "$P2I" "a Mermaid dependency graph (slices as nodes, blocked-by edges)"
 assert_match "prd-to-issues makes no diagram mandatory" "$P2I" "No diagram is mandatory."
 
-# --- 8. Live wiring, AFK path, and the full wiring set -----------------------------
+# --- 8. Live wiring, AFK path, and the show-me wiring set -----------------------------
 assert_match "grill-me presents structural branches with show-me" \
   "$(cat "$ROOT/skills/grill-me/SKILL.md")" "When a branch is structural (flow, layout, ownership, interface), Load \`show-me\`"
 PLAN="$ROOT/skills/plan/SKILL.md"
@@ -518,22 +576,11 @@ SIG=$(sed -n '/^SIG=\$( {/,/sha256sum/p' "$ROOT/skills/plan-light/artifacts.md")
 assert_eq "the Lite signature still hashes exactly four inputs" "$(printf '%s\n' "$SIG" | grep -c 'cat /tmp/slice-')" "4"
 assert_nomatch "the Lite signature does not hash the outline" "$SIG" "outline"
 
-# The full wiring set, in one place.
+# Every planning skill that presents views loads show-me.
 for F in skills/grill-me/SKILL.md skills/prd-from-grill-me/SKILL.md skills/prd-to-issues/SKILL.md \
          skills/plan/SKILL.md skills/triage-issue/SKILL.md; do
   assert_match "$F references show-me" "$(cat "$ROOT/$F")" "show-me"
 done
-for F in skills/ship/post-dispatch.md skills/ship-light/SKILL.md skills/apply/prd.md; do
-  C=$(cat "$ROOT/$F")
-  assert_match "$F references visual-pr" "$C" "visual-pr"
-  for INPUT in '- issue context:' '- base ref:' '- evidence:' '- closing line:' '- output:'; do
-    assert_match "$F passes body-only input '$INPUT'" "$C" "$INPUT"
-  done
-  assert_match "$F compares against the PR target" "$(printf '%s\n' "$C" | grep -- '- base ref:')" '`origin/'
-  assert_match "$F still calls publish-decisions.sh render" "$C" "publish-decisions.sh render"
-done
-assert_match "ship-light/pr-body.md references visual-pr" "$(cat "$ROOT/skills/ship-light/pr-body.md")" "visual-pr"
-assert_match "slice-e2e loads visual-pr" "$(cat "$ROOT/skills/slice-e2e/SKILL.md")" "visual-pr"
 for F in references/prd-template.md references/issue-template.md; do
   assert_match "$F has a Change outline" "$(cat "$ROOT/$F")" "## Change outline"
   assert_match "$F says outlines add no obligations" "$(cat "$ROOT/$F")" "it adds no obligations"

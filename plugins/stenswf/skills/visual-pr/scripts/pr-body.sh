@@ -16,8 +16,8 @@
 #
 # compose  header, closing line, region block and evidence, one blank line
 #          apart; absent parts are omitted. The evidence is appended byte for
-#          byte, plus one newline only when it lacks a final one; missing or
-#          empty evidence is omitted.
+#          byte, plus one newline only when it lacks a final one; empty
+#          evidence is omitted, a missing evidence file is an error.
 # file     replace the marked region in place. An unmarked body that follows
 #          upstream's template has its owned sections migrated; any other
 #          unmarked body gets the block prepended. Malformed markers (one alone, or out of order)
@@ -26,6 +26,8 @@
 #          newline, so every refresh would grow the body), merge, save the
 #          complete result at <description-path>, publish that same file.
 #          Nothing is written when the merge fails.
+#
+# Every mode refuses a region that contains a marker line, and writes nothing.
 set -eu
 
 MARK_START='<!-- stenswf:visual-pr:start -->'
@@ -50,6 +52,17 @@ readable() {
   done
 }
 
+# A region that quotes a marker on a line of its own would publish a body
+# with two of them, which the next refresh refuses as malformed. Refuse it
+# here instead, next to its cause. CRs are dropped first because the body is
+# normalised to LF when it is read back.
+no_markers() {
+  if tr -d '\r' < "$1" | grep -qxF -e "$MARK_START" -e "$MARK_END"; then
+    echo "pr-body: region contains a visual-pr marker" >&2
+    exit 1
+  fi
+}
+
 block() {
   printf '%s\n' "$MARK_START"
   trim "$1"
@@ -71,10 +84,12 @@ compose() {
   done
   [ $# -eq 0 ] && [ -n "$_out" ] && [ -n "$_region" ] || usage
   readable "$_region"
+  no_markers "$_region"
   [ -z "$_header" ] || readable "$_header"
+  [ -z "$_evidence" ] || readable "$_evidence"
 
   mkdir -p "$(dirname -- "$_out")"
-  # Missing or empty evidence is omitted, like every other absent part.
+  # Empty evidence is omitted, like every other absent part.
   # Build beside the output and move it in, so a failure leaves nothing.
   {
     if [ -n "$_header" ]; then trim "$_header"; echo; fi
@@ -96,8 +111,9 @@ compose() {
 #   - CommonMark fences: nothing inside one counts; an unclosed fence is doubt.
 #   - The three headings occur once each, in order, outside fences.
 #   - The span stops before the first `#`/`##` heading (up to three leading
-#     spaces, as CommonMark allows), HTML comment or closing-keyword
-#     line after the outline, so a trailing `Closes #N` survives.
+#     spaces, as CommonMark allows), HTML comment, closing-keyword line,
+#     thematic break or `Generated with` attribution line after the outline,
+#     so a trailing `Closes #N` or tool footer survives.
 #   - An unrelated section or comment between the headings, or a closing
 #     keyword reference inside the span, is doubt.
 # No {n,m} intervals: mawk lacks them.
@@ -106,6 +122,9 @@ legacy_span() {
     function kw(l) { l = tolower(l)
       return l ~ /(^|[^a-z0-9_])(close|closes|closed|fix|fixes|fixed|resolve|resolves|resolved):?[ \t]+([a-z0-9_.-]+\/[a-z0-9_.-]+)?#[0-9]+/ ||
              l ~ /(^|[^a-z0-9_])(close|closes|closed|fix|fixes|fixed|resolve|resolves|resolved):?[ \t]+https?:\/\/[^ ]*\/issues\/[0-9]+/ }
+    function footer(l) {
+      return l ~ /^(   |  | )?((-[ \t]*)(-[ \t]*)(-[ \t]*)+|(\*[ \t]*)(\*[ \t]*)(\*[ \t]*)+|(_[ \t]*)(_[ \t]*)(_[ \t]*)+)$/ ||
+             l ~ /^[^A-Za-z0-9]*[Gg]enerated with / }
     { line = $0
       if (infence) {
         if (match(line, /^(   |  | )?(`+|~+)[ \t]*$/)) {
@@ -127,6 +146,7 @@ legacy_span() {
       else if (line ~ /^(   |  | )?##?([ \t]|$)/ || line ~ /^(   |  | )?<!--/ ||
                tolower(line) ~ /^[ \t]*(close|closes|closed|fix|fixes|fixed|resolve|resolves|resolved):?[ \t]/) {
         if (cl && !stop) stop = NR; else if (wl && !cl) other++ }
+      else if (cl && !stop && footer(line)) stop = NR
       if (wl && !stop && kw(line)) keyword++
       if (cl && !stop && line ~ /[^ \t]/) last = NR }
     END { if (infence) exit
@@ -174,6 +194,7 @@ merge() {
 merge_file() {
   [ $# -eq 2 ] || usage
   readable "$1" "$2"
+  no_markers "$2"
   _tmp=$(mktemp)
   trap 'rm -f "$_tmp" "$_tmp.body"' EXIT
   lf "$1" > "$_tmp.body"
@@ -185,6 +206,7 @@ refresh_pr() {
   [ $# -eq 3 ] || usage
   _pr=$1; _region=$2; _desc=$3
   readable "$_region"
+  no_markers "$_region"
   _tmp=$(mktemp)
   trap 'rm -f "$_tmp" "$_tmp.raw" "$_tmp.body" "$_tmp.merged"' EXIT
 
