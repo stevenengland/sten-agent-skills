@@ -12,6 +12,11 @@
 #      body is hashed (concept.md, drift check), turning every new comment
 #      into false drift.
 #
+# Deliberately NOT wired, because the comments are already read elsewhere:
+# prd-to-issues' conventions step (step 1 already read the same PRD's
+# comments) and wayfinder's frontier scan (it filters candidates by
+# front-matter; the chosen ticket's comments are read at resolution).
+#
 # Run: bash plugins/stenswf/tests/issue-comments.test.sh
 set -uo pipefail
 
@@ -98,6 +103,17 @@ for f in skills/plan/SKILL.md skills/plan-light/SKILL.md skills/ship-light/SKILL
 done
 assert_match "plan reads the parent PRD's comments too" \
   "$(cat "$ROOT/skills/plan/SKILL.md")" 'get_comments $PRD_REF'
+
+# Lite-path review is the only lite read of the parent PRD; its comments must
+# reach the reviewer, not the synthesized conventions file.
+RS="$ROOT/skills/review/slice.md"
+SYNTH_END=$(grep -n '} > "\$SYNTH"' "$RS" | cut -d: -f1)
+PRD_CMT=$(grep -n 'get_comments "\$PRD_REF"' "$RS" | cut -d: -f1)
+[ -n "$PRD_CMT" ] && ok "review/slice.md reads the parent PRD's comments" \
+  || fail "review/slice.md reads the parent PRD's comments"
+[ -n "$SYNTH_END" ] && [ -n "$PRD_CMT" ] && [ "$PRD_CMT" -gt "$SYNTH_END" ] \
+  && ok "PRD comments stay out of conventions.synth.md" \
+  || fail "PRD comments stay out of conventions.synth.md"
 
 # Prose call sites.
 for f in skills/prd-to-issues/SKILL.md skills/wayfinder/SKILL.md; do
