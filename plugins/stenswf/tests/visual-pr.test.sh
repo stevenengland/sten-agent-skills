@@ -290,6 +290,33 @@ assert_eq "compose with a missing evidence file ends with the region" "$(tail -1
 bash "$PRBODY" compose --out "$WORK/emptyev.md" --region "$REGION" --evidence "$WORK/empty-evidence.md"
 assert_eq "compose with empty evidence ends with the region" "$(tail -1 "$WORK/emptyev.md")" "$END"
 
+# 1h. unreadable inputs never overwrite or publish anything
+printf 'keep me\n' > "$WORK/existing.md"; cp "$WORK/existing.md" "$WORK/existing.before"
+bash "$PRBODY" compose --out "$WORK/existing.md" --region "$WORK/no-such-region.md" 2>"$WORK/err"; RC=$?
+assert_eq "compose with a missing region exits 1" "$RC" "1"
+assert_eq "compose with a missing region keeps the old output" "$(same "$WORK/existing.md" "$WORK/existing.before")" "same"
+assert_match "compose with a missing region names the file" "$(cat "$WORK/err")" "no-such-region.md"
+bash "$PRBODY" compose --out "$WORK/existing.md" --region "$REGION" --header "$WORK/no-such-header.md" 2>/dev/null; RC=$?
+assert_eq "compose with a missing header exits 1" "$RC" "1"
+assert_eq "compose with a missing header keeps the old output" "$(same "$WORK/existing.md" "$WORK/existing.before")" "same"
+OUT=$(bash "$PRBODY" file "$WORK/existing.md" "$WORK/no-such-region.md" 2>/dev/null); RC=$?
+assert_eq "file mode with a missing region exits 1 and prints nothing" "$RC/$OUT" "1/"
+seed_body; cp "$BODY" "$WORK/body.before"
+MISSING_DESC="$WORK/missing-region/pr-description.md"
+( cd "$WORK" && bash "$PRBODY" pr 77 "$WORK/no-such-region.md" "$MISSING_DESC" ) >/dev/null 2>&1; RC=$?
+assert_eq "pr mode with a missing region exits 1" "$RC" "1"
+assert_eq "pr mode with a missing region never calls gh pr edit" "$([ -e "$EDITS" ] && echo edited || echo untouched)" "untouched"
+assert_eq "pr mode with a missing region leaves the PR body alone" "$(same "$BODY" "$WORK/body.before")" "same"
+assert_eq "pr mode with a missing region writes no description" "$([ -e "$MISSING_DESC" ] && echo written || echo none)" "none"
+
+# 1i. legacy migration: an indented heading still ends the span
+printf '## Why the change\n\nOld.\n\n## Special things to note\n\n- None.\n\n## Change outline\n\nOld shape.\n\n   ## Validation \n- `kept evidence`\n' > "$WORK/leg-indent.md"
+bash "$PRBODY" file "$WORK/leg-indent.md" "$REGION" > "$WORK/leg-indent.out"
+sed -n '/^   ## Validation $/,$p' "$WORK/leg-indent.md" > "$WORK/leg-indent.before"
+sed -n '/^   ## Validation $/,$p' "$WORK/leg-indent.out" > "$WORK/leg-indent.after"
+assert_eq "an indented heading after the outline survives migration" "$(same "$WORK/leg-indent.before" "$WORK/leg-indent.after")" "same"
+assert_match "the indented heading's evidence survives" "$(cat "$WORK/leg-indent.out")" "kept evidence"
+
 # --- 2. Standalone guard: workflow-issue.sh ---------------------------------
 GUARD="$ROOT/skills/visual-pr/scripts/workflow-issue.sh"
 GREPO="$WORK/guard-repo"

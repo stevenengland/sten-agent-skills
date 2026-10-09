@@ -41,6 +41,15 @@ usage() {
 # closing fence would swallow everything after it into the code block.
 trim() { { cat "$1"; echo; } | sed -e :a -e '/^\n*$/{$d;N;ba' -e '}'; }
 
+# A required input that cannot be read stops the run before anything is
+# written: inside the trim pipeline its read failure would be masked, and an
+# empty region would replace — and publish over — the real description.
+readable() {
+  for _f in "$@"; do
+    [ -f "$_f" ] && [ -r "$_f" ] || { echo "pr-body: cannot read $_f" >&2; exit 1; }
+  done
+}
+
 block() {
   printf '%s\n' "$MARK_START"
   trim "$1"
@@ -61,6 +70,8 @@ compose() {
     shift 2
   done
   [ $# -eq 0 ] && [ -n "$_out" ] && [ -n "$_region" ] || usage
+  readable "$_region"
+  [ -z "$_header" ] || readable "$_header"
 
   mkdir -p "$(dirname -- "$_out")"
   # Missing or empty evidence is omitted, like every other absent part.
@@ -84,7 +95,8 @@ compose() {
 # the caller then prepends instead. Conservative by design:
 #   - CommonMark fences: nothing inside one counts; an unclosed fence is doubt.
 #   - The three headings occur once each, in order, outside fences.
-#   - The span stops before the first heading, HTML comment or closing-keyword
+#   - The span stops before the first `#`/`##` heading (up to three leading
+#     spaces, as CommonMark allows), HTML comment or closing-keyword
 #     line after the outline, so a trailing `Closes #N` survives.
 #   - An unrelated section or comment between the headings, or a closing
 #     keyword reference inside the span, is doubt.
@@ -112,7 +124,7 @@ legacy_span() {
       if (line == "## Why the change")              { w++; if (!wl) wl = NR }
       else if (line == "## Special things to note")  { s++; if (!sl) sl = NR }
       else if (line == "## Change outline")          { c++; if (!cl) cl = NR }
-      else if (line ~ /^##? / || line ~ /^(   |  | )?<!--/ ||
+      else if (line ~ /^(   |  | )?##?([ \t]|$)/ || line ~ /^(   |  | )?<!--/ ||
                tolower(line) ~ /^[ \t]*(close|closes|closed|fix|fixes|fixed|resolve|resolves|resolved):?[ \t]/) {
         if (cl && !stop) stop = NR; else if (wl && !cl) other++ }
       if (wl && !stop && kw(line)) keyword++
@@ -161,6 +173,7 @@ merge() {
 
 merge_file() {
   [ $# -eq 2 ] || usage
+  readable "$1" "$2"
   _tmp=$(mktemp)
   trap 'rm -f "$_tmp" "$_tmp.body"' EXIT
   lf "$1" > "$_tmp.body"
@@ -171,6 +184,7 @@ merge_file() {
 refresh_pr() {
   [ $# -eq 3 ] || usage
   _pr=$1; _region=$2; _desc=$3
+  readable "$_region"
   _tmp=$(mktemp)
   trap 'rm -f "$_tmp" "$_tmp.raw" "$_tmp.body" "$_tmp.merged"' EXIT
 
