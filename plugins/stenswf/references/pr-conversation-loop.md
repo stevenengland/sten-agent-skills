@@ -362,8 +362,9 @@ mutation($threadId:ID!,$body:String!){
 }
 ```
 
-**Resolve a thread** — `resolve_thread <thread-id>` (after the fix is
-committed and pushed). Prints the post-resolution `isResolved` flag:
+**Resolve a thread** — `resolve_thread <thread-id>` (after the pass's
+fixes are committed and pushed **once**; the fixed threads are then
+resolved together). Prints the post-resolution `isResolved` flag:
 
 ```graphql
 mutation($threadId:ID!){

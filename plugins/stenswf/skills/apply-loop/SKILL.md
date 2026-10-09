@@ -121,8 +121,8 @@ For each remaining thread — **regardless of author** (the paired reviewer
    failing test written first.
 
 2. **Confirmed, safe, non-rollback remedy.** Fix it autonomously →
-   conventional commit → `git push` → `add_reply <node-id> "<what changed>,
-   fixed in <sha>"` → `resolve_thread <node-id>`.
+   conventional commit → note `<node-id> <sha>` for the end of the pass.
+   Do not push, reply or resolve yet.
 
    Commit with the decision trailers, so a decision reached mid-loop lands
    in the repo and not only on the PR:
@@ -144,6 +144,18 @@ For each remaining thread — **regardless of author** (the paired reviewer
 4. **Rollback, or confirmed with no safe remedy.** The thread stays
    unresolved and unhandled — a rollback until the shared approval gate
    decides it, a missing safe remedy as a blocker.
+
+**End of pass — one push, then resolve together.** Once every thread in
+the pass has been visited:
+
+```bash
+git push || exit 1      # once per pass; skip when the pass made no commit
+```
+
+then, for each noted thread, `add_reply <node-id> "<what changed>, fixed
+in <sha>"` → `resolve_thread <node-id>`. A push per fix costs a CI run each
+time and wakes the reviewer on a half-fixed head; replying before the push
+would cite a SHA the reviewer cannot see.
 
 A thread is **handled** when it is resolved OR its latest marker is a
 left-open reply — and `list_threads` reports that as its `disposition`, so
