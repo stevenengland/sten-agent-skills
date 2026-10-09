@@ -50,6 +50,10 @@ Dev-only. Not packaged for end users.
   routing, the atomic `gh issue edit` write-back, and the hatch's bail-outs.
   These need a real issue and a `gh` fake; the suite does not assert them, so
   do not read a green run as evidence that they work.
+- [`show-me.test.sh`](show-me.test.sh) — shared scripts for show-me /
+  visual-pr: `ensure-stenswf-dir.sh` (local state ignored before the first
+  write, also without bootstrap and in worktrees) and `open-html.sh` (opener
+  chosen by platform; path printed, exit 0 when nothing opens).
 - [`fixtures/`](fixtures/) — hand-authored issue bodies exercising the
   front-matter parser (`references/extractors.md`) and the
   route-selection gates in `plan-light`, `ship-light`, `plan`,
@@ -63,6 +67,7 @@ bash plugins/stenswf/tests/inherit-decisions.test.sh
 bash plugins/stenswf/tests/apply-verification.test.sh
 bash plugins/stenswf/tests/hitl-escape-hatch.test.sh
 bash plugins/stenswf/tests/publish-decisions.test.sh
+bash plugins/stenswf/tests/show-me.test.sh
 ```
 
 The GitHub-facing suites inject a fake `gh` on `PATH` rather than calling
