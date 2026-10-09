@@ -201,7 +201,7 @@ the gate; the subagent re-validates per
 Message template (paste verbatim):
 
 ```
-SKILLS TO LOAD: ship-light, tdd, clean-code, lint-escape, brevity
+SKILLS TO LOAD: ship-light, visual-pr, tdd, clean-code, lint-escape, brevity
 
 Run the ship-light skill for issue #$ARGUMENTS in unattended mode. You are a
 subagent and cannot prompt the user: a heavy decision must PARK, never block

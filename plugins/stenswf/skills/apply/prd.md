@@ -174,25 +174,37 @@ With these substitutions:
 - **Issue number:** `$ARGUMENTS` (PRD).
 - **Branch:** `prd/$ARGUMENTS-cleanup`.
 - **PR title:** `fix(PRD): #$ARGUMENTS cleanup — capstone findings`.
-- **PR body:**
+- **PR body — built by `visual-pr`.** Write the evidence to
+  `.stenswf/$ARGUMENTS/pr-evidence.md`:
+
   ```
-  Addresses capstone findings from the local `<prd-review>`.
-  Includes the curated decisions excerpt at
-  `docs/stenswf/decisions/prd-$ARGUMENTS.md` (committed as
-  `docs(stenswf): curated decisions for PRD #$ARGUMENTS`).
+  ## Findings addressed
+  - F1 title
+  - F2 title
 
-  Finding IDs addressed: 
-    - F1 title
-    - F2 title
-    - F5 title
-    - F6 title
-    - F7 title
-    - F9 title
-  Finding IDs skipped (with reason):
-    - F3 title: low severity, out of scope
-    - F8 title: already addressed in slice #<N>
+  ## Findings skipped
+  - F3 title: low severity, out of scope
+  - F8 title: already addressed in slice #<N>
+  ```
 
-  Closes #$ARGUMENTS (capstone cleanup).
+  Then Load `visual-pr` in body-only mode with these inputs:
+
+  - issue context: `.stenswf/$ARGUMENTS/concept.md`
+  - base ref: `origin/$DEFAULT`
+  - evidence: `.stenswf/$ARGUMENTS/pr-evidence.md`
+  - closing line: `Closes #$ARGUMENTS (capstone cleanup).`
+  - output: `.stenswf/$ARGUMENTS/pr-description.md`
+
+  Its **Why the change** says the PR addresses the capstone findings from
+  the local `<prd-review>`. Its links header names the curated decisions
+  excerpt `docs/stenswf/decisions/prd-$ARGUMENTS.md` (committed as
+  `docs(stenswf): curated decisions for PRD #$ARGUMENTS`). Point
+  `PR_BODY_FILE` at the output and append the rendered decision block
+  **before** `gh pr create`:
+
+  ```bash
+  PR_BODY_FILE=".stenswf/$ARGUMENTS/pr-description.md"
+  bash ../../scripts/publish-decisions.sh render "$ARGUMENTS" >> "$PR_BODY_FILE"
   ```
 - **After PR opened, mirror `<prd-review>` XML onto the PR:**
 

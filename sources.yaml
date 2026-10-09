@@ -6,7 +6,7 @@
 #   upstream       - URL to upstream folder (preferred) or file
 #   ref            - upstream commit SHA last reviewed (empty = no baseline yet)
 #   last_reviewed  - ISO date of last sync decision
-#   status         - tracked | own-invention | unknown-source | abandoned
+#   status         - tracked | own-invention | unknown-source | abandoned | diverged
 #   notes          - intentional divergences, rename history, rejected imports
 
 - skill: skills/architecture
@@ -99,6 +99,20 @@
   last_reviewed: ""
   status: diverged
   notes: "Heavily diverged from Matt Pocock original: emits stenswf:v1 HTML-comment front-matter per references/front-matter-schema.md, slice issue template externalized to references/issue-template.md, lite_eligible routing, portable extractors."
+
+- skill: plugins/stenswf/skills/show-me
+  upstream: https://github.com/humanlayer/skills/tree/main/plugins/show-me/skills/show-me
+  ref: "ca7c8088db69e315a8b2deea43820270457f8f3c"
+  last_reviewed: "2026-10-08"
+  status: diverged
+  notes: "Ported near-verbatim (PRD #28). Adaptations: dropped disable-model-invocation and agents/openai.yaml (craft skill, loaded at the author's discretion by grill-me, prd-from-grill-me, prd-to-issues, plan, triage-issue); HTML written under .stenswf/ after ../../scripts/ensure-stenswf-dir.sh (git exclusion via --git-path info/exclude) and opened via ../../scripts/open-html.sh instead of macOS open; added 'in durable artifacts' paragraph (GitHub-renderable fences only, HTML as a local aside, outlines illustrate and never bind)."
+
+- skill: plugins/stenswf/skills/visual-pr
+  upstream: https://github.com/humanlayer/skills/tree/main/plugins/visual-pr/skills/visual-pr
+  ref: "ca7c8088db69e315a8b2deea43820270457f8f3c"
+  last_reviewed: "2026-10-08"
+  status: diverged
+  notes: "Ported near-verbatim (PRD #28), upstream file names kept. Adaptations: model-invocable with a one-line description; {SKILLBASE} -> relative paths; .humanlayer/tasks -> .stenswf/<N>/pr-description.md (fallback .stenswf/pr-<number>/description.md), complete published body always saved; scripts/workflow-issue.sh names the owning stenswf skill (ship, ship-light, apply) from branch identity only before creating PRs; Change outline may be one or two plain sentences when no view helps; scripts/pr-body.sh composes new bodies (evidence appended byte for byte), refreshes the marked region in place (bodies read as JSON via jq -j, so no newline drift) and conservatively migrates upstream-template bodies (CommonMark fences, closing keywords always kept); body-only mode with five explicit inputs and no gh calls for ship, ship-light and apply PRD-mode; template adds closing line, region markers and evidence slot; task-artifact fence and cloud permalink replaced by a local HTML aside at the path show-me computes (.stenswf/<N>/, else .stenswf/.show-me/)."
 
 - skill: plugins/stenswf/skills/tdd
   upstream: https://github.com/mattpocock/skills

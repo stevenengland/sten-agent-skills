@@ -1,15 +1,17 @@
-# ship-light — PR body template
+# ship-light — PR evidence template
 
-Verbatim — no brevity compression. `## Notable assumptions` is omitted
-entirely if Phase 3 recorded none.
+Verbatim — no brevity compression. Write this to
+`.stenswf/$ARGUMENTS/pr-evidence.md` at Phase 4. `visual-pr` (body-only
+mode) appends it byte for byte below its own **Why the change**, **Special
+things to note** and **Change outline** sections, after the closing line
+`Closes #$ARGUMENTS`. `## Notable assumptions` is omitted entirely if
+Phase 3 recorded none.
 
 ```
-Closes #$ARGUMENTS
-
-## Summary
-- <bullet 1: what changed>
-- <bullet 2: how it was tested>
-- <bullet 3: notable trade-off, or "none">
+## Validation
+- `<test command>` — <result, e.g. "41 passed">
+- `<lint / build command>` — <result>
+- <manual check, or what validated a change that needed no new test>
 
 ## Tests added (red → green)
 - `<test name 1>`
@@ -19,7 +21,12 @@ Closes #$ARGUMENTS
 - <only include if silent assumptions were recorded; else omit section>
 ```
 
-`## Decisions` is appended below this by
+What the old *Summary* bullets carried now has a home of its own: *what
+changed* is visual-pr's **Change outline**, *how it was tested* is
+`## Validation` plus `## Tests added (red → green)`, and a notable
+trade-off goes under **Special things to note**.
+
+`## Decisions` is appended below the whole body by
 [../../scripts/publish-decisions.sh](../../scripts/publish-decisions.sh)
 at Phase 4 — do not hand-write it, and do not edit inside its
 `<!-- stenswf:decisions:… -->` markers; later refreshes replace whatever

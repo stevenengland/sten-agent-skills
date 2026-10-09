@@ -31,6 +31,15 @@ Concise description of the vertical slice. End-to-end behavior, not
 layer-by-layer implementation. Reference PRD sections rather than
 duplicating content.
 
+## Change outline
+
+Optional — include it when it clarifies the slice's shape.
+Illustrative only: it adds no obligations; Acceptance criteria and
+Conventions are authoritative. Use the smallest `show-me` view that makes
+the point (file tree, call tree, pseudocode, data flow, types, `diff`) in
+fences GitHub renders — never HTML, no line numbers. Trim the parent PRD's
+`## Change outline` when it has one.
+
 ## Conventions (from PRD)
 
 Copy the parent PRD's or bug-brief's `## Conventions` section verbatim

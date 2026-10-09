@@ -215,6 +215,8 @@ user. Lead with your recommendation; iterate.
       (small interface, deep implementation).
 - [ ] Design interfaces for [testability](../tdd/interface-design.md).
 - [ ] List the behaviors to test (not implementation steps).
+- [ ] When an interface or flow changes, show the smallest `show-me` view
+      that clarifies it (Load `show-me`) — no diagram for its own sake.
 - [ ] Get user approval on the plan.
 
 Ask: "What should the public interface look like? Which behaviors are

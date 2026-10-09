@@ -237,6 +237,7 @@ your harness (or manually invoke) accordingly.
 | `/stenswf:ship` | Sonnet | Orchestrator dispatch; subagents do the heavy lifting |
 | `/stenswf:plan-light` | Any (Sonnet or Opus) | Bounded planning, single artifact, no interview |
 | `/stenswf:ship-light` | Any (Sonnet or Opus) | Single-session lite path; preflight-gated |
+| `/stenswf:visual-pr` | Sonnet | Standalone PR description; ship, ship-light and apply PRD-mode load it in body-only mode |
 | `/stenswf:slice-e2e` | Any (cheapest orchestrator OK) | Thin facade; dispatches subagents; zero judgment calls |
 | `/stenswf:review` | Opus | Capstone synthesis; 5-axis architectural critique |
 | `/stenswf:apply` | Sonnet | Execution against a structured findings list |
@@ -252,6 +253,8 @@ parent session invokes them — no separate routing.
 | `/stenswf:tdd` | Red-green-refactor; integration-style tests |
 | `/stenswf:lint-escape` | Tiered protocol for unresolvable lint/type errors |
 | `/stenswf:architecture` | Architectural decision guidance |
+| `/stenswf:show-me` | Views (trees, pseudocode, Mermaid, focused HTML asides) where they clarify a decision |
+| `/stenswf:visual-pr` | PR description: why, special things to note, change outline |
 | `/stenswf:deliberate` | Work a blocking tension out with a peer agent (agent A) |
 | `/stenswf:deliberate-peer` | Take up the deliberation at a given path as the challenger (agent B) |
 | `/stenswf:brevity` | Plain-English brevity for internal reasoning (full prose for artifacts) |
@@ -355,11 +358,15 @@ STEN-AGENT-SKILLS/                       ← Repo root
 │       │   ├── extractors.sh
 │       │   ├── pr-threads.sh
 │       │   ├── deliberation.sh
+│       │   ├── ensure-stenswf-dir.sh
+│       │   ├── open-html.sh
 │       │   └── wayfinder.sh
 │       ├── tests/                       ← Behavior suites + fixtures
 │       │   ├── pr-threads.test.sh
 │       │   ├── deliberation.test.sh
 │       │   ├── wayfinder.test.sh
+│       │   ├── show-me.test.sh
+│       │   ├── visual-pr.test.sh
 │       │   └── fixtures/
 │       ├── skills/                      ← All plugin skills
 │       │   ├── plan/
@@ -381,6 +388,8 @@ STEN-AGENT-SKILLS/                       ← Repo root
 │       │   ├── tdd/
 │       │   ├── lint-escape/
 │       │   ├── architecture/
+│       │   ├── show-me/
+│       │   ├── visual-pr/
 │       │   └── brevity/
 │       └── README.md                    ← This file
 │
@@ -535,10 +544,18 @@ Claude Code discovers and loads it automatically. Reload if already running:
 │   ├── plan-light.md          (plan-light: single advisory plan, if used)
 │   ├── plan-light.json        (plan-light: 5-field identity stub + source_signature + behavior_change_acs)
 │   ├── lite-notes.md          (plan-light / ship-light: soft constraints for review)
+│   ├── pr-evidence.md         (ship / ship-light / apply PRD: evidence sections, appended byte for byte)
+│   ├── pr-region.md           (visual-pr: its own sections — Why, Special things, Change outline)
+│   ├── pr-description.md      (visual-pr: complete PR body; PR_BODY_FILE points here)
+│   ├── show-me-<slug>.html    (show-me / visual-pr: local HTML asides, never committed)
 │   ├── review/slice.md OR review/prd-review.xml
 │   └── apply-state.json
+├── .show-me/                  (show-me HTML asides when no issue is in play)
+├── pr-<number>/               (standalone visual-pr on a non-stenswf PR: description.md, region.md)
 └── .archive/<issue>-<date>/   (cold storage after merge)
 ```
+
+Outside a stenswf workflow (no `bootstrap`), `scripts/ensure-stenswf-dir.sh` creates these folders and adds `.stenswf/` to the clone's `git rev-parse --git-path info/exclude` before the first write.
 
 Heavy-plan and plan-light artifacts coexist peacefully — neither skill
 touches the other's files. A slice is heavy-planned iff `manifest.json`

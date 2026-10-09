@@ -84,6 +84,8 @@ List every decision that would trigger a HITL slice. Classify each:
 
 Goal: zero HITL slices except irreducible judgment calls. Present the
 triage table to the user for confirmation.
+Load `show-me` when a triage entry is structural, and show its options as
+views beside the table.
 
 ### 4. Draft vertical slices (Lite-first)
 
@@ -162,6 +164,10 @@ schema-migration | arch-unknown | hitl-cat3`. Also show the AC list per
 slice (with tags) so the user can confirm AC ordering is
 tracer-bullet-first.
 
+When a view helps, Load `show-me` and lead the list with it — for example
+a Mermaid dependency graph (slices as nodes, blocked-by edges) for a
+multi-slice set. No diagram is mandatory.
+
 Ask: granularity right? dependencies right? correct HITL/AFK? Lite
 flags and disqualifiers correct? AC set + ordering right? Iterate
 until approved.
@@ -203,6 +209,16 @@ wc -l /tmp/prd-<prd-number>-conventions.md
 For each approved slice, create an issue using the template at
 [../../references/issue-template.md](../../references/issue-template.md).
 Inline the Conventions file where indicated.
+
+When it clarifies a slice's shape, give the slice body a `## Change outline`
+right after `## What to build` (Load `show-me` for the views). Trim the
+PRD's outline to the views the slice touches; the outline illustrates and
+adds no obligations. No slice needs one by default.
+
+```bash
+extract_section 'Change outline' /tmp/prd-<prd-number>.md \
+  > /tmp/prd-<prd-number>-outline.md   # empty when the PRD has none
+```
 
 Create in dependency order (blockers first) so real issue numbers can
 be referenced in `blocked_by` front-matter.

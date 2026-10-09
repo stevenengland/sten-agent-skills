@@ -319,6 +319,7 @@ Class:                <bug | other from Phase 0.4>
 Dedup:                <duplicate of #X | out-of-scope match | clean>
 Repro status:         <confirmed | likely | cannot-locate>
 Root cause:           <one-line summary | n/a>
+Root-cause view:      <shown below the panel | n/a>
 Affected modules:     <comma list>
 Affected files:       <count> (<≤15 ideal>)
 Judgment calls:       <N open (M resolved from evidence) | none>
@@ -338,6 +339,10 @@ Pick one. Default: <C-1 if Phase 3 ran cleanly, else R-info>.
 
 Hide outcomes that are not available (e.g. `R-dup` only when Phase 1
 found one; `C-1`/`C-N` only when `repro_status != cannot-locate`).
+
+When a view clarifies the root cause, Load `show-me` and show it directly under the panel
+as one view — a call tree, or a control-flow `diff` marking where the bad
+path diverges.
 
 ### 4.2 Apply outcome
 
@@ -422,7 +427,7 @@ with the `class: bug-brief` overrides documented in
 Required body sections (copy verbatim shape, fill from earlier phases):
 
 - `## Problem Statement` — one paragraph paraphrased from the bug body.
-- `## Root Cause` — from Phase 3 (`confirmed_root_cause`, `origin`, `symptom`).
+- `## Root Cause` — from Phase 3 (`confirmed_root_cause`, `origin`, `symptom`). ≤3 sentences plus at most one GitHub-renderable view (call tree or control-flow `diff`; never HTML).
 - `## Implementation Decisions` — `fix_shape_summary` + module list, plus each Phase 3.1 `resolved_judgment_calls` decided rule. No code, no file paths (the evidence `file:line` lives in the `decisions.md` anchor).
 - `## Invariants Preserved` — explicit list (e.g. "public API stable", "existing green tests stay green", "no schema change").
 - `## Conventions` — new rules introduced to prevent recurrence, or `None — slice-local decisions only.`

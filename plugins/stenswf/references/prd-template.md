@@ -39,6 +39,16 @@ Cover all aspects of the feature extensively.
 
 Do NOT include specific file paths or code snippets — they go stale fast.
 
+## Change outline
+
+Optional. The planned shape, illustrative only: it adds no obligations —
+Acceptance criteria and Conventions are authoritative. Use any `show-me`
+view that clarifies (file tree, call tree, pseudocode, data flow, types,
+Mermaid, `diff`) in fences GitHub renders — never HTML, no line numbers.
+Unlike Implementation Decisions, it may name modules or files. Usually the
+design agreed in Step 4, kept as a renderable view (translate an accepted
+HTML view rather than pasting it). `prd-to-issues` may trim it into slices.
+
 ## Conventions
 
 Bikeshed decisions resolved upfront so individual slices do not
@@ -80,6 +90,8 @@ what continues to break / drift if this work is deferred.
 | `migration`   | Problem, Implementation Decisions, Invariants Preserved, Conventions, Out of Scope, Testing Decisions | (Solution may be a sequenced rollout) |
 | `refactor`    | Problem, Implementation Decisions, Invariants Preserved, Risks of Not Doing This, Conventions, Out of Scope, Testing Decisions | User Stories (replaced by Invariants) |
 | `bug-brief`   | Problem (= report summary), Root Cause, Implementation Decisions, Invariants Preserved, Conventions, Out of Scope, Testing Decisions | User Stories, Solution (the slice IS the solution) |
+
+`## Change outline` is optional for every class: recommended for `capability`, `integration` and `refactor`, rarely needed for `migration` and `bug-brief`. It is never a gate for `review` or `apply`.
 
 For `class: bug-brief`, see also
 [bug-brief-class.md](bug-brief-class.md) for the section-by-section

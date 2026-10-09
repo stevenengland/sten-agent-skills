@@ -17,7 +17,7 @@ listed here behaves as in the base PRD template.
 | Section | Notes |
 |---|---|
 | `## Problem Statement` | One-paragraph summary of the broken behavior, lifted from the original bug report (paraphrased — keep the reporter's wording verbatim only when essential). |
-| `## Root Cause` | Output of `triage-issue` Phase 3. ≤3 sentences. Cites file:line for the origin and the symptom. |
+| `## Root Cause` | Output of `triage-issue` Phase 3. ≤3 sentences, plus at most one GitHub-renderable view (call tree or control-flow `diff`; never HTML). Cites file:line for the origin and the symptom. |
 | `## Implementation Decisions` | Fix-shape summary from triage. Modules to modify. No file paths or code. |
 | `## Invariants Preserved` | **Required.** Behaviors that MUST stay unchanged (e.g. public API stable, persisted state shape unchanged, existing green tests stay green). |
 | `## Conventions` | New rules introduced by this fix to prevent recurrence. May be exactly `None — slice-local decisions only.` |

@@ -1,0 +1,590 @@
+#!/usr/bin/env bash
+# Behavior and wiring tests for the visual-pr skill.
+#
+#   1. pr-body.sh owns the `<!-- stenswf:visual-pr:start/end -->` region. A
+#      refresh that touches anything outside it can drop the closing line,
+#      the validation evidence, or the `## Decisions` block — silently.
+#      Exact preservation is checked on files with cmp: `$(...)` would strip
+#      trailing newlines and hide exactly the bytes that matter.
+#   2. workflow-issue.sh keeps standalone visual-pr from creating PRs on
+#      branches that ship, ship-light or apply own.
+#   3. Wiring: shippers, templates and planning skills must actually
+#      reference the skills; a correct skill wired nowhere does nothing.
+#
+# Run: bash plugins/stenswf/tests/visual-pr.test.sh
+set -uo pipefail
+
+HERE=$(CDPATH= cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
+ROOT=$(CDPATH= cd -- "$HERE/.." && pwd)
+REPO_ROOT=$(CDPATH= cd -- "$ROOT/../.." && pwd)
+PRBODY="$ROOT/skills/visual-pr/scripts/pr-body.sh"
+PUBLISH="$ROOT/scripts/publish-decisions.sh"
+
+PASS=0
+FAIL=0
+fail() { printf 'not ok - %s\n' "$1"; FAIL=$((FAIL + 1)); }
+ok()   { printf 'ok - %s\n'     "$1"; PASS=$((PASS + 1)); }
+assert_eq()      { [ "$2" = "$3" ] && ok "$1" || { fail "$1"; printf '    expected: %s\n    actual:   %s\n' "$3" "$2"; }; }
+assert_match()   { printf '%s' "$2" | grep -qF -- "$3" && ok "$1" || { fail "$1"; printf '    missing %q in: %s\n' "$3" "$2"; }; }
+assert_nomatch() { printf '%s' "$2" | grep -qF -- "$3" && { fail "$1"; printf '    unexpected %q in: %s\n' "$3" "$2"; } || ok "$1"; }
+same()           { cmp -s "$1" "$2" && echo same || echo changed; }
+
+WORK=$(mktemp -d)
+trap 'rm -rf "$WORK"' EXIT
+
+START='<!-- stenswf:visual-pr:start -->'
+END='<!-- stenswf:visual-pr:end -->'
+outside()         { sed "/^$START\$/,/^$END\$/d" "$1"; }
+region_position() { awk -v s="$START" '$0==s{a=NR} /^## Tests added/{b=NR} END{print (a && b && a<b) ? "above" : "not above"}' "$1"; }
+after_end()       { n=$(grep -nxF "$END" "$1" | cut -d: -f1); tail -n +$((n + 2)) "$1"; }
+
+# --- Fake gh ---------------------------------------------------------------
+# The PR body round-trips through a file, so a second run reads back the
+# first's write. Like the real CLI, `pr view --json body` returns JSON and
+# `-q .body` appends a newline — a fake that just cat'ed the file would hide
+# exactly the transport drift that breaks idempotence. Every `pr edit` logs
+# the --body-file it was given, so "wrote nothing" and "published the saved
+# file" are both observable.
+BODY="$WORK/pr-body"
+EDITS="$WORK/pr-edits"
+cat > "$WORK/gh" <<GHEOF
+#!/usr/bin/env bash
+BODY="$BODY"; EDITS="$EDITS"
+flagval() { local want="\$1" prev=""; shift; for a in "\$@"; do [ "\$prev" = "\$want" ] && { printf '%s' "\$a"; return; }; prev="\$a"; done; }
+case "\$1 \$2" in
+  "pr view")   # like the real CLI: JSON for --json, and -q/--jq appends a newline
+    if printf '%s\n' "\$@" | grep -qxE -- '-q|--jq'; then cat "\$BODY"; echo
+    else jq -Rs '{body: .}' < "\$BODY"; fi ;;
+  "pr edit")
+    f=\$(flagval --body-file "\$@")
+    [ -n "\$f" ] || { echo "fake gh: pr edit without --body-file" >&2; exit 3; }
+    echo "\$f" >> "\$EDITS"
+    cp "\$f" "\$BODY" ;;
+  *) echo "fake gh: unhandled: \$*" >&2; exit 3 ;;
+esac
+GHEOF
+chmod +x "$WORK/gh"
+export PATH="$WORK:$PATH"
+
+# --- Fixtures --------------------------------------------------------------
+seed_body() {
+  cat > "$BODY" <<'EOF'
+[#28](https://github.com/o/r/issues/28)
+
+Closes #901
+
+<!-- stenswf:visual-pr:start -->
+## Why the change
+
+The old reason.
+<!-- stenswf:visual-pr:end -->
+
+## Tests added (red → green)
+- `test_old_behaviour`
+EOF
+  rm -f "$EDITS"
+}
+REGION="$WORK/region.md"
+printf '## Why the change\n\nThe new reason.\n\n## Change outline\n\n~~~text\nsubmitForm\n  createSession\n~~~\n\n' > "$REGION"
+EVID="$WORK/pr-evidence.md"
+printf '## Validation\n- `bash tests/run.sh` — 41 passed\n- lint clean\n\n## Tests added (red → green)\n- `test_new_flow`\n' > "$EVID"
+printf '[#28](https://github.com/o/r/issues/28)\n\n' > "$WORK/header.md"
+
+# --- 1. pr-body.sh -------------------------------------------------------------
+# 1a. compose
+bash "$PRBODY" compose --out "$WORK/new/pr-description.md" --region "$REGION" \
+  --header "$WORK/header.md" --closing "Closes #901" --evidence "$EVID"; RC=$?
+NEW="$WORK/new/pr-description.md"
+assert_eq "compose exits 0" "$RC" "0"
+tail -c "$(( $(wc -c < "$EVID") ))" "$NEW" > "$WORK/new-tail"
+assert_eq "compose ends with the evidence, byte for byte" "$(same "$WORK/new-tail" "$EVID")" "same"
+assert_eq "compose starts with the header" "$(head -1 "$NEW")" "[#28](https://github.com/o/r/issues/28)"
+assert_eq "compose writes the closing line once" "$(grep -cxF 'Closes #901' "$NEW")" "1"
+assert_eq "compose writes one region" "$(grep -cxF "$START" "$NEW")/$(grep -cxF "$END" "$NEW")" "1/1"
+assert_eq "the closing line sits above the region" \
+  "$(awk -v s="$START" '/^Closes #901$/{a=NR} $0==s{b=NR} END{print (a && b && a<b) ? "above" : "not above"}' "$NEW")" "above"
+bash "$PRBODY" compose --out "$WORK/bare.md" --region "$REGION"
+assert_eq "compose without optional parts starts with the region" "$(head -1 "$WORK/bare.md")" "$START"
+assert_eq "compose without evidence ends with the region" "$(tail -1 "$WORK/bare.md")" "$END"
+printf '## Validation\n- ok' > "$WORK/ev-nonl.md"
+bash "$PRBODY" compose --out "$WORK/nonl.md" --region "$REGION" --evidence "$WORK/ev-nonl.md"
+{ cat "$WORK/ev-nonl.md"; echo; } > "$WORK/ev-nonl.expected"
+tail -c "$(( $(wc -c < "$WORK/ev-nonl.expected") ))" "$WORK/nonl.md" > "$WORK/nonl.tail"
+assert_eq "evidence without a final newline is followed by exactly one" "$(same "$WORK/nonl.tail" "$WORK/ev-nonl.expected")" "same"
+
+# 1b. pr: in-place refresh, saved and published
+seed_body
+cp "$BODY" "$WORK/before.md"
+DESC="$WORK/saved/pr-description.md"
+( cd "$WORK" && bash "$PRBODY" pr 77 "$REGION" "$DESC" ) >/dev/null; RC=$?
+assert_eq "pr mode exits 0" "$RC" "0"
+assert_match "pr mode publishes the new region" "$(cat "$BODY")" "The new reason."
+assert_nomatch "pr mode drops the old region" "$(cat "$BODY")" "The old reason."
+outside "$WORK/before.md" > "$WORK/out-before"; outside "$BODY" > "$WORK/out-after"
+assert_eq "pr mode keeps every byte outside the markers" "$(same "$WORK/out-before" "$WORK/out-after")" "same"
+assert_eq "pr mode saves the complete body at the description path" "$(same "$DESC" "$BODY")" "same"
+assert_eq "pr mode publishes the saved file itself" "$(cat "$EDITS")" "$DESC"
+assert_eq "pr mode leaves one region" "$(grep -cxF "$START" "$BODY")/$(grep -cxF "$END" "$BODY")" "1/1"
+assert_eq "pr mode replaces the region where it was" "$(region_position "$BODY")" "above"
+
+# 1b'. transport: the fetched bytes are exactly the stored bytes
+printf 'Closes #901\n\n%s\nold\n%s\n\n## Tests added (red → green)\n- `t`' "$START" "$END" > "$BODY"   # no final newline
+tail -c 12 "$BODY" > "$WORK/tail.before"
+( cd "$WORK" && bash "$PRBODY" pr 77 "$REGION" "$DESC" ) >/dev/null
+tail -c 12 "$BODY" > "$WORK/tail.after"
+assert_eq "a refresh keeps the body's final bytes (no added newline)" "$(same "$WORK/tail.before" "$WORK/tail.after")" "same"
+cp "$BODY" "$WORK/transport-first"
+( cd "$WORK" && bash "$PRBODY" pr 77 "$REGION" "$DESC" ) >/dev/null
+assert_eq "repeated refreshes do not grow the body" "$(same "$BODY" "$WORK/transport-first")" "same"
+
+# 1c. malformed markers: nothing is written anywhere
+printf 'Closes #7\n\n%s\n## Why the change\nhalf a region\n' "$START" > "$WORK/half.md"
+OUT=$(bash "$PRBODY" file "$WORK/half.md" "$REGION" 2>"$WORK/err"); RC=$?
+assert_eq "a lone start marker exits 1" "$RC" "1"
+assert_eq "a lone start marker prints no body" "$OUT" ""
+assert_match "a lone start marker says why" "$(cat "$WORK/err")" "malformed"
+printf '%s\nbackwards\n%s\n' "$END" "$START" > "$WORK/backwards.md"
+bash "$PRBODY" file "$WORK/backwards.md" "$REGION" >/dev/null 2>&1; RC=$?
+assert_eq "markers out of order exit 1" "$RC" "1"
+cp "$WORK/half.md" "$BODY"; rm -f "$EDITS"
+BAD_DESC="$WORK/bad/pr-description.md"
+( cd "$WORK" && bash "$PRBODY" pr 77 "$REGION" "$BAD_DESC" ) >/dev/null 2>&1; RC=$?
+assert_eq "pr mode on a malformed body exits 1" "$RC" "1"
+assert_eq "pr mode on a malformed body never calls gh pr edit" "$([ -e "$EDITS" ] && echo edited || echo untouched)" "untouched"
+assert_eq "pr mode on a malformed body writes no description" "$([ -e "$BAD_DESC" ] && echo written || echo none)" "none"
+
+# 1d. idempotence
+seed_body
+( cd "$WORK" && bash "$PRBODY" pr 77 "$REGION" "$DESC" ) >/dev/null
+cp "$BODY" "$WORK/after-first"
+( cd "$WORK" && bash "$PRBODY" pr 77 "$REGION" "$DESC" ) >/dev/null
+assert_eq "a second run with the same region changes no byte" "$(same "$BODY" "$WORK/after-first")" "same"
+
+# 1e. legacy upstream-template bodies: migrate owned content only, else prepend
+migrated() { [ "$(grep -cx '## Special things to note' "$1")" = 0 ] && echo migrated || echo kept; }   # REGION has no Special heading
+LEG="$WORK/legacy.md"
+cat > "$LEG" <<'EOF'
+[#28](https://github.com/o/r/issues/28)
+
+Closes #902
+
+## Why the change
+
+The old upstream reason.
+
+## Special things to note
+
+- None.
+
+## Change outline
+
+Shape before:
+
+~~~markdown
+## Not a heading — inside a fence
+~~~
+
+## Tests added (red → green)
+- `test_kept`
+
+<!-- stenswf:decisions:start -->
+## Decisions
+- kept
+<!-- stenswf:decisions:end -->
+EOF
+bash "$PRBODY" file "$LEG" "$REGION" > "$WORK/legacy.out"; RC=$?
+LOUT="$WORK/legacy.out"
+assert_eq "migration exits 0" "$RC" "0"
+assert_eq "an upstream-template body is migrated" "$(migrated "$LOUT")" "migrated"
+assert_eq "migration leaves one region" "$(grep -cxF "$START" "$LOUT")/$(grep -cxF "$END" "$LOUT")" "1/1"
+assert_nomatch "migration drops the old explanation" "$(cat "$LOUT")" "The old upstream reason."
+assert_nomatch "migration drops the old outline, fenced lines included" "$(cat "$LOUT")" "Not a heading"
+assert_eq "migration keeps the header and closing line" "$(head -3 "$LOUT")" "$(head -3 "$LEG")"
+sed -n '/^## Tests added/,$p' "$LEG" > "$WORK/leg-tail.before"
+sed -n '/^## Tests added/,$p' "$LOUT" > "$WORK/leg-tail.after"
+assert_eq "migration keeps evidence and decisions byte for byte" "$(same "$WORK/leg-tail.before" "$WORK/leg-tail.after")" "same"
+bash "$PRBODY" file "$LOUT" "$REGION" > "$WORK/legacy.again"
+assert_eq "a migrated body refreshes idempotently" "$(same "$LOUT" "$WORK/legacy.again")" "same"
+
+T3='## Why the change\n\nOld.\n\n## Special things to note\n\n- None.\n\n## Change outline\n\n'
+printf "$T3"'Old shape.\n\nCloses #29\n' > "$WORK/leg-closes.md"
+bash "$PRBODY" file "$WORK/leg-closes.md" "$REGION" > "$WORK/leg-closes.out"
+assert_eq "a trailing closing line ends the span (still migrated)" "$(migrated "$WORK/leg-closes.out")" "migrated"
+assert_eq "a trailing closing line survives migration" "$(grep -cx 'Closes #29' "$WORK/leg-closes.out")" "1"
+
+# A footer the tool appended is not visual-pr's, so it survives, whether a
+# thematic break sets it off or not.
+for CASE in attribution break; do
+  case $CASE in
+    attribution) FOOT='🤖 Generated with [Claude Code](https://claude.com/claude-code)' ;;
+    break)       FOOT='***' ;;
+  esac
+  printf "$T3"'Old shape.\n\n%s\n\nSigned off by a human.\n' "$FOOT" > "$WORK/leg-$CASE.md"
+  bash "$PRBODY" file "$WORK/leg-$CASE.md" "$REGION" > "$WORK/leg-$CASE.out"
+  assert_eq "a trailing footer ($CASE) ends the span (still migrated)" "$(migrated "$WORK/leg-$CASE.out")" "migrated"
+  assert_nomatch "a trailing footer ($CASE): the old outline is replaced" "$(cat "$WORK/leg-$CASE.out")" "Old shape."
+  grep -nxF -- "$FOOT" "$WORK/leg-$CASE.md" | cut -d: -f1 | { read -r N; tail -n +"$N" "$WORK/leg-$CASE.md"; } > "$WORK/leg-$CASE.before"
+  grep -nxF -- "$FOOT" "$WORK/leg-$CASE.out" | cut -d: -f1 | { read -r N; [ -n "$N" ] && tail -n +"$N" "$WORK/leg-$CASE.out"; } > "$WORK/leg-$CASE.after"
+  assert_eq "a trailing footer ($CASE) survives byte for byte" "$(same "$WORK/leg-$CASE.before" "$WORK/leg-$CASE.after")" "same"
+done
+
+printf "$T3"'Old shape.\n\n<!-- stenswf:decisions:start -->\n## Decisions\n- kept\n<!-- stenswf:decisions:end -->\n' > "$WORK/leg2.md"
+bash "$PRBODY" file "$WORK/leg2.md" "$REGION" > "$WORK/leg2.out"
+sed -n '/^<!-- stenswf:decisions:start -->$/,$p' "$WORK/leg2.md" > "$WORK/leg2.before"
+sed -n '/^<!-- stenswf:decisions:start -->$/,$p' "$WORK/leg2.out" > "$WORK/leg2.after"
+assert_eq "an HTML comment ends the span" "$(same "$WORK/leg2.before" "$WORK/leg2.after")" "same"
+assert_nomatch "the span before the comment was replaced" "$(cat "$WORK/leg2.out")" "Old shape."
+
+printf "$T3"'````markdown\n```\n## inner, still fenced\n````\n\n## Validation\n- `kept`\n' > "$WORK/leg-fence4.md"
+bash "$PRBODY" file "$WORK/leg-fence4.md" "$REGION" > "$WORK/leg-fence4.out"
+sed -n '/^## Validation$/,$p' "$WORK/leg-fence4.md" > "$WORK/leg-fence4.before"
+sed -n '/^## Validation$/,$p' "$WORK/leg-fence4.out" > "$WORK/leg-fence4.after"
+assert_eq "a shorter fence run inside a longer fence does not close it" "$(migrated "$WORK/leg-fence4.out")" "migrated"
+assert_eq "the section after a four-backtick fence survives" "$(same "$WORK/leg-fence4.before" "$WORK/leg-fence4.after")" "same"
+
+for CASE in unclosed prose-keyword incomplete unrelated; do
+  case $CASE in
+    unclosed)      printf "$T3"'```text\nnever closed\n\n## Validation\n- kept\n' ;;
+    prose-keyword) printf '## Why the change\n\nThis fixes #12 for good.\n\n## Special things to note\n\n- None.\n\n## Change outline\n\nShape.\n' ;;
+    incomplete)    printf 'Closes #7\n\n## Why the change\n\nHand-written.\n\n## Notes\n- keep\n' ;;
+    unrelated)     printf '## Why the change\n\nA.\n\n## Notes\n\nB.\n\n## Special things to note\n\n- C.\n\n## Change outline\n\nD.\n' ;;
+  esac > "$WORK/amb-$CASE.md"
+  bash "$PRBODY" file "$WORK/amb-$CASE.md" "$REGION" > "$WORK/amb-$CASE.out"
+  assert_eq "ambiguous ($CASE): the region is prepended" "$(head -1 "$WORK/amb-$CASE.out")" "$START"
+  after_end "$WORK/amb-$CASE.out" > "$WORK/amb-$CASE.rest"
+  assert_eq "ambiguous ($CASE): the original bytes follow unchanged" "$(same "$WORK/amb-$CASE.rest" "$WORK/amb-$CASE.md")" "same"
+done
+
+# 1f. coexistence with the decisions block, both orders
+mkdir -p "$WORK/.stenswf/901"
+cat > "$WORK/.stenswf/901/decisions.md" <<'EOF'
+# Decisions — #901
+
+### D1 — Retry with exponential backoff
+
+- **Category:** decision
+- **Source:** ship-light
+- **Rationale:** Fixed retries hammer the API during an outage.
+- **Refs:** src/worker.py
+EOF
+
+check_combined() {   # check_combined <label>
+  assert_eq "$1: one visual-pr marker pair" "$(grep -cxF "$START" "$BODY")/$(grep -cxF "$END" "$BODY")" "1/1"
+  assert_eq "$1: one decisions marker pair" \
+    "$(grep -cxF '<!-- stenswf:decisions:start -->' "$BODY")/$(grep -cxF '<!-- stenswf:decisions:end -->' "$BODY")" "1/1"
+  assert_eq "$1: the decisions block is last" "$(grep -v '^[[:space:]]*$' "$BODY" | tail -1)" "<!-- stenswf:decisions:end -->"
+  assert_eq "$1: the region stays above the evidence" "$(region_position "$BODY")" "above"
+  assert_match "$1: the new region is in" "$(cat "$BODY")" "The new reason."
+}
+seed_body
+( cd "$WORK" && bash "$PUBLISH" pr 901 77 && bash "$PRBODY" pr 77 "$REGION" "$DESC" ) >/dev/null
+check_combined "decisions then region"
+seed_body
+( cd "$WORK" && bash "$PRBODY" pr 77 "$REGION" "$DESC" && bash "$PUBLISH" pr 901 77 ) >/dev/null
+check_combined "region then decisions"
+
+# 1g. robustness: unterminated inputs, CRLF bodies, missing evidence
+printf '## Why the change\n\nNo final newline.\n\n```text\nshape\n```' > "$WORK/region-nonl.md"
+printf '[#28](https://github.com/o/r/issues/28)' > "$WORK/header-nonl.md"
+bash "$PRBODY" compose --out "$WORK/nonl-region.md" --region "$WORK/region-nonl.md" \
+  --header "$WORK/header-nonl.md" --closing "Closes #901"
+assert_eq "a region without a final newline still gets its own end marker line" "$(grep -cxF "$END" "$WORK/nonl-region.md")" "1"
+assert_eq "the region's closing fence stays a fence line" "$(grep -cx '```' "$WORK/nonl-region.md")" "1"
+assert_eq "a header without a final newline stays on its own line" "$(sed -n 3p "$WORK/nonl-region.md")" "Closes #901"
+
+printf 'Closes #901\r\n\r\n%s\r\n## Why the change\r\n\r\nOld.\r\n%s\r\n\r\n## Tests added (red → green)\r\n- `t`\r\n' "$START" "$END" > "$WORK/crlf.md"
+bash "$PRBODY" file "$WORK/crlf.md" "$REGION" > "$WORK/crlf.out"; RC=$?
+assert_eq "a CRLF body refreshes" "$RC" "0"
+assert_eq "a CRLF body keeps one region" "$(grep -c "^$START" "$WORK/crlf.out")/$(grep -c "^$END" "$WORK/crlf.out")" "1/1"
+assert_nomatch "a CRLF body loses its old region" "$(cat "$WORK/crlf.out")" "Old."
+
+: > "$WORK/empty-evidence.md"
+bash "$PRBODY" compose --out "$WORK/emptyev.md" --region "$REGION" --evidence "$WORK/empty-evidence.md"
+assert_eq "compose with empty evidence ends with the region" "$(tail -1 "$WORK/emptyev.md")" "$END"
+
+# 1h. unreadable inputs never overwrite or publish anything
+printf 'keep me\n' > "$WORK/existing.md"; cp "$WORK/existing.md" "$WORK/existing.before"
+bash "$PRBODY" compose --out "$WORK/existing.md" --region "$WORK/no-such-region.md" 2>"$WORK/err"; RC=$?
+assert_eq "compose with a missing region exits 1" "$RC" "1"
+assert_eq "compose with a missing region keeps the old output" "$(same "$WORK/existing.md" "$WORK/existing.before")" "same"
+assert_match "compose with a missing region names the file" "$(cat "$WORK/err")" "no-such-region.md"
+bash "$PRBODY" compose --out "$WORK/existing.md" --region "$REGION" --header "$WORK/no-such-header.md" 2>/dev/null; RC=$?
+assert_eq "compose with a missing header exits 1" "$RC" "1"
+assert_eq "compose with a missing header keeps the old output" "$(same "$WORK/existing.md" "$WORK/existing.before")" "same"
+# Every shipper creates its evidence file, empty or not, so a missing one is
+# a broken handoff: composing anyway would publish a PR without its
+# red → green evidence and no signal.
+bash "$PRBODY" compose --out "$WORK/existing.md" --region "$REGION" --evidence "$WORK/no-such-evidence.md" 2>"$WORK/err"; RC=$?
+assert_eq "compose with a missing evidence file exits 1" "$RC" "1"
+assert_eq "compose with a missing evidence file keeps the old output" "$(same "$WORK/existing.md" "$WORK/existing.before")" "same"
+assert_match "compose with a missing evidence file names the file" "$(cat "$WORK/err")" "no-such-evidence.md"
+mkdir -p "$WORK/evidence-dir.md"
+bash "$PRBODY" compose --out "$WORK/existing.md" --region "$REGION" --evidence "$WORK/evidence-dir.md" 2>/dev/null; RC=$?
+assert_eq "compose with unreadable evidence exits 1" "$RC" "1"
+assert_eq "compose with unreadable evidence leaves no temp file" "$([ -e "$WORK/existing.md.tmp" ] && echo left || echo none)" "none"
+OUT=$(bash "$PRBODY" file "$WORK/existing.md" "$WORK/no-such-region.md" 2>/dev/null); RC=$?
+assert_eq "file mode with a missing region exits 1 and prints nothing" "$RC/$OUT" "1/"
+seed_body; cp "$BODY" "$WORK/body.before"
+MISSING_DESC="$WORK/missing-region/pr-description.md"
+( cd "$WORK" && bash "$PRBODY" pr 77 "$WORK/no-such-region.md" "$MISSING_DESC" ) >/dev/null 2>&1; RC=$?
+assert_eq "pr mode with a missing region exits 1" "$RC" "1"
+assert_eq "pr mode with a missing region never calls gh pr edit" "$([ -e "$EDITS" ] && echo edited || echo untouched)" "untouched"
+assert_eq "pr mode with a missing region leaves the PR body alone" "$(same "$BODY" "$WORK/body.before")" "same"
+assert_eq "pr mode with a missing region writes no description" "$([ -e "$MISSING_DESC" ] && echo written || echo none)" "none"
+
+# 1i. legacy migration: an indented heading still ends the span
+printf '## Why the change\n\nOld.\n\n## Special things to note\n\n- None.\n\n## Change outline\n\nOld shape.\n\n   ## Validation \n- `kept evidence`\n' > "$WORK/leg-indent.md"
+bash "$PRBODY" file "$WORK/leg-indent.md" "$REGION" > "$WORK/leg-indent.out"
+sed -n '/^   ## Validation $/,$p' "$WORK/leg-indent.md" > "$WORK/leg-indent.before"
+sed -n '/^   ## Validation $/,$p' "$WORK/leg-indent.out" > "$WORK/leg-indent.after"
+assert_eq "an indented heading after the outline survives migration" "$(same "$WORK/leg-indent.before" "$WORK/leg-indent.after")" "same"
+assert_match "the indented heading's evidence survives" "$(cat "$WORK/leg-indent.out")" "kept evidence"
+
+# 1j. a region that quotes a marker line would publish a body the next refresh
+#     refuses as malformed, so it is refused up front and nothing is written
+printf '## Why the change\n\n```text\n%s\n```\n' "$END" > "$WORK/region-marker.md"
+bash "$PRBODY" compose --out "$WORK/existing.md" --region "$WORK/region-marker.md" 2>"$WORK/err"; RC=$?
+assert_eq "compose with a marker in the region exits 1" "$RC" "1"
+assert_eq "compose with a marker in the region keeps the old output" "$(same "$WORK/existing.md" "$WORK/existing.before")" "same"
+assert_match "compose with a marker in the region says why" "$(cat "$WORK/err")" "region contains a visual-pr marker"
+printf '## Why the change\r\n%s\r\n' "$START" > "$WORK/region-marker-crlf.md"
+printf 'Hand-written body.\n' > "$WORK/plain-body.md"
+OUT=$(bash "$PRBODY" file "$WORK/plain-body.md" "$WORK/region-marker-crlf.md" 2>/dev/null); RC=$?
+assert_eq "file mode with a CRLF marker line in the region exits 1 and prints nothing" "$RC/$OUT" "1/"
+seed_body; cp "$BODY" "$WORK/body.before"
+MARKER_DESC="$WORK/marker-region/pr-description.md"
+( cd "$WORK" && bash "$PRBODY" pr 77 "$WORK/region-marker.md" "$MARKER_DESC" ) >/dev/null 2>&1; RC=$?
+assert_eq "pr mode with a marker in the region exits 1" "$RC" "1"
+assert_eq "pr mode with a marker in the region never calls gh pr edit" "$([ -e "$EDITS" ] && echo edited || echo untouched)" "untouched"
+assert_eq "pr mode with a marker in the region writes no description" "$([ -e "$MARKER_DESC" ] && echo written || echo none)" "none"
+
+# --- 2. Standalone guard: workflow-issue.sh ---------------------------------
+GUARD="$ROOT/skills/visual-pr/scripts/workflow-issue.sh"
+GREPO="$WORK/guard-repo"
+git init -q -b master "$GREPO"
+gitc()  { git -C "$GREPO" -c user.name=t -c user.email=t@example.com "$@"; }
+guard() { ( cd "$GREPO" && bash "$GUARD" ); }
+art()   { mkdir -p "$GREPO/.stenswf/$1" && printf '%s\n' "$3" > "$GREPO/.stenswf/$1/$2"; }   # art <N> <file> <json>
+gitc commit -q --allow-empty -m "chore: base"
+
+art 42 manifest.json '{"kind":"slice","branch":"feature/custom"}'
+gitc checkout -q -b feature/custom master
+assert_eq "a branch recorded in a heavy manifest belongs to ship" "$(guard)" "ship 42"
+
+art 43 plan-light.json '{"issue":43}'
+gitc checkout -q -b impl/43-lite-thing master
+assert_eq "a Lite impl branch with plan-light.json belongs to ship-light" "$(guard)" "ship-light 43"
+
+gitc checkout -q -b impl/44-direct master
+assert_eq "a direct ship-light run (no artifacts yet) belongs to ship-light" "$(guard)" "ship-light 44"
+
+art 45 manifest.json '{"kind":"slice","branch":null}'
+gitc checkout -q -b impl/45-heavy master
+assert_eq "an impl branch with a heavy manifest belongs to ship" "$(guard)" "ship 45"
+
+gitc checkout -q -b prd/50-cleanup master
+assert_eq "a PRD cleanup branch belongs to apply" "$(guard)" "apply 50"
+
+art 46 anchor.json '{"issue":46}'
+gitc checkout -q -b feature/notes master
+gitc commit -q --allow-empty -m "feat(stenswf): add thing" -m "Refs: #46 T10"
+assert_eq "a Refs trailer on an unrelated branch is not ownership" "$(guard)" ""
+
+art 28 manifest.json '{"kind":"prd"}'
+gitc checkout -q -b feature/prd-followup master
+gitc commit -q --allow-empty -m "docs: follow-up for #28"
+assert_eq "a mention of a PRD is not ownership (no route to apply)" "$(guard)" ""
+
+gitc checkout -q -b impl/notanumber master
+assert_eq "a non-numeric impl branch is not a workflow branch" "$(guard)" ""
+
+# --- 3. Skill files: tokens, descriptions, fidelity, contract -------------------
+SHOWME="$ROOT/skills/show-me/SKILL.md"
+VPR="$ROOT/skills/visual-pr/SKILL.md"
+VPR_REFS="$ROOT/skills/visual-pr/references"
+vpr() { cat "$VPR" 2>/dev/null; }
+
+( cd "$REPO_ROOT" && bash scripts/check-skill-descriptions.sh "$SHOWME" "$VPR" ) >/dev/null 2>&1; RC=$?
+assert_eq "both skills pass the one-line description check" "$RC" "0"
+assert_eq "show-me keeps the upstream description" "$(grep '^description:' "$SHOWME")" \
+  "description: Help the user understand the current topic visually with concise diagrams, code-shape sketches, and focused HTML artifacts."
+assert_eq "visual-pr carries the stenswf description" "$(grep '^description:' "$VPR" 2>/dev/null)" \
+  "description: Create or update a pull request description that explains why the change exists and shows its shape with show-me-style visual outlines."
+
+for F in "$SHOWME" "$VPR" "$VPR_REFS/pr_description_template.md" "$VPR_REFS/show-me.md" "$VPR_REFS/describe_pr_final_answer.md"; do
+  assert_eq "${F#"$ROOT/"} exists" "$([ -s "$F" ] && echo yes || echo no)" "yes"
+  for TOKEN in 'disable-model-invocation' '{SKILLBASE}' '.humanlayer/' 'task-artifact' '${CLAUDE_PLUGIN_ROOT}'; do
+    assert_nomatch "${F#"$ROOT/"} has no $TOKEN" "$(cat "$F" 2>/dev/null)" "$TOKEN"
+  done
+done
+for F in "$SHOWME" "$VPR"; do
+  assert_eq "${F#"$ROOT/"} has no \$-digit token (Claude Code expands it, #30)" \
+    "$(grep -cE '\$[0-9]|\$\{[0-9]' "$F" 2>/dev/null)" "0"
+done
+
+# Upstream sentences that must survive the port verbatim.
+assert_match "show-me keeps upstream's opening" "$(cat "$SHOWME")" "Pick the smallest view that makes the key point clear."
+assert_match "show-me keeps upstream's restraint rule" "$(cat "$SHOWME")" "it is unlikely you will use all of them"
+assert_match "visual-pr keeps the one-sentence rule" "$(vpr)" "Keep **Why the change** to exactly one sentence."
+assert_match "visual-pr keeps the voice rule" "$(vpr)" "Write as one human talking to another"
+assert_match "the template keeps upstream's story guidance" "$(cat "$VPR_REFS/pr_description_template.md" 2>/dev/null)" \
+  "Tell the story in the order that makes it easiest to understand."
+
+# The stenswf adaptations and contracts.
+TEMPLATE=$(cat "$VPR_REFS/pr_description_template.md" 2>/dev/null)
+assert_match "the template opens the visual-pr region" "$TEMPLATE" "$START"
+assert_match "the template closes the visual-pr region" "$TEMPLATE" "$END"
+assert_match "the template keeps the closing line" "$TEMPLATE" "Closes #{N}"
+assert_match "the template appends evidence byte for byte" "$TEMPLATE" "byte for byte"
+assert_match "standalone guards workflow branches" "$(vpr)" "bash scripts/workflow-issue.sh"
+assert_match "standalone ensures local state first" "$(vpr)" "bash ../../scripts/ensure-stenswf-dir.sh"
+assert_match "standalone refreshes through pr-body.sh pr" "$(vpr)" "bash scripts/pr-body.sh pr {number} {region-path} {description-path}"
+assert_match "a PR outline describes the delivered change" "$(vpr)" "Describe the change actually delivered."
+assert_match "a tiny change may get a prose outline" "$(vpr)" "one or two plain sentences are enough"
+assert_match "body-only compares against the PR target" "$(vpr)" "the same comparison GitHub shows"
+BODY_ONLY=$(sed -n '/^## Body-only mode/,$p' "$VPR" 2>/dev/null)
+for INPUT in '**issue context**' '**base ref**' '**evidence**' '**closing line**' '**output**'; do
+  assert_match "body-only mode names the input $INPUT" "$BODY_ONLY" "$INPUT"
+done
+assert_match "body-only mode composes through pr-body.sh" "$BODY_ONLY" "bash scripts/pr-body.sh compose"
+assert_match "body-only mode forbids gh calls" "$BODY_ONLY" "make no \`gh\` calls"
+assert_nomatch "body-only mode runs no gh pr command" "$BODY_ONLY" "gh pr "
+assert_nomatch "body-only mode runs no gh issue command" "$BODY_ONLY" "gh issue "
+assert_match "show-me opens HTML through the shared opener" "$(cat "$SHOWME")" "bash ../../scripts/open-html.sh"
+assert_match "show-me ensures local state first" "$(cat "$SHOWME")" "bash ../../scripts/ensure-stenswf-dir.sh"
+assert_match "visual-pr's show-me copy keeps HTML a local aside" "$(cat "$VPR_REFS/show-me.md" 2>/dev/null)" "bash ../../scripts/open-html.sh"
+# visual-pr carries its own copy of show-me (upstream's layout). Only the
+# HTML view may differ, and even there the file lands where show-me puts it.
+upto_html() { sed '/^- For a visual UI, layout, state comparison/,$d' "$1"; }
+upto_html "$SHOWME" > "$WORK/showme.head"; upto_html "$VPR_REFS/show-me.md" > "$WORK/vpr-showme.head"
+assert_eq "visual-pr's show-me copy matches show-me up to the HTML view" "$(same "$WORK/showme.head" "$WORK/vpr-showme.head")" "same"
+HTML_DIR='DIR=$(bash ../../scripts/ensure-stenswf-dir.sh <N>)   # <N> = the issue in play, otherwise .show-me'
+HTML_OPEN='bash ../../scripts/open-html.sh "$DIR/show-me-{description}.html"'
+for F in "$SHOWME" "$VPR_REFS/show-me.md"; do
+  assert_match "${F#"$ROOT/"} computes the HTML folder with the .show-me fallback" "$(cat "$F")" "$HTML_DIR"
+  assert_match "${F#"$ROOT/"} opens the computed HTML path" "$(cat "$F")" "$HTML_OPEN"
+done
+
+# --- 4. Wiring: the three shippers build their PR body with visual-pr ----------
+# One row per shipper: file | issue context | closing line. The other inputs,
+# PR_BODY_FILE and the decisions render are the same for all three.
+while IFS='|' read -r F CONTEXT CLOSING; do
+  C=$(cat "$ROOT/$F")
+  assert_match "$F loads visual-pr in body-only mode" "$C" 'Load `visual-pr` in body-only mode'
+  assert_match "$F passes the issue context" "$C" "- issue context: \`$CONTEXT\`"
+  assert_match "$F compares against the PR target" "$C" '- base ref: `origin/$DEFAULT`'
+  assert_match "$F passes its evidence file" "$C" '- evidence: `.stenswf/$ARGUMENTS/pr-evidence.md`'
+  assert_match "$F passes the closing line" "$C" "- closing line: \`$CLOSING\`"
+  assert_match "$F passes the output path" "$C" '- output: `.stenswf/$ARGUMENTS/pr-description.md`'
+  assert_match "$F points PR_BODY_FILE at the visual-pr output" "$C" 'PR_BODY_FILE=".stenswf/$ARGUMENTS/pr-description.md"'
+  assert_match "$F still appends the decisions render" "$C" 'publish-decisions.sh render "$ARGUMENTS" >> "$PR_BODY_FILE"'
+done <<'EOF'
+skills/ship-light/SKILL.md|/tmp/slice-$ARGUMENTS.md|Closes #$ARGUMENTS
+skills/ship/post-dispatch.md|.stenswf/$ARGUMENTS/concept.md|Closes #$ARGUMENTS
+skills/apply/prd.md|.stenswf/$ARGUMENTS/concept.md|Closes #$ARGUMENTS (capstone cleanup).
+EOF
+
+# Per-shipper evidence and extras.
+PB=$(cat "$ROOT/skills/ship-light/pr-body.md")
+assert_match "pr-body.md references visual-pr" "$PB" "visual-pr"
+assert_match "pr-body.md has the validation summary" "$PB" '## Validation'
+assert_match "pr-body.md keeps the TDD evidence heading" "$PB" '## Tests added (red → green)'
+assert_match "pr-body.md keeps Notable assumptions" "$PB" '## Notable assumptions'
+assert_match "pr-body.md keeps the assumptions-vs-decisions paragraph" "$PB" 'is a transient review surface'
+assert_match "pr-body.md names the evidence file" "$PB" '.stenswf/$ARGUMENTS/pr-evidence.md'
+assert_nomatch "pr-body.md drops the superseded Summary template" "$PB" '## Summary'
+E2E=$(grep 'SKILLS TO LOAD: ship-light' "$ROOT/skills/slice-e2e/SKILL.md")
+assert_match "slice-e2e loads visual-pr for ship-light" "$E2E" "visual-pr"
+assert_match "slice-e2e keeps tdd for ship-light" "$E2E" "tdd"
+SH=$(cat "$ROOT/skills/ship/post-dispatch.md")
+assert_match "ship's base ref is the PR target, not the manifest checkpoint" "$SH" '- base ref: `origin/$DEFAULT` — the PR'"'"'s target'
+assert_match "ship hands over lint escapes as evidence" "$SH" '## Lint escapes'
+assert_match "ship hands over review-step absences as evidence" "$SH" '## Review-step absences'
+AP=$(cat "$ROOT/skills/apply/prd.md")
+assert_match "apply PRD-mode hands over addressed findings" "$AP" '## Findings addressed'
+assert_match "apply PRD-mode hands over skipped findings" "$AP" '## Findings skipped'
+assert_match "apply PRD-mode names the decisions excerpt" "$AP" 'docs/stenswf/decisions/prd-$ARGUMENTS.md'
+assert_match "apply PRD-mode keeps its PR title" "$AP" '**PR title:** `fix(PRD): #$ARGUMENTS cleanup — capstone findings`.'
+
+# --- 5. Branch names the standalone guard depends on ------------------------------
+# workflow-issue.sh recognises a workflow branch by name alone; if a shipper
+# renamed its branches, standalone visual-pr could open a PR around it.
+assert_match "ship creates impl/<N>-<slug> branches" "$(cat "$ROOT/skills/ship/SKILL.md")" 'BR="impl/$ARGUMENTS-$SLUG"'
+assert_match "ship-light creates impl/<N>-<slug> branches" "$(cat "$ROOT/skills/ship-light/SKILL.md")" 'BR="impl/$ARGUMENTS-$SLUG"'
+assert_match "apply PRD-mode creates prd/<N>-cleanup branches" "$AP" 'git checkout -b "prd/$ARGUMENTS-cleanup"'
+
+# --- 6. Slice template: optional Change outline + extractors -----------------------
+source "$ROOT/scripts/extractors.sh"
+export ARGUMENTS=0
+FIX="$HERE/fixtures/issue-slice-change-outline.md"
+sed '/^## Change outline$/,/^## Conventions (from PRD)$/{/^## Conventions (from PRD)$/!d}' "$FIX" > "$WORK/no-outline.md"
+assert_eq "the fixture has a Change outline" "$(grep -c '^## Change outline$' "$FIX")" "1"
+assert_eq "the stripped copy lacks it" "$(grep -c '^## Change outline$' "$WORK/no-outline.md")" "0"
+extract_section 'What to build' "$FIX" > "$WORK/wtb.with"; extract_section 'What to build' "$WORK/no-outline.md" > "$WORK/wtb.without"
+assert_eq "What to build is unchanged by a Change outline after it" "$(same "$WORK/wtb.with" "$WORK/wtb.without")" "same"
+extract_acs "$FIX" > "$WORK/acs.with"; extract_acs "$WORK/no-outline.md" > "$WORK/acs.without"
+assert_eq "AC records are unchanged by a Change outline" "$(same "$WORK/acs.with" "$WORK/acs.without")" "same"
+assert_eq "both ACs still parse" "$(wc -l < "$WORK/acs.with" | tr -d ' ')" "2"
+assert_match "the outline itself is extractable" "$(extract_section 'Change outline' "$FIX")" "healthz.ts"
+IT="$ROOT/references/issue-template.md"
+assert_eq "the slice template puts the outline right after What to build" \
+  "$(grep -E '^## (What to build|Change outline|Conventions \(from PRD\))$' "$IT" | tr '\n' '|')" \
+  "## What to build|## Change outline|## Conventions (from PRD)|"
+assert_match "the slice template makes the outline optional" "$(cat "$IT")" "Optional — include it when it clarifies the slice's shape."
+assert_match "the slice template says outlines add no obligations" "$(cat "$IT")" "it adds no obligations"
+P2I=$(cat "$ROOT/skills/prd-to-issues/SKILL.md")
+assert_match "prd-to-issues adds an outline when it clarifies" "$P2I" "When it clarifies a slice's shape, give the slice body a \`## Change outline\`"
+assert_match "prd-to-issues trims it from the PRD outline" "$P2I" "extract_section 'Change outline'"
+
+# --- 7. PRD template and PRD-authoring skills -------------------------------------
+PT="$ROOT/references/prd-template.md"
+assert_eq "the PRD template's Change outline follows Implementation Decisions" \
+  "$(grep -E '^## (Implementation Decisions|Change outline|Conventions)$' "$PT" | tr '\n' '|')" \
+  "## Implementation Decisions|## Change outline|## Conventions|"
+assert_match "the PRD outline is optional and illustrative" "$(cat "$PT")" "Optional. The planned shape, illustrative only: it adds no obligations"
+assert_match "the PRD outline may name modules or files" "$(cat "$PT")" "it may name modules or files"
+assert_match "the PRD outline allows pseudocode and data flow" "$(cat "$PT")" "pseudocode, data flow"
+assert_match "the class table nudges the outline" "$(cat "$PT")" "recommended for \`capability\`, \`integration\` and \`refactor\`"
+PG=$(cat "$ROOT/skills/prd-from-grill-me/SKILL.md")
+assert_match "prd-from-grill-me shows structural options with show-me" "$PG" "When a question is structural (flow, layout, ownership, interface), Load \`show-me\`"
+assert_match "prd-from-grill-me sketches with views where they clarify" "$PG" "Sketch modules to build/modify — with \`show-me\` views where they clarify"
+assert_match "prd-from-grill-me keeps the agreed design in the PRD" "$PG" "Keep the agreed design in the PRD's \`## Change outline\` as a"
+assert_match "prd-from-grill-me translates an accepted HTML view" "$PG" "translate an accepted HTML view"
+P2I=$(cat "$ROOT/skills/prd-to-issues/SKILL.md")
+assert_match "prd-to-issues triage loads show-me" "$P2I" "Load \`show-me\` when a triage entry is structural"
+assert_match "prd-to-issues quiz uses a view when it helps" "$P2I" "When a view helps, Load \`show-me\`"
+assert_match "prd-to-issues names the dependency graph as an example" "$P2I" "a Mermaid dependency graph (slices as nodes, blocked-by edges)"
+assert_match "prd-to-issues makes no diagram mandatory" "$P2I" "No diagram is mandatory."
+
+# --- 8. Live wiring, AFK path, and the show-me wiring set -----------------------------
+assert_match "grill-me presents structural branches with show-me" \
+  "$(cat "$ROOT/skills/grill-me/SKILL.md")" "When a branch is structural (flow, layout, ownership, interface), Load \`show-me\`"
+PLAN="$ROOT/skills/plan/SKILL.md"
+assert_match "plan shows the smallest clarifying view" "$(cat "$PLAN")" "When an interface or flow changes, show the smallest \`show-me\` view"
+assert_eq "plan shows it before asking for approval" \
+  "$(awk '/When an interface or flow changes, show the smallest/{a=NR} /Get user approval on the plan/{b=NR} END{print (a && b && a<b) ? "before" : "not before"}' "$PLAN")" "before"
+TI=$(cat "$ROOT/skills/triage-issue/SKILL.md")
+assert_match "the triage panel has a root-cause view line" "$TI" "Root-cause view:"
+assert_match "triage shows a root-cause view when it clarifies" "$TI" "When a view clarifies the root cause, Load \`show-me\` and show it directly under the panel"
+assert_match "the bug-brief Root Cause may carry one view (triage-issue)" "$TI" "at most one GitHub-renderable view"
+assert_match "the bug-brief Root Cause may carry one view (bug-brief-class)" \
+  "$(cat "$ROOT/references/bug-brief-class.md")" "at most one GitHub-renderable view"
+
+# The AFK path stays untouched.
+assert_nomatch "plan-light stays free of show-me" "$(cat "$ROOT/skills/plan-light/SKILL.md")" "show-me"
+SIG=$(sed -n '/^SIG=\$( {/,/sha256sum/p' "$ROOT/skills/plan-light/artifacts.md")
+assert_eq "the Lite signature still hashes exactly four inputs" "$(printf '%s\n' "$SIG" | grep -c 'cat /tmp/slice-')" "4"
+assert_nomatch "the Lite signature does not hash the outline" "$SIG" "outline"
+
+# Every planning skill that presents views loads show-me.
+for F in skills/grill-me/SKILL.md skills/prd-from-grill-me/SKILL.md skills/prd-to-issues/SKILL.md \
+         skills/plan/SKILL.md skills/triage-issue/SKILL.md; do
+  assert_match "$F references show-me" "$(cat "$ROOT/$F")" "show-me"
+done
+for F in references/prd-template.md references/issue-template.md; do
+  assert_match "$F has a Change outline" "$(cat "$ROOT/$F")" "## Change outline"
+  assert_match "$F says outlines add no obligations" "$(cat "$ROOT/$F")" "it adds no obligations"
+done
+
+printf '\n1..%d\n# pass %d fail %d\n' "$((PASS + FAIL))" "$PASS" "$FAIL"
+[ "$FAIL" -eq 0 ]
