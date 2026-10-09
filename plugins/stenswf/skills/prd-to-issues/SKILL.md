@@ -84,6 +84,8 @@ List every decision that would trigger a HITL slice. Classify each:
 
 Goal: zero HITL slices except irreducible judgment calls. Present the
 triage table to the user for confirmation.
+Load `show-me` when a triage entry is structural, and show its options as
+views beside the table.
 
 ### 4. Draft vertical slices (Lite-first)
 
@@ -161,6 +163,10 @@ tag if false). Disqualifier tags: `files>15 | cross-module |
 schema-migration | arch-unknown | hitl-cat3`. Also show the AC list per
 slice (with tags) so the user can confirm AC ordering is
 tracer-bullet-first.
+
+When a view helps, Load `show-me` and lead the list with it — for example
+a Mermaid dependency graph (slices as nodes, blocked-by edges) for a
+multi-slice set. No diagram is mandatory.
 
 Ask: granularity right? dependencies right? correct HITL/AFK? Lite
 flags and disqualifiers correct? AC set + ordering right? Iterate

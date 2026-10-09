@@ -96,6 +96,7 @@ If `$ORIG` is empty, behave as before (blank-page interview from Step 1).
 
    - Provide a recommended answer and reasoning for each question.
    - Delegate codebase questions to targeted Explore subagents.
+   - When a question is structural (flow, layout, ownership, interface), Load `show-me` and present the options as views next to your recommendation.
    - Propose 2–3 approaches with trade-offs. Lead with recommendation.
      Weigh them per
      [../../references/decision-weighting.md](../../references/decision-weighting.md)
@@ -108,8 +109,11 @@ If `$ORIG` is empty, behave as before (blank-page interview from Step 1).
 
    No code in this phase.
 
-4. Sketch modules to build/modify. Look for deep modules extractable in
-   isolation. Consult the `architecture` skill.
+4. Sketch modules to build/modify — with `show-me` views where they clarify
+   (file tree, call tree, pseudocode, Mermaid; `diff` against today's shape).
+   Look for deep modules extractable in isolation. Consult the `architecture`
+   skill. Keep the agreed design in the PRD's `## Change outline` as a
+   GitHub-renderable view; translate an accepted HTML view, do not paste it.
 
    Check with the user that modules match their expectations. Check
    which modules they want tests written for.

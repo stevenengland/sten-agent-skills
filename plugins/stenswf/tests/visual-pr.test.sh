@@ -428,5 +428,25 @@ P2I=$(cat "$ROOT/skills/prd-to-issues/SKILL.md")
 assert_match "prd-to-issues adds an outline when it clarifies" "$P2I" "When it clarifies a slice's shape, give the slice body a \`## Change outline\`"
 assert_match "prd-to-issues trims it from the PRD outline" "$P2I" "extract_section 'Change outline'"
 
+# --- 7. PRD template and PRD-authoring skills -------------------------------------
+PT="$ROOT/references/prd-template.md"
+assert_eq "the PRD template's Change outline follows Implementation Decisions" \
+  "$(grep -E '^## (Implementation Decisions|Change outline|Conventions)$' "$PT" | tr '\n' '|')" \
+  "## Implementation Decisions|## Change outline|## Conventions|"
+assert_match "the PRD outline is optional and illustrative" "$(cat "$PT")" "Optional. The planned shape, illustrative only: it adds no obligations"
+assert_match "the PRD outline may name modules or files" "$(cat "$PT")" "it may name modules or files"
+assert_match "the PRD outline allows pseudocode and data flow" "$(cat "$PT")" "pseudocode, data flow"
+assert_match "the class table nudges the outline" "$(cat "$PT")" "recommended for \`capability\`, \`integration\` and \`refactor\`"
+PG=$(cat "$ROOT/skills/prd-from-grill-me/SKILL.md")
+assert_match "prd-from-grill-me shows structural options with show-me" "$PG" "When a question is structural (flow, layout, ownership, interface), Load \`show-me\`"
+assert_match "prd-from-grill-me sketches with views where they clarify" "$PG" "Sketch modules to build/modify — with \`show-me\` views where they clarify"
+assert_match "prd-from-grill-me keeps the agreed design in the PRD" "$PG" "Keep the agreed design in the PRD's \`## Change outline\` as a"
+assert_match "prd-from-grill-me translates an accepted HTML view" "$PG" "translate an accepted HTML view"
+P2I=$(cat "$ROOT/skills/prd-to-issues/SKILL.md")
+assert_match "prd-to-issues triage loads show-me" "$P2I" "Load \`show-me\` when a triage entry is structural"
+assert_match "prd-to-issues quiz uses a view when it helps" "$P2I" "When a view helps, Load \`show-me\`"
+assert_match "prd-to-issues names the dependency graph as an example" "$P2I" "a Mermaid dependency graph (slices as nodes, blocked-by edges)"
+assert_match "prd-to-issues makes no diagram mandatory" "$P2I" "No diagram is mandatory."
+
 printf '\n1..%d\n# pass %d fail %d\n' "$((PASS + FAIL))" "$PASS" "$FAIL"
 [ "$FAIL" -eq 0 ]
