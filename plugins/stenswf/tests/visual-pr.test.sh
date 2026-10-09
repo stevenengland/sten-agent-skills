@@ -448,5 +448,46 @@ assert_match "prd-to-issues quiz uses a view when it helps" "$P2I" "When a view 
 assert_match "prd-to-issues names the dependency graph as an example" "$P2I" "a Mermaid dependency graph (slices as nodes, blocked-by edges)"
 assert_match "prd-to-issues makes no diagram mandatory" "$P2I" "No diagram is mandatory."
 
+# --- 8. Live wiring, AFK path, and the full wiring set -----------------------------
+assert_match "grill-me presents structural branches with show-me" \
+  "$(cat "$ROOT/skills/grill-me/SKILL.md")" "When a branch is structural (flow, layout, ownership, interface), Load \`show-me\`"
+PLAN="$ROOT/skills/plan/SKILL.md"
+assert_match "plan shows the smallest clarifying view" "$(cat "$PLAN")" "When an interface or flow changes, show the smallest \`show-me\` view"
+assert_eq "plan shows it before asking for approval" \
+  "$(awk '/When an interface or flow changes, show the smallest/{a=NR} /Get user approval on the plan/{b=NR} END{print (a && b && a<b) ? "before" : "not before"}' "$PLAN")" "before"
+TI=$(cat "$ROOT/skills/triage-issue/SKILL.md")
+assert_match "the triage panel has a root-cause view line" "$TI" "Root-cause view:"
+assert_match "triage shows a root-cause view when it clarifies" "$TI" "When a view clarifies the root cause, Load \`show-me\` and show it directly under the panel"
+assert_match "the bug-brief Root Cause may carry one view (triage-issue)" "$TI" "at most one GitHub-renderable view"
+assert_match "the bug-brief Root Cause may carry one view (bug-brief-class)" \
+  "$(cat "$ROOT/references/bug-brief-class.md")" "at most one GitHub-renderable view"
+
+# The AFK path stays untouched.
+assert_nomatch "plan-light stays free of show-me" "$(cat "$ROOT/skills/plan-light/SKILL.md")" "show-me"
+SIG=$(sed -n '/^SIG=\$( {/,/sha256sum/p' "$ROOT/skills/plan-light/artifacts.md")
+assert_eq "the Lite signature still hashes exactly four inputs" "$(printf '%s\n' "$SIG" | grep -c 'cat /tmp/slice-')" "4"
+assert_nomatch "the Lite signature does not hash the outline" "$SIG" "outline"
+
+# The full wiring set, in one place.
+for F in skills/grill-me/SKILL.md skills/prd-from-grill-me/SKILL.md skills/prd-to-issues/SKILL.md \
+         skills/plan/SKILL.md skills/triage-issue/SKILL.md; do
+  assert_match "$F references show-me" "$(cat "$ROOT/$F")" "show-me"
+done
+for F in skills/ship/post-dispatch.md skills/ship-light/SKILL.md skills/apply/prd.md; do
+  C=$(cat "$ROOT/$F")
+  assert_match "$F references visual-pr" "$C" "visual-pr"
+  for INPUT in '- issue context:' '- base ref:' '- evidence:' '- closing line:' '- output:'; do
+    assert_match "$F passes body-only input '$INPUT'" "$C" "$INPUT"
+  done
+  assert_match "$F compares against the PR target" "$(printf '%s\n' "$C" | grep -- '- base ref:')" '`origin/'
+  assert_match "$F still calls publish-decisions.sh render" "$C" "publish-decisions.sh render"
+done
+assert_match "ship-light/pr-body.md references visual-pr" "$(cat "$ROOT/skills/ship-light/pr-body.md")" "visual-pr"
+assert_match "slice-e2e loads visual-pr" "$(cat "$ROOT/skills/slice-e2e/SKILL.md")" "visual-pr"
+for F in references/prd-template.md references/issue-template.md; do
+  assert_match "$F has a Change outline" "$(cat "$ROOT/$F")" "## Change outline"
+  assert_match "$F says outlines add no obligations" "$(cat "$ROOT/$F")" "it adds no obligations"
+done
+
 printf '\n1..%d\n# pass %d fail %d\n' "$((PASS + FAIL))" "$PASS" "$FAIL"
 [ "$FAIL" -eq 0 ]

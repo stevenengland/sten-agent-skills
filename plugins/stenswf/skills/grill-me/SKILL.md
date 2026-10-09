@@ -19,6 +19,7 @@ dependencies between decisions one-by-one.
 - If a question can be answered by exploring the codebase, explore the codebase
 instead.
 - Propose 2-3 different approaches with trade-offs.
+- When a branch is structural (flow, layout, ownership, interface), Load `show-me` and present the options as views.
 - Lead with your recommended option and explain why. Weigh options per
   [../../references/decision-weighting.md](../../references/decision-weighting.md)
   — prefer quality, simplicity, robustness, scalability, and maintainability
