@@ -544,10 +544,18 @@ Claude Code discovers and loads it automatically. Reload if already running:
 │   ├── plan-light.md          (plan-light: single advisory plan, if used)
 │   ├── plan-light.json        (plan-light: 5-field identity stub + source_signature + behavior_change_acs)
 │   ├── lite-notes.md          (plan-light / ship-light: soft constraints for review)
+│   ├── pr-evidence.md         (ship / ship-light / apply PRD: evidence sections, appended byte for byte)
+│   ├── pr-region.md           (visual-pr: its own sections — Why, Special things, Change outline)
+│   ├── pr-description.md      (visual-pr: complete PR body; PR_BODY_FILE points here)
+│   ├── show-me-<slug>.html    (show-me / visual-pr: local HTML asides, never committed)
 │   ├── review/slice.md OR review/prd-review.xml
 │   └── apply-state.json
+├── .show-me/                  (show-me HTML asides when no issue is in play)
+├── pr-<number>/               (standalone visual-pr on a non-stenswf PR: description.md, region.md)
 └── .archive/<issue>-<date>/   (cold storage after merge)
 ```
+
+Outside a stenswf workflow (no `bootstrap`), `scripts/ensure-stenswf-dir.sh` creates these folders and adds `.stenswf/` to the clone's `git rev-parse --git-path info/exclude` before the first write.
 
 Heavy-plan and plan-light artifacts coexist peacefully — neither skill
 touches the other's files. A slice is heavy-planned iff `manifest.json`
