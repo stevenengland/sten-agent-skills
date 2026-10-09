@@ -389,12 +389,30 @@ EOF
 fi
 ```
 
+**Build the PR body with `visual-pr`.** Write this run's evidence to
+`.stenswf/$ARGUMENTS/pr-evidence.md` using [pr-body.md](pr-body.md) —
+verbatim, no brevity compression. Then Load `visual-pr` in body-only mode
+with these inputs:
+
+- issue context: `/tmp/slice-$ARGUMENTS.md`
+- base ref: `origin/$DEFAULT`
+- evidence: `.stenswf/$ARGUMENTS/pr-evidence.md`
+- closing line: `Closes #$ARGUMENTS`
+- output: `.stenswf/$ARGUMENTS/pr-description.md`
+
+visual-pr writes the one-sentence **Why the change**, **Special things to
+note** and the **Change outline** (the change actually delivered) inside
+its marker region, appends your evidence byte for byte, and never touches
+GitHub.
+
 **Publish the decision anchor.** `.stenswf/` is gitignored, so the
-anchor does not survive this working copy. Append the rendered block to
-`$PR_BODY_FILE` **before** `gh pr create`, so the PR carries the
-decisions from its first render (`scripts/publish-decisions.sh`):
+anchor does not survive this working copy. Point `PR_BODY_FILE` at the
+visual-pr output and append the rendered block **before** `gh pr create`,
+so the PR carries the decisions from its first render
+(`scripts/publish-decisions.sh`):
 
 ```bash
+PR_BODY_FILE=".stenswf/$ARGUMENTS/pr-description.md"
 bash ../../scripts/publish-decisions.sh render "$ARGUMENTS" >> "$PR_BODY_FILE"
 ```
 
@@ -404,8 +422,6 @@ Empty anchor → nothing appended. See
 Then run the shared PR+CI procedure with `CI_MAX_CYCLES=2` and
 `WAIT_FOR_MERGE=no`:
 [../../references/pr-ci-merge.md](../../references/pr-ci-merge.md).
-
-PR body template: [pr-body.md](pr-body.md). Verbatim, no brevity compression.
 
 ## Phase 5 — CI (via shared procedure)
 

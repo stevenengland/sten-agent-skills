@@ -363,5 +363,26 @@ assert_match "show-me opens HTML through the shared opener" "$(cat "$SHOWME")" "
 assert_match "show-me ensures local state first" "$(cat "$SHOWME")" "bash ../../scripts/ensure-stenswf-dir.sh"
 assert_match "visual-pr's show-me copy keeps HTML a local aside" "$(cat "$VPR_REFS/show-me.md" 2>/dev/null)" "bash ../../scripts/open-html.sh"
 
+# --- 4. Wiring: ship-light and slice-e2e ----------------------------------------
+SL=$(cat "$ROOT/skills/ship-light/SKILL.md")
+assert_match "ship-light loads visual-pr in body-only mode" "$SL" 'Load `visual-pr` in body-only mode'
+assert_match "ship-light passes the issue context" "$SL" '- issue context: `/tmp/slice-$ARGUMENTS.md`'
+assert_match "ship-light passes the base ref" "$SL" '- base ref: `origin/$DEFAULT`'
+assert_match "ship-light passes its evidence file" "$SL" '- evidence: `.stenswf/$ARGUMENTS/pr-evidence.md`'
+assert_match "ship-light passes the closing line" "$SL" '- closing line: `Closes #$ARGUMENTS`'
+assert_match "ship-light passes the output path" "$SL" '- output: `.stenswf/$ARGUMENTS/pr-description.md`'
+assert_match "ship-light points PR_BODY_FILE at the visual-pr output" "$SL" 'PR_BODY_FILE=".stenswf/$ARGUMENTS/pr-description.md"'
+assert_match "ship-light still appends the decisions render" "$SL" 'publish-decisions.sh render "$ARGUMENTS" >> "$PR_BODY_FILE"'
+PB=$(cat "$ROOT/skills/ship-light/pr-body.md")
+assert_match "pr-body.md has the validation summary" "$PB" '## Validation'
+assert_match "pr-body.md keeps the TDD evidence heading" "$PB" '## Tests added (red → green)'
+assert_match "pr-body.md keeps Notable assumptions" "$PB" '## Notable assumptions'
+assert_match "pr-body.md keeps the assumptions-vs-decisions paragraph" "$PB" 'is a transient review surface'
+assert_match "pr-body.md names the evidence file" "$PB" '.stenswf/$ARGUMENTS/pr-evidence.md'
+assert_nomatch "pr-body.md drops the superseded Summary template" "$PB" '## Summary'
+E2E=$(grep 'SKILLS TO LOAD: ship-light' "$ROOT/skills/slice-e2e/SKILL.md")
+assert_match "slice-e2e loads visual-pr for ship-light" "$E2E" "visual-pr"
+assert_match "slice-e2e keeps tdd for ship-light" "$E2E" "tdd"
+
 printf '\n1..%d\n# pass %d fail %d\n' "$((PASS + FAIL))" "$PASS" "$FAIL"
 [ "$FAIL" -eq 0 ]
