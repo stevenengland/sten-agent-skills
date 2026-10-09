@@ -121,7 +121,7 @@ For each remaining thread — **regardless of author** (the paired reviewer
    failing test written first.
 
 2. **Confirmed, safe, non-rollback remedy.** Fix it autonomously →
-   conventional commit → note `<node-id> <sha>` for the end of the pass.
+   conventional commit → note `<node-id> <sha>` for *End of pass* below.
    Do not push, reply or resolve yet.
 
    Commit with the decision trailers, so a decision reached mid-loop lands
@@ -144,18 +144,6 @@ For each remaining thread — **regardless of author** (the paired reviewer
 4. **Rollback, or confirmed with no safe remedy.** The thread stays
    unresolved and unhandled — a rollback until the shared approval gate
    decides it, a missing safe remedy as a blocker.
-
-**End of pass — one push, then resolve together.** Once every thread in
-the pass has been visited:
-
-```bash
-git push || exit 1      # once per pass; skip when the pass made no commit
-```
-
-then, for each noted thread, `add_reply <node-id> "<what changed>, fixed
-in <sha>"` → `resolve_thread <node-id>`. A push per fix costs a CI run each
-time and wakes the reviewer on a half-fixed head; replying before the push
-would cite a SHA the reviewer cannot see.
 
 A thread is **handled** when it is resolved OR its latest marker is a
 left-open reply — and `list_threads` reports that as its `disposition`, so
@@ -211,12 +199,26 @@ delib_wait "$DIR" A "${DELIB_HANDSHAKE_TIMEOUT:-600}"
 Apply the outcome to the thread, citing `delib#$ISSUE-<id>`:
 
 - **`agreed`** (or an ASK answered) — implement the decision as in steps 2–3
-  above: fix, reply and resolve; or reply with a
-  `<!-- stenswf-left-open: delib#<issue>-<id> <reason> -->` marker.
+  above: fix and commit, noting `<node-id> <sha>` for *End of pass*; or reply
+  with a `<!-- stenswf-left-open: delib#<issue>-<id> <reason> -->` marker.
 - **`parked`** — leave the thread `disputed`. It blocks convergence, as an
   unsettled dispute should, and the end-of-session summary lists it.
 
 You remain the **sole git writer** throughout. The peer argues; you commit.
+
+### End of pass — one push, then resolve together
+
+Run this after every path that can produce a fix — steps 2–4 and any
+deliberation outcome — and immediately before Phase 2:
+
+```bash
+git push || exit 1      # once per pass; skip when the pass made no commit
+```
+
+then, for each noted thread, `add_reply <node-id> "<what changed>, fixed
+in <sha>"` → `resolve_thread <node-id>`. A push per fix costs a CI run each
+time and wakes the reviewer on a half-fixed head; replying before the push
+would cite a SHA the reviewer cannot see.
 
 ## Phase 2 — Converge or wait
 
