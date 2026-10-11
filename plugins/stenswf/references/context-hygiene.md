@@ -1,14 +1,11 @@
 # Context hygiene
 
 Practices for keeping orchestrator + subagent context lean across long
-lifecycle sessions. Sourced from
-[../research/perplexity_token_efficiency.md] and
-[../research/notebooklm_token_efficiency.md] (out-of-repo research
-bundle).
+lifecycle sessions.
 
 ## 1. Clear stale tool results between phases
 
-If your harness supports `clear_tool_uses_20250919`, fire it with
+If your harness supports `clear_tool_uses_20250919` or similar mechanisms, fire it with
 `keep: 3` between phases and between tasks inside `ship`'s Phase 1
 dispatch loop. This is the single highest-leverage context reduction
 (up to ~67% per event). If unsupported, note it once in the run's
@@ -19,8 +16,7 @@ first BLOCKER / exit report; do not retry per turn.
 - `git diff` / patches: `wc -l` first. If > ~500 lines, read ranged
   slices (`sed -n 'A,Bp'`) or split by path.
 - `gh issue view`: already scoped via `--json body`. Do not `view` twice;
-  persist to `/tmp/slice-$ARGUMENTS.md` and re-read. Comments via
-  `get_comments` (compact), never raw `--json comments`.
+  persist to `/tmp/slice-$ARGUMENTS.md` and re-read.
 - File reads for context: prefer `head`/`tail`/ranged reads over full file.
 
 ## 3. Pre-subtask compaction
