@@ -17,7 +17,7 @@ Phase 4 verifies it landed on disk.
 
 ## Context
 3–5 sentences: behavioral goal, modules touched, 1–3 materially-shaping
-conventions. Analogous symbol paths inline where useful.
+conventions, and why this is the best solution for the underlying problem, the architecture and the business rules, and its trade-off against the strongest plausible alternative ("as PRD #N" when slice planning changed nothing). Analogous symbol paths inline where useful.
 
 ## Tasks
 - **T1. <short imperative name>**

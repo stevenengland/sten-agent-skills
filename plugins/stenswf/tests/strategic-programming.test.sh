@@ -77,5 +77,22 @@ LOADERS=$(awk '/^---$/ { exit } { print }' "$WEIGHTING" | tr '\n' ' ')
 assert_match "the loader list names deliberate and deliberate-peer after triage-issue" \
   "$LOADERS" '`triage-issue`, `deliberate`, `deliberate-peer`,'
 
+# --- 2. The justification clause in the three planning templates ------------
+PRD_DECISIONS=$(section '## Implementation Decisions' "$ROOT/references/prd-template.md" '^## ')
+assert_eq "the PRD template's last Implementation Decisions item is the justification" \
+  "$(printf '%s\n' "$PRD_DECISIONS" | grep '^- ' | tail -1)" "- W${CLAUSE#w}"
+assert_eq "that section is followed by ## Change outline" \
+  "$(awk '/^## Implementation Decisions$/ { on = 1; next } on && /^## / { print; exit }' "$ROOT/references/prd-template.md")" \
+  "## Change outline"
+
+SUMMARY=$(section '## design-summary.md' "$ROOT/references/plan-artifact-schemas.md" '^## ')
+assert_eq "design-summary carries the clause on its 3–5 short sentences line" \
+  "$(printf '%s\n' "$SUMMARY" | grep -F '3–5 short sentences' | grep -cF "$CLAUSE")" "1"
+
+CONTEXT=$(section '## Context' "$ROOT/skills/plan-light/artifacts.md" '^## ' | tr '\n' ' ')
+assert_match "plan-light Context keeps its 3–5 sentences" "$CONTEXT" "3–5 sentences"
+assert_match "plan-light Context carries the clause" "$CONTEXT" "$CLAUSE"
+assert_match "plan-light Context allows deferring to the PRD" "$CONTEXT" '("as PRD #N" when slice planning changed nothing)'
+
 printf '\n1..%d\n# pass %d fail %d\n' "$((PASS + FAIL))" "$PASS" "$FAIL"
 [ "$FAIL" -eq 0 ]
