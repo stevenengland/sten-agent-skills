@@ -66,6 +66,17 @@ Dev-only. Not packaged for end users.
   in-place refresh with the saved body published, legacy migration, refusal
   on malformed markers, idempotence, coexistence with `## Decisions`), the
   `workflow-issue.sh` guard, and all show-me / visual-pr wiring.
+- [`strategic-programming.test.sh`](strategic-programming.test.sh) — presence
+  tests for the strategic-over-tactical rule
+  (`references/decision-weighting.md`): the verbatim question on one line, the
+  nine planning skills in order and no execution skill, the rejection phrase,
+  the reversibility proviso, the four tactical-exception elements, the
+  16-line cap, and the loader list. Plus the shared justification clause in
+  the PRD template, the design-summary schema and the plan-light Context.
+
+  **Not covered — by design:** it guards that the instructions are present,
+  not the quality of planning judgment. A green run says the planning skills
+  are told to ask the question, never that they answer it well.
 - [`fixtures/`](fixtures/) — hand-authored issue bodies exercising the
   front-matter parser (`references/extractors.md`) and the
   route-selection gates in `plan-light`, `ship-light`, `plan`,
@@ -81,6 +92,7 @@ bash plugins/stenswf/tests/hitl-escape-hatch.test.sh
 bash plugins/stenswf/tests/publish-decisions.test.sh
 bash plugins/stenswf/tests/show-me.test.sh
 bash plugins/stenswf/tests/visual-pr.test.sh
+bash plugins/stenswf/tests/strategic-programming.test.sh
 ```
 
 The GitHub-facing suites inject a fake `gh` on `PATH` rather than calling

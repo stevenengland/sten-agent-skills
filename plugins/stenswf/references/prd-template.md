@@ -36,6 +36,7 @@ Cover all aspects of the feature extensively.
 - Schema changes
 - API contracts
 - Specific interactions
+- Why this is the best solution for the underlying problem, the architecture and the business rules, and its trade-off against the strongest plausible alternative
 
 Do NOT include specific file paths or code snippets — they go stale fast.
 

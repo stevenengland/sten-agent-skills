@@ -127,7 +127,7 @@ If it says `None — slice-local decisions only.`, write that single line.
 
 ## design-summary.md
 
-3–5 short sentences: key components, interfaces, data/error flow.
+3–5 short sentences: key components, interfaces, data/error flow, and why this is the best solution for the underlying problem, the architecture and the business rules, and its trade-off against the strongest plausible alternative.
 
 ## acceptance-criteria.md
 

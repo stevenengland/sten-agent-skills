@@ -5,8 +5,9 @@ governs *which* option to pick, not *whether* a skill may pick alone — that
 second question belongs to [decision-escalation.md](decision-escalation.md).
 
 Loaded lazily by `architecture`, `plan`, `plan-light`, `grill-me`,
-`prd-from-grill-me`, `prd-to-issues`, `triage-issue`, `tdd`, `apply`,
-`clean-code`, and `slice-e2e` at their decision points.
+`prd-from-grill-me`, `prd-to-issues`, `triage-issue`, `deliberate`,
+`deliberate-peer`, `tdd`, `apply`, `clean-code`, and `slice-e2e` at
+their decision points.
 
 ---
 
@@ -25,6 +26,23 @@ development cost" is a mandate for the *right* design, not a licence for
 disproportionate over-engineering. The deepest, simplest design that serves
 the quality attributes wins — that is usually neither the cheapest-to-build
 nor the most elaborate.
+
+### Strategic over tactical
+
+Applies to the planning skills `architecture`, `grill-me`, `prd-from-grill-me`,
+`prd-to-issues`, `plan`, `plan-light`, `triage-issue`, `deliberate`, and
+`deliberate-peer`. Program strategically (Ousterhout, *A Philosophy of Software
+Design*): leave the design better for the next change, not only fix today's
+problem. Answer explicitly:
+
+**Is this the best solution to the problem from an architectural and business-logic point of view?**
+
+"No, but quicker" rejects the option. Strategic is not speculative: scale
+design effort to reversibility (Amazon's one-way vs. two-way doors). A tactical
+compromise fits business urgency (e.g. restoring service), never developer
+convenience: name it and its reason, get the user's acceptance per
+[decision-escalation.md](decision-escalation.md) (ASK; PARK when unattended),
+and link a follow-up issue, new or existing, for the strategic fix.
 
 ---
 
