@@ -17,7 +17,7 @@ Refs: `plugins/stenswf/skills/codebase-design/SKILL.md`,
 [TDD-as-lens](2026-04-26-tdd-as-lens.md):
 
 - **Trigger.** Slice review dispatches the deepening subagent whenever the
-  staged diff changes a file outside docs, data files and test paths
+  diff (staged, or `review-loop`'s commit range) changes a file outside docs, data files and test paths
   (`DEEPEN_HIT`). It looks for no declarations: when in doubt the subagent
   inspects, and the subagent decides what is a finding. The Architect gate is
   unchanged. PRD review has no trigger: Axis 3 runs the pass every time.
@@ -49,6 +49,20 @@ Refs: `plugins/stenswf/skills/codebase-design/SKILL.md`,
   across an upgrade still blocks `review-loop` from converging.
 - **Judgment checks.** `tests/review-scenarios/` holds six sample diffs with
   expected verdicts, run whenever the reviewer instructions change.
+
+## Consequences
+
+- **More review work.** A diff that touches production code costs a second
+  specialist dispatch, and the caller must dedup Architect, thermo and
+  deepening findings before it can count them.
+- **Later commits get no specialist pass.** `review-loop` runs thermo and
+  deepening only on its first pass. A structural or code-quality regression
+  introduced by a later fix-up commit is seen only by the five perspectives,
+  never by either specialist. This is accepted: later deltas are fix-ups, and
+  re-running both on every pass would multiply the cost of every loop.
+- **Judgment is checked by hand.** The bash suites check that the contract is
+  wired up; whether the reviewers judge well is known only from running
+  `tests/review-scenarios/`, which is not a pass/fail gate.
 
 ## Rejected alternatives
 
