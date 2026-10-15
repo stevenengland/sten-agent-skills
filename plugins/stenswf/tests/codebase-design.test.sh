@@ -113,7 +113,8 @@ assert_match "follow-up lines are capped at three" "$DST" "Then at most three fo
 assert_match "follow-up line format" "$DST" "follow-up: <module> — <friction> — /stenswf:improve-codebase-architecture <module>"
 assert_match "it never grills" "$DST" "grilling a candidate belongs to \`/stenswf:improve-codebase-architecture\`"
 assert_match "it owns module structure" "$DST" "The lens owns **module structure**"
-assert_match "each review dispatches it at most once" "$DST" "Each review dispatches it at most once"
+assert_match "each review dispatches it at most once" "$DST" "Each review dispatches it at most once."
+assert_nomatch "the first-pass rule is review-loop's alone" "$DST" "dispatches it only on its first pass"
 # Severity, confidence and diff attribution
 assert_match "diff attribution: introduced or worsened only, older friction a follow-up" "$DST" "Diff attribution: raise a finding only for a problem the diff introduced or materially worsened; list older friction as a follow-up line."
 assert_match "severity follows consequence" "$DST" "Severity follows demonstrated consequence"
@@ -152,8 +153,6 @@ assert_match "the slice pass runs on DEEPEN_HIT" "$DEEP" "*Only if \`DEEPEN_HIT\
 assert_match "the slice pass dispatches the shared contract" "$DEEP" "[../../references/deepening-subagent.md](../../references/deepening-subagent.md)"
 assert_match "the slice pass passes the staged diff" "$DEEP" "\`DIFF_PATH=/tmp/review-\$ARGUMENTS-staged.patch\`"
 assert_match "the slice pass runs in slice mode" "$DEEP" "\`<MODE>=slice\`"
-assert_match "the slice deepening pass runs once" "$DEEP" "Dispatch it at most once per review."
-assert_match "the slice thermo pass runs once" "$THS" "Dispatch it at most once per review."
 assert_match "the slice pass dedups across all three sources" "$DEEP" "dedup across Architect, thermo and deepening findings (higher severity wins)"
 assert_match "the slice pass folds survivors into the Summary counts" "$DEEP" "fold them into the \`Summary:\` counts"
 assert_match "the slice pass writes the verbatim skip line" "$DEEP" "\`Deepening: skipped (no production code in diff).\`"
@@ -171,7 +170,6 @@ assert_match "PRD Axis 3 has a deepening pass" "$AX3" "**Deepening subagent pass
 assert_match "PRD Axis 3 runs it on every review" "$AX3" "On every PRD review (no gate)"
 assert_match "PRD Axis 3 dispatches the shared contract" "$AX3" "[../../references/deepening-subagent.md](../../references/deepening-subagent.md)"
 assert_match "PRD Axis 3 passes the PRD diff in prd mode" "$AX3" "(the delta patch on idempotent re-review), \`<N>=\$ARGUMENTS\` and \`<MODE>=prd\`"
-assert_match "PRD Axis 3 deepening and thermo run once" "$AX3" "Dispatch each pass at most once per review."
 assert_match "PRD Axis 3 never emits critical" "$AX3" "Deepening contributes no \`critical\`."
 assert_match "PRD Step 5 emits deepening survivors as findings" "$PRT" "Deduped thermo and deepening survivors (from the Axis-3 passes)"
 assert_match "PRD Step 5 emits follow-ups as uncounted elements" "$PRT" "<follow-up module=\"<module>\">"
@@ -183,6 +181,8 @@ RLT=$(read_file "$RL")
 P1=$(section '## Phase 1 — Open deliberations first, then the delta pass' "$RL" '^## ')
 assert_match "review-loop: thermo and deepening run on the first pass only" "$P1" "**Thermo and deepening run on the first pass only.**"
 assert_match "review-loop: the first pass is the one starting at the PR base" "$P1" "the one whose delta starts at the PR base"
+assert_nomatch "the once rule lives only in the two references" "$SLT$PRT$P1" "at most once per review"
+assert_nomatch "review-loop does not restate the once rule" "$P1" "dispatched twice"
 assert_match "review-loop: later passes write the verbatim skip line" "$P1" "\`Thermo and deepening: skipped (run on the first pass only).\`"
 assert_match "review-loop still scopes passes to the delta" "$RLT" "Then review only \`<last-reviewed-sha>..\$HEAD_SHA\` (delta scope; the first"
 
@@ -207,7 +207,8 @@ assert_match "thermo keeps its code-level rules" "$TST" "**Do not allow random s
 assert_eq "thermo's description passes the one-sentence lint" "$(lint_ok plugins/stenswf/skills/thermo-nuclear-code-quality-review/SKILL.md)" "pass"
 assert_match "thermo contract: module structure belongs to deepening" "$TCT" "belongs to the deepening subagent ([deepening-subagent.md](deepening-subagent.md)), never to thermo."
 assert_match "thermo contract: the dispatch leaves module structure alone" "$TCT" "Leave module structure to the deepening pass; do not flag it."
-assert_match "thermo contract: dispatched at most once" "$TCT" "Each review dispatches it at most once"
+assert_match "thermo contract: dispatched at most once" "$TCT" "Each review dispatches it at most once."
+assert_nomatch "thermo contract: the first-pass rule is review-loop's alone" "$TCT" "dispatches it only on its first pass"
 assert_nomatch "thermo contract: no boundary-leak blocker" "$TCT" "boundary / canonical-layer leak"
 assert_nomatch "thermo contract: no wrong-layer blocker" "$TCT" "wrong-layer or duplicate-helper logic"
 

@@ -14,7 +14,7 @@ branching growth, types, duplicated helpers — belongs to the thermo pass
 ([thermo-subagent.md](thermo-subagent.md)). No correctness, security or
 critical-severity scope. It never interviews the user: grilling a candidate belongs to `/stenswf:improve-codebase-architecture`.
 
-Each review dispatches it at most once; `review-loop` dispatches it only on its first pass.
+Each review dispatches it at most once.
 
 ## Dispatch message template
 

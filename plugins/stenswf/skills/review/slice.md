@@ -182,7 +182,7 @@ After the five perspectives, dispatch a **read-only** thermo subagent on the
 staged diff per
 [../../references/thermo-subagent.md](../../references/thermo-subagent.md),
 with `DIFF_PATH=/tmp/review-$ARGUMENTS-staged.patch` and `<N>=$ARGUMENTS`.
-This pass is always-on and additive — it does not replace any perspective. Dispatch it at most once per review.
+This pass is always-on and additive — it does not replace any perspective.
 
 Parse the returned finding blocks and apply the merge/dedup rules from that
 reference: dedup against the five-perspective findings (most overlap is with
@@ -194,7 +194,7 @@ list below. Thermo `severity` maps 1:1 to `**Priority:**`. If
 
 *Only if `DEEPEN_HIT` is set.* After the thermo pass, dispatch a **read-only** deepening subagent on the staged diff per
 [../../references/deepening-subagent.md](../../references/deepening-subagent.md), with `DIFF_PATH=/tmp/review-$ARGUMENTS-staged.patch`, `<N>=$ARGUMENTS` and `<MODE>=slice`.
-Dispatch it at most once per review. It judges module structure and replaces no perspective.
+It judges module structure and replaces no perspective.
 
 Parse the returned blocks and apply that reference's merge/dedup rules:
 dedup across Architect, thermo and deepening findings (higher severity wins), carry survivors into the `## Suggestions` list below, and fold them into the `Summary:` counts.

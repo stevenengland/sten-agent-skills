@@ -10,7 +10,7 @@ The thermo skill is **code-quality only**: no correctness, security, or
 critical-severity scope. Those stay with the native review perspectives/axes.
 Module structure — whether an abstraction, wrapper or pass-through earns its keep, interface leaks, coupling between modules, which module owns logic — belongs to the deepening subagent ([deepening-subagent.md](deepening-subagent.md)), never to thermo.
 
-Each review dispatches it at most once; `review-loop` dispatches it only on its first pass.
+Each review dispatches it at most once.
 
 ## Dispatch message template
 

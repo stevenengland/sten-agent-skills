@@ -118,7 +118,6 @@ code-quality only — no `critical`.
 **Deepening subagent pass.** On every PRD review (no gate), dispatch a **read-only** deepening subagent on the delivered diff per
 [../../references/deepening-subagent.md](../../references/deepening-subagent.md), with `DIFF_PATH=/tmp/prd-$ARGUMENTS-diff.patch` (the delta patch on idempotent re-review), `<N>=$ARGUMENTS` and `<MODE>=prd`.
 Dedup its findings against this axis's native and thermo findings per that reference; survivors are emitted into this axis's `<finding>` list at Step 5 (continuing the `F`-number sequence) with the severity the subagent assigned. Deepening contributes no `critical`.
-Dispatch each pass at most once per review.
 
 ### Axis 4 — Test strategy
 
