@@ -176,6 +176,15 @@ assert_match "PRD Step 5 emits deepening survivors as findings" "$PRT" "Deduped 
 assert_match "PRD Step 5 emits follow-ups as uncounted elements" "$PRT" "<follow-up module=\"<module>\">"
 assert_match "the PRD finding schema is unchanged" "$PRT" "<finding id=\"F<n>\" severity=\"high|medium|low\">"
 
+# --- 5. review-loop runs thermo and deepening once -------------------------
+RL="$SKILLS/review-loop/SKILL.md"
+RLT=$(read_file "$RL")
+P1=$(section '## Phase 1 — Open deliberations first, then the delta pass' "$RL" '^## ')
+assert_match "review-loop: thermo and deepening run on the first pass only" "$P1" "**Thermo and deepening run on the first pass only.**"
+assert_match "review-loop: the first pass is the one starting at the PR base" "$P1" "the one whose delta starts at the PR base"
+assert_match "review-loop: later passes write the verbatim skip line" "$P1" "\`Thermo and deepening: skipped (run on the first pass only).\`"
+assert_match "review-loop still scopes passes to the delta" "$RLT" "Then review only \`<last-reviewed-sha>..\$HEAD_SHA\` (delta scope; the first"
+
 # --- footer (append new sections above this line) --------------------------
 printf '\n1..%d\n# pass %d fail %d\n' "$((PASS + FAIL))" "$PASS" "$FAIL"
 [ "$FAIL" -eq 0 ]

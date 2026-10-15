@@ -95,6 +95,8 @@ needs no checkout, so this stays read-only against the working tree.
 Cache `last_reviewed_sha` in `$STATE` — a cache, not the record: the PR is
 the authority, and this pass must be correct with `$STATE` deleted.
 
+**Thermo and deepening run on the first pass only.** The first pass — the one whose delta starts at the PR base, so it covers the whole PR — runs the engine sub-file's thermo and deepening subagent passes as written; neither is ever dispatched twice in one pass. Every later pass skips both and writes `Thermo and deepening: skipped (run on the first pass only).` in their place: later deltas are fix-ups, and the first pass already judged the PR's structure.
+
 Run the engine sub-file's critique over that delta. For each finding it
 produces:
 
