@@ -30,13 +30,6 @@
   status: tracked
   notes: ""
 
-- skill: plugins/stenswr/skills/improve-codebase-architecture
-  upstream: https://github.com/mattpocock/skills
-  ref: ""
-  last_reviewed: ""
-  status: tracked
-  notes: ""
-
 - skill: plugins/stenswr/skills/comprehension-to-taste
   upstream: ""
   ref: ""
@@ -113,6 +106,20 @@
   last_reviewed: "2026-10-08"
   status: diverged
   notes: "Ported near-verbatim (PRD #28), upstream file names kept. Adaptations: model-invocable with a one-line description; {SKILLBASE} -> relative paths; .humanlayer/tasks -> .stenswf/<N>/pr-description.md (fallback .stenswf/pr-<number>/description.md), complete published body always saved; scripts/workflow-issue.sh names the owning stenswf skill (ship, ship-light, apply) from branch identity only before creating PRs; Change outline may be one or two plain sentences when no view helps; scripts/pr-body.sh composes new bodies (evidence appended byte for byte), refreshes the marked region in place (bodies read as JSON via jq -j, so no newline drift) and conservatively migrates upstream-template bodies (CommonMark fences, closing keywords always kept); body-only mode with five explicit inputs and no gh calls for ship, ship-light and apply PRD-mode; template adds closing line, region markers and evidence slot; task-artifact fence and cloud permalink replaced by a local HTML aside at the path show-me computes (.stenswf/<N>/, else .stenswf/.show-me/)."
+
+- skill: plugins/stenswf/skills/codebase-design
+  upstream: https://github.com/mattpocock/skills/tree/main/skills/engineering/codebase-design
+  ref: "d80fa0f4ebe0c5714af0adf8670336065233ecc6"
+  last_reviewed: "2026-10-15"
+  status: diverged
+  notes: "Ported near-verbatim (PRD #37). Files: SKILL.md -> SKILL.md, DEEPENING.md -> deepening.md, DESIGN-IT-TWICE.md -> design-it-twice.md; agents/openai.yaml not ported. Adaptations: one-sentence description (repo description lint); lowercase kebab file names and links; design-it-twice briefs include the project's domain glossary (GLOSSARY.md, CONTEXT.md or UBIQUITOUS_LANGUAGE.md) only when one exists. Rule adaptations: new principles 'These are questions, not verdicts' (the deletion test and the adapter count are evidence; a single-adapter seam that keeps vendor types out of domain code, centralizes an invariant or isolates volatile infrastructure can earn its keep) and 'Name the invariants that must survive' (transaction boundaries, error behaviour, authorization, ordering); seam discipline names the same single-adapter exceptions; replace-don't-layer deletes old tests only once the interface tests cover the behaviours they checked."
+
+- skill: plugins/stenswf/skills/improve-codebase-architecture
+  upstream: https://github.com/mattpocock/skills/tree/main/skills/engineering/improve-codebase-architecture
+  ref: "d80fa0f4ebe0c5714af0adf8670336065233ecc6"
+  last_reviewed: "2026-10-15"
+  status: diverged
+  notes: "Ported near-verbatim (PRD #37); replaces the older stenswr port. Files: SKILL.md -> SKILL.md, HTML-REPORT.md -> html-report.md; agents/openai.yaml not ported. Adaptations: brevity header and Feedback section; 'Call the Skill tool with ...' -> load codebase-design / grill-me (upstream grilling -> grill-me); domain-modeling dropped: a glossary (GLOSSARY.md, CONTEXT.md or UBIQUITOUS_LANGUAGE.md) and docs/adr are honored only when present and never created unasked, ADR offers use the architecture skill's ADR fields; the walk runs as an Explore subagent with codebase-design loaded; the report is written via ../../scripts/ensure-stenswf-dir.sh .show-me as architecture-review-<UTC timestamp>.html and opened with ../../scripts/open-html.sh instead of the OS temp dir and open/xdg-open/start; Tailwind CDN pinned to 3.4.17 and Mermaid to 11.4.1; new step 4 hands the grilled brief to prd-from-grill-me as class: refactor; principles applied as questions, not verdicts, each candidate's Solution names the invariants it must keep, and ADRs may live in docs/adr/ or a docs/**/decisions/ directory."
 
 - skill: plugins/stenswf/skills/tdd
   upstream: https://github.com/mattpocock/skills

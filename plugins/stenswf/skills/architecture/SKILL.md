@@ -174,16 +174,7 @@ Decisions are constrained by live systems, team knowledge, and existing consumer
 
 **Module Deepening (Pocock Approach):** Converts shallow modules into deep modules by merging tightly-coupled small files into coherent units with thin public interfaces. Safe, incremental, no external behavior change.
 
-A **deep module** has a small interface hiding a large implementation. The opposite — shallow modules where the interface is nearly as complex as the implementation — creates a codebase that is hard to test, hard to navigate, and hard to reason about (Ousterhout, *A Philosophy of Software Design*).
-
-> *"What you really want to avoid are lots of little shallow modules... really hard to navigate and really hard to keep in your head."* — Matt Pocock
-
-Module deepening process:
-1. Explore organically — note where understanding one concept requires bouncing between many small files
-2. Identify clusters of tightly-coupled modules sharing types, call patterns, or co-ownership of a concept
-3. Classify dependencies (in-process, local-substitutable, remote-but-owned, true external)
-4. Design a radically simpler public interface for the merged module (use `/design-an-interface` skill)
-5. Replace shallow unit tests with boundary tests on the new interface; delete the old tests
+The vocabulary (module, interface, depth, seam, adapter, leverage, locality), the deletion test and the dependency categories live in [`codebase-design`](../codebase-design/SKILL.md); design the deepened module's interface with its [design-it-twice](../codebase-design/design-it-twice.md) pattern. To scan a codebase for candidates, run `/stenswf:improve-codebase-architecture`.
 
 ---
 

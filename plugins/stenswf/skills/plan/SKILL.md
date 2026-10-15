@@ -213,8 +213,9 @@ user. Lead with your recommendation; iterate.
 
 - [ ] Confirm with user what interface changes are needed.
 - [ ] Confirm with user which behaviors to test (prioritize).
-- [ ] Identify opportunities for [deep modules](../tdd/deep-modules.md)
+- [ ] Identify opportunities for [deep modules](../codebase-design/SKILL.md)
       (small interface, deep implementation).
+      Apply the deletion test and the adapter-count question from `codebase-design` to every module the plan adds or reshapes.
 - [ ] Design interfaces for [testability](../tdd/interface-design.md).
 - [ ] List the behaviors to test (not implementation steps).
 - [ ] When an interface or flow changes, show the smallest `show-me` view
@@ -334,7 +335,7 @@ artifact shape, not reasoning quality. Pause and step back:
   keys, schema fields) but not declared in `blocked_by`?
 - **Ponytail (subtractive lens).** Run the plan — not code — through
   [../../references/ponytail-pass.md](../../references/ponytail-pass.md).
-  This seam is interactive (available by default): safe leanings simplify the
+  This checkpoint is interactive (available by default): safe leanings simplify the
   plan in place, contentious ones become ASK interview points (PARK when
   unattended). The reference owns the ladder, the safe/contentious test,
   and the never-override precedence rule.

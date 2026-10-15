@@ -1,0 +1,11 @@
+diff --git a/src/config/settings.ts b/src/config/settings.ts
+index 4de6c37..196e6b4 100644
+--- a/src/config/settings.ts
++++ b/src/config/settings.ts
+@@ -5,5 +5,5 @@ export function getRedisUrl(): string | undefined { return env.REDIS_URL }
+ export function getLogLevel(): string | undefined { return env.LOG_LEVEL }
+ export function getPort(): string | undefined { return env.PORT }
+ export function getSentryDsn(): string | undefined { return env.SENTRY_DSN }
+-// Retruns the region the service runs in.
++// Returns the region the service runs in.
+ export function getRegion(): string | undefined { return env.REGION }

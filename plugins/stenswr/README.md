@@ -19,7 +19,7 @@ below, or propose a new axis.
 | Phase | Skill | Lossy? | Purpose |
 |---|---|---|---|
 | 0 — Understand | `comprehension-to-taste` | n/a | Capture repo "taste" — conventions, invariants, design decisions — before touching anything |
-| 1 — Discover | `improve-codebase-architecture` | n/a | Find structural refactor opportunities (deep modules, testability) |
+| 1 — Discover | `/stenswf:improve-codebase-architecture` *(stenswf)* | n/a | Find structural refactor opportunities (deep modules, testability) |
 | 1 — Discover | `functional-bug-hunting` *(placeholder)* | n/a | Find behavioural bugs worth fixing during the refactor |
 | 1 — Discover | `security-bug-hunting` *(placeholder)* | n/a | Find security defects worth fixing during the refactor |
 | 2 — Critique | `plan-reviewer` | n/a | Multi-perspective critique of a refactor plan |
@@ -44,7 +44,6 @@ below, or propose a new axis.
 | Skill | Purpose |
 |---|---|
 | `/stenswr:comprehension-to-taste` | Three-quiz interview producing a layered `TASTE.md` for downstream skills |
-| `/stenswr:improve-codebase-architecture` | Explore for module-deepening refactor opportunities; propose issue RFCs |
 | `/stenswr:plan-reviewer` | Multi-perspective plan critique; rewrites the plan in place and implements it |
 | `/stenswr:test-file-compaction` | Lossless test-file compaction |
 | `/stenswr:functional-bug-hunting` | **Placeholder** — behavioural bug hunting |
@@ -75,7 +74,6 @@ STEN-AGENT-SKILLS/                       ← Repo root
 │       ├── .claude-plugin/plugin.json   ← Mirror for Claude Code
 │       ├── skills/
 │       │   ├── comprehension-to-taste/
-│       │   ├── improve-codebase-architecture/
 │       │   ├── plan-reviewer/
 │       │   ├── test-file-compaction/
 │       │   ├── functional-bug-hunting/  ← placeholder
@@ -98,7 +96,6 @@ the plugin:
 
 ```
 Plugin name:   stenswr
-Skill folder:  improve-codebase-architecture  →  /stenswr:improve-codebase-architecture
 Skill folder:  plan-reviewer                  →  /stenswr:plan-reviewer
 Skill folder:  test-file-compaction           →  /stenswr:test-file-compaction
 ...
@@ -129,9 +126,9 @@ copilot plugin install stenswr@sten-agent-skills-marketplace
 
 ```bash
 copilot plugin list
-# → stenswr  0.1.0
+# → stenswr  0.2.0
 
-/stenswr:improve-codebase-architecture
+/stenswr:plan-reviewer
 ```
 
 ---
@@ -167,4 +164,4 @@ Claude Code discovers and loads it automatically. Reload if already running:
 ## Relationship to sibling plugins
 
 - [`stenswf`](../stenswf/) — **Execution workflow.** Plan → ship → review → apply. Uses the skills in `stenswr` as external helpers (invoke `/stenswr:plan-reviewer` on a plan; invoke `/stenswr:test-file-compaction` when test files have drifted). `stenswf` does not implicitly invoke any `stenswr` skill.
-- [`python-refactor`](../python-refactor/) — **Python-specific, tool-driven.** Runs radon / vulture / bandit / semgrep / skylos / grimp and produces a metrics bundle. Complementary to `stenswr`: run `python-refactor:measure` for quantitative signals, then `stenswr:improve-codebase-architecture` for design-level recommendations.
+- [`python-refactor`](../python-refactor/) — **Python-specific, tool-driven.** Runs radon / vulture / bandit / semgrep / skylos / grimp and produces a metrics bundle. Complementary to `stenswr`: run `python-refactor:measure` for quantitative signals, then `/stenswf:improve-codebase-architecture` for design-level recommendations.

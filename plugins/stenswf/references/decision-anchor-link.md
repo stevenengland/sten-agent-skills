@@ -45,10 +45,10 @@ ASK-resolved and parked forks come from
 [decision-escalation.md](decision-escalation.md); HITL escape-hatch resolutions
 from [hitl-escape-hatch.md](hitl-escape-hatch.md); peer-deliberated agreements
 from [deliberation-loop.md](deliberation-loop.md). Provenance stays with the
-host seam — there is no `decision-escalation`, `hitl-escape-hatch`, or
+host skill — there is no `decision-escalation`, `hitl-escape-hatch`, or
 `deliberate` source. A deliberated entry is marked instead by a
 `delib#<issue>-<id>` token in `Refs:`, which points at the transcript without
-spending `Source:` on the mechanism rather than the seam.
+spending `Source:` on the mechanism rather than the host skill.
 
 ## Parked decisions
 

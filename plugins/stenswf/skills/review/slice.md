@@ -69,7 +69,7 @@ synthesized conventions.
 
 Inputs (read ranged, not full):
 
-- Staged diff: `git diff --staged > /tmp/review-$ARGUMENTS-staged.patch`.
+- Diff (staged, or `DIFF_RANGE` when `review-loop` sets it): `git diff ${DIFF_RANGE:---staged} > /tmp/review-$ARGUMENTS-staged.patch`.
 - Issue body: `/tmp/slice-$ARGUMENTS.md`.
 - `$CONV_FILE` (real or synthesized).
 - `.stenswf/$ARGUMENTS/acceptance-criteria.md` if present.
@@ -107,6 +107,18 @@ else
   ARCH_GATE=off
 fi
 echo "Architect gate: $ARCH_GATE"
+```
+
+### Deepening trigger (rule-based)
+
+Runs the deepening subagent (below) when the diff — staged, or the `DIFF_RANGE` commit range `review-loop` sets — changes any file outside docs, data files and test paths.
+
+```bash
+DEEPEN_HIT=$(git diff --name-only ${DIFF_RANGE:---staged} | awk '
+  /\.(md|markdown|json|yaml|yml|toml|lock|txt)$/ { next }
+  /(^|\/)(tests?|spec|__tests__)\// || /(^|\/)test_[^\/]*$/ || /(_test|\.test|\.spec)\.[^\/]+$/ { next }
+  { print; exit }')
+echo "Deepening trigger: $([ -n "$DEEPEN_HIT" ] && echo on || echo off)"
 ```
 
 ### Five perspectives (axis-by-axis; do not collapse)
@@ -149,6 +161,7 @@ padding.
 
 **Perspective 4 — Software Architect.** *Only if `ARCH_GATE=on`.*
 Structural fit, coupling, abstraction level, doc updates required.
+Module-structure judgments — shallow modules, single-adapter seams, leaks across an interface — come from the deepening subagent pass below.
 
 If `ARCH_GATE=off`: one line — `Architect: skipped (diff below structural threshold).`
 
@@ -177,6 +190,19 @@ Perspective 4 — Architect), then carry survivors into the `## Suggestions`
 list below. Thermo `severity` maps 1:1 to `**Priority:**`. If
 `THERMO_SUMMARY` is all-zero, add nothing and say so.
 
+### Deepening subagent pass (codebase-design lens)
+
+*Only if `DEEPEN_HIT` is set.* After the thermo pass, dispatch a **read-only** deepening subagent on the staged diff per
+[../../references/deepening-subagent.md](../../references/deepening-subagent.md), with `DIFF_PATH=/tmp/review-$ARGUMENTS-staged.patch`, `<N>=$ARGUMENTS` and `<MODE>=slice`.
+It judges module structure and replaces no perspective.
+
+Parse the returned blocks and apply that reference's merge/dedup rules:
+dedup across Architect, thermo and deepening findings (higher severity wins), carry survivors into the `## Suggestions` list below, and fold them into the `Summary:` counts.
+Deepening `severity` carries over to `**Priority:**` unchanged. If `DEEPENING_SUMMARY` is all-zero, add no findings and say so.
+List any `follow-up:` lines under `## Follow-ups (not counted)` in the output, never as suggestions.
+
+If `DEEPEN_HIT` is empty: one line — `Deepening: skipped (no production code in diff).`
+
 ### Severity guide
 
 - **Critical** — data loss, security breach, or crash on happy path.
@@ -184,7 +210,7 @@ list below. Thermo `severity` maps 1:1 to `**Priority:**`. If
 - **Medium** — maintainability, clarity, coverage gap with real cost.
 - **Low** — nit, style.
 
-Thermo findings are code-quality only (no Critical); they enter as ordinary
+Thermo and deepening findings are maintainability only (no Critical); they enter as ordinary
 suggestions at their mapped Priority.
 
 ## Slice-mode Output
@@ -213,6 +239,10 @@ Write to `.stenswf/$ARGUMENTS/review/slice.md`:
    **Priority:** high
 
 Summary: N high | M medium | K low
+
+## Follow-ups (not counted)
+<!-- omit when the deepening pass returned no follow-up lines -->
+- follow-up: <module> — <friction> — /stenswf:improve-codebase-architecture <module>
 
 <!-- reviewed-at: <HEAD-SHA> diff-sha256: <staged-diff-sha256> -->
 ```

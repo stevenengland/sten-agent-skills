@@ -49,7 +49,7 @@ interface in your own working memory — do NOT ask the user, do NOT
 write a planning document. This is a thinking step, not a ceremony.
 
 Apply [interface-design.md](interface-design.md) and
-[deep-modules.md](deep-modules.md):
+[codebase-design](../codebase-design/SKILL.md):
 
 - Function/method signature: inputs as parameters (accept dependencies,
   don't construct them), output as return value (return results, don't

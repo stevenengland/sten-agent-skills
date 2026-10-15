@@ -252,7 +252,7 @@ return is a valid cycle, not an error.
 
 ## GraphQL / gh snippets
 
-The `gh` CLI is the host seam (swap it for `glab`/`gitea` adapters).
+The `gh` CLI is the seam (swap it for `glab`/`gitea` adapters).
 The snippets below are what `pr-threads.sh` wraps.
 
 **List threads** — `list_threads <pr>` (all), `list_open_threads <pr>`

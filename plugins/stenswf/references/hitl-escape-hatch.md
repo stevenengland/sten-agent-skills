@@ -102,7 +102,7 @@ Only after every entry is resolved. All of the following go up in a **single**
 Then append one `decision` anchor per call to `.stenswf/$ARGUMENTS/decisions.md`
 (chosen **and** rejected) per [decision-anchor-link.md](decision-anchor-link.md),
 category `arch` for genuinely architectural calls. `Source:` is the host skill —
-provenance stays with the seam. Log `user_override` with the attestation.
+provenance stays with the host skill. Log `user_override` with the attestation.
 
 Leave `type`, `lite_eligible`, and `disqualifier` **unrewritten**: they are
 durable provenance, and a later heavy re-route must still see that this slice

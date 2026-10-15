@@ -8,6 +8,9 @@ output — never a separate artifact.
 
 The thermo skill is **code-quality only**: no correctness, security, or
 critical-severity scope. Those stay with the native review perspectives/axes.
+Module structure — whether an abstraction, wrapper or pass-through earns its keep, interface leaks, coupling between modules, which module owns logic — belongs to the deepening subagent ([deepening-subagent.md](deepening-subagent.md)), never to thermo.
+
+Each review dispatches it at most once.
 
 ## Dispatch message template
 
@@ -22,6 +25,7 @@ run state-modifying git/gh. Review ONLY the diff at <DIFF_PATH>; read ranged
 hunks and ranged file context — never cat whole files needlessly.
 
 Apply the thermo-nuclear-code-quality-review skill at full strength.
+Leave module structure to the deepening pass; do not flag it.
 
 Return findings as a flat list, highest-conviction first. Each finding is a
 four-line block, nothing else between blocks:
@@ -34,9 +38,8 @@ four-line block, nothing else between blocks:
 Severity rule:
 - high   — presumptive blockers: a file crosses 1000 lines due to this diff;
            spaghetti branch growth bolted onto unrelated flows; a clear
-           missed code-judo simplification; boundary / canonical-layer leak;
-           unnecessary abstraction / wrapper / cast / optionality churn that
-           obscures the contract; wrong-layer or duplicate-helper logic.
+           missed code-judo simplification; cast / optionality churn that
+           obscures the contract; duplicate-helper logic.
 - medium — other real maintainability cost.
 - low    — minor (use sparingly; prefer omitting nits).
 

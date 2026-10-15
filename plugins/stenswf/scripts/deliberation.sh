@@ -193,16 +193,18 @@ delib_wait() {
 }
 
 # Deliberations for one issue that have not ended, one path per line. With
-# a host seam, only those whose tension names it — so `review-loop` never
-# answers a deliberation that was opened for some other peer.
-#   delib_open_for_issue <issue> [host-seam]
+# a host skill, only those whose tension names it — so `review-loop` never
+# answers a deliberation that was opened for some other peer. The label it
+# had before the rename is still read, so a deliberation open across an
+# upgrade keeps blocking convergence; nothing writes it any more.
+#   delib_open_for_issue <issue> [host-skill]
 delib_open_for_issue() {
   local d
   for d in ".stenswf/$1/deliberations"/*; do
     [ -d "$d" ] || continue
     case "$(delib_status "$d")" in none|ended*) continue ;; esac
     if [ -n "${2:-}" ]; then
-      grep -Eq "^- \*\*Host seam:\*\*[[:space:]]*\`?$2\`?[[:space:]]*\$" "$d/00-A-tension.md" || continue
+      grep -Eq "^- \*\*Host (skill|seam):\*\*[[:space:]]*\`?$2\`?[[:space:]]*\$" "$d/00-A-tension.md" || continue
     fi
     printf '%s\n' "$d"
   done

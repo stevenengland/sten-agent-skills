@@ -241,6 +241,7 @@ your harness (or manually invoke) accordingly.
 | `/stenswf:slice-e2e` | Any (cheapest orchestrator OK) | Thin facade; dispatches subagents; zero judgment calls |
 | `/stenswf:review` | Opus | Capstone synthesis; 5-axis architectural critique |
 | `/stenswf:apply` | Sonnet | Execution against a structured findings list |
+| `/stenswf:improve-codebase-architecture` | Opus | Hot-spot exploration, deletion-test judgment and before/after design synthesis |
 
 Craft skills (`tdd`, `clean-code`, `lint-escape`, etc.) run in whatever
 parent session invokes them — no separate routing.
@@ -253,6 +254,7 @@ parent session invokes them — no separate routing.
 | `/stenswf:tdd` | Red-green-refactor; integration-style tests |
 | `/stenswf:lint-escape` | Tiered protocol for unresolvable lint/type errors |
 | `/stenswf:architecture` | Architectural decision guidance |
+| `/stenswf:codebase-design` | Deep-module vocabulary (module, interface, depth, seam, adapter, leverage, locality), deletion test, design-it-twice |
 | `/stenswf:show-me` | Views (trees, pseudocode, Mermaid, focused HTML asides) where they clarify a decision |
 | `/stenswf:visual-pr` | PR description: why, special things to note, change outline |
 | `/stenswf:deliberate` | Work a blocking tension out with a peer agent (agent A) |
@@ -302,10 +304,39 @@ invariant — at
 
 ---
 
+## Deepening lens
+
+`codebase-design` runs as a *lens* the way `tdd` does: detection is the
+trigger, loading the skill is the lens, and whether a finding is raised
+follows from its demonstrated consequence.
+
+- **Trigger.** Slice review runs a read-only deepening subagent whenever the
+  diff (staged, or review-loop's commit range) changes production code (`DEEPEN_HIT`: any file outside docs,
+  data files and test paths). PRD review runs it in Axis 3 every time. Each
+  review dispatches it once; `review-loop` only on its first pass.
+- **Ownership.** Deepening owns module structure — abstractions earning their
+  keep, interface leaks, coupling, where logic lives. Thermo keeps code-level
+  quality and hands module structure over.
+- **Findings.** Thermo's four-line shape, merged into the existing review
+  schemas. Severity follows consequence, never critical; only problems the
+  diff introduced or worsened are findings. Older friction becomes an
+  uncounted follow-up pointing to `/stenswf:improve-codebase-architecture`.
+- **Design time.** `plan`, `plan-light`, `tdd` and `prd-from-grill-me` link
+  the same skill, so modules are judged in one vocabulary before and after
+  code exists. Review never grills; the standalone skill does.
+- **Judgment checks.** [tests/review-scenarios/](tests/review-scenarios/README.md)
+  holds sample diffs with expected verdicts, run whenever the reviewer
+  instructions change.
+
+Contract: [references/deepening-subagent.md](references/deepening-subagent.md).
+Rationale: [docs/stenswf/decisions/2026-10-14-deepening-lens.md](../../docs/stenswf/decisions/2026-10-14-deepening-lens.md).
+
+---
+
 ## Subtractive pass (ponytail-lens)
 
 A subtractive (YAGNI / laziest-that-works) lens runs as a self-review
-pass on seams stenswf already has — it **adds to** `clean-code` and
+pass at checkpoints stenswf already has — it **adds to** `clean-code` and
 `tdd`, never overrides them. `plan` / `plan-light` apply it to the plan
 (cut speculative tasks before code exists); `ship` Phase 2 and
 `ship-light` Phase 3 apply it to the diff after green; `apply` carries
@@ -383,11 +414,13 @@ STEN-AGENT-SKILLS/                       ← Repo root
 │       │   ├── prd-from-grill-me/
 │       │   ├── prd-to-issues/
 │       │   ├── triage-issue/
+│       │   ├── improve-codebase-architecture/
 │       │   ├── bootstrap/
 │       │   ├── clean-code/
 │       │   ├── tdd/
 │       │   ├── lint-escape/
 │       │   ├── architecture/
+│       │   ├── codebase-design/
 │       │   ├── show-me/
 │       │   ├── visual-pr/
 │       │   └── brevity/
@@ -891,7 +924,7 @@ machine — invisible to CI, to a second clone, and to everyone else.
 | `apply` slice-mode | both, refreshed | Phase 3, after supersessions land |
 | `apply-loop` | both, refreshed | End-of-session, both converged and cap paths |
 | `apply` PRD-mode | committed excerpt (`--excerpt`) | Phase 3 |
-| `deliberate` | host seam's surfaces, refreshed | after the contradiction gate clears |
+| `deliberate` | host skill's surfaces, refreshed | after the contradiction gate clears |
 | `review`, `review-loop`, `deliberate-peer` | none | peers and reviewers never write or publish anchors |
 
 Every skill that commits also records the trailers (`ship`, `ship-light`,
@@ -979,7 +1012,7 @@ human is reachable ([decision-escalation.md](references/decision-escalation.md))
 `deliberate-peer` (agent **B**, in a separate harness) argue over numbered move
 files in `.stenswf/<issue>/deliberations/<id>/` until B accepts a complete
 proposal. It ends `agreed` — recorded as an ordinary anchor, `Source:` the host
-seam, `delib#<issue>-<id>` in `Refs:` — or `escalated` / `parked` / `cancelled`,
+skill, `delib#<issue>-<id>` in `Refs:` — or `escalated` / `parked` / `cancelled`,
 which fall back to the existing ASK / PARK. Contradicting a decision already on
 record still needs a human.
 

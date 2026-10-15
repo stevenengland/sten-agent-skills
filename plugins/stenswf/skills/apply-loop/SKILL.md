@@ -180,7 +180,7 @@ delib_pr_peer_ready "$ISSUE" || <the existing ASK / PARK — no deliberation>
 ```
 
 When it passes, run [../deliberate/SKILL.md](../deliberate/SKILL.md) as agent
-**A**, with `apply-loop` as the tension's host seam and the thread's node id in
+**A**, with `apply-loop` as the tension's host skill and the thread's node id in
 `## Evidence`. Right after `delib_new`, wake the reviewer — it waits on the PR,
 which is quiet while you argue:
 
