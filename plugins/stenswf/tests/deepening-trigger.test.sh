@@ -4,7 +4,8 @@
 # The trigger is a bash block inside the skill, so this test extracts the
 # block and executes it against fixture changes in throwaway repos — staged,
 # or committed and named by DIFF_RANGE as review-loop does — instead of
-# restating the predicate (see tests/README.md). DEEPEN_HIT is on
+# restating the predicate (see tests/README.md). It runs Step 1's patch
+# command the same way, so the subagents' input follows DIFF_RANGE too. DEEPEN_HIT is on
 # when any changed file lies outside documentation and data files (*.md,
 # *.markdown, *.json, *.yaml, *.yml, *.toml, *.lock, *.txt) and test paths.
 # It deliberately does not look for declarations: uncertainty means the
@@ -23,6 +24,8 @@ fail() { printf 'not ok - %s\n' "$1"; FAIL=$((FAIL + 1)); }
 ok()   { printf 'ok - %s\n'     "$1"; PASS=$((PASS + 1)); }
 assert_eq() { [ "$2" = "$3" ] && ok "$1" || { fail "$1"; printf '    expected: %s\n    actual:   %s\n' "$3" "$2"; }; }
 
+# Step 1's patch command — the diff the thermo and deepening subagents read.
+PATCH_CMD=$(grep -oE '`git diff [^`]*> /tmp/review-\$ARGUMENTS-staged\.patch`' "$SLICE" | head -1 | tr -d '`')
 # The fenced bash block under "### Deepening trigger (rule-based)".
 TRIGGER=$(awk '
   $0 == "### Deepening trigger (rule-based)" { s = 1; next }
@@ -56,10 +59,16 @@ new_repo() {
 # Run the extracted trigger in $R and print on|off.
 trigger() { (cd "$R" && bash -c "$TRIGGER") 2>/dev/null | sed -n 's/^Deepening trigger: //p'; }
 stage() { git -C "$R" add -A; }
-# review-loop reads fetched commits, never the index: commit, then run the
-# trigger on that commit range with an empty index.
-trigger_range() { git -C "$R" add -A; git -C "$R" commit -qm change
-  (cd "$R" && DIFF_RANGE=HEAD~1..HEAD bash -c "$TRIGGER") 2>/dev/null | sed -n 's/^Deepening trigger: //p'; }
+# review-loop reads fetched commits without checking them out: commit the
+# change, return the checkout to the base, and name the range in DIFF_RANGE.
+# The index is empty and the working tree is at the base, as in review-loop.
+commit_range() {
+  git -C "$R" add -A; git -C "$R" commit -qm change
+  RANGE="$(git -C "$R" rev-parse HEAD~1)..$(git -C "$R" rev-parse HEAD)"
+  git -C "$R" checkout -q HEAD~1
+}
+trigger_range() { commit_range
+  (cd "$R" && DIFF_RANGE="$RANGE" bash -c "$TRIGGER") 2>/dev/null | sed -n 's/^Deepening trigger: //p'; }
 
 # --- 1. Production code turns the trigger on --------------------------------
 new_repo indented-method
@@ -97,6 +106,19 @@ assert_eq "a committed source change in DIFF_RANGE turns the trigger on" "$(trig
 new_repo committed-docs
 printf '## More\n' >> "$R/docs/guide.md"
 assert_eq "a committed docs-only change in DIFF_RANGE keeps the trigger off" "$(trigger_range)" "off"
+
+# The subagents' patch must come from the same range, or the trigger says on
+# while the one dispatch review-loop allows reads an empty diff.
+assert_eq "Step 1's patch command is extractable" "$([ -n "$PATCH_CMD" ] && echo yes || echo no)" "yes"
+new_repo committed-patch
+printf 'export function existing() {\n  return 4\n}\n' > "$R/src/core.ts"
+commit_range
+ARGUMENTS="dt-$$"
+(cd "$R" && ARGUMENTS="$ARGUMENTS" DIFF_RANGE="$RANGE" bash -c "$PATCH_CMD") 2>/dev/null
+PATCH="/tmp/review-$ARGUMENTS-staged.patch"
+assert_eq "the patch for a committed range carries the change" \
+  "$(grep -c '^+  return 4$' "$PATCH" 2>/dev/null)" "1"
+rm -f "$PATCH"
 
 printf '\n1..%d\n# pass %d fail %d\n' "$((PASS + FAIL))" "$PASS" "$FAIL"
 [ "$FAIL" -eq 0 ]
