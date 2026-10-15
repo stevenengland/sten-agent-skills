@@ -2,8 +2,9 @@
 # Behavior tests for the deepening trigger in skills/review/slice.md.
 #
 # The trigger is a bash block inside the skill, so this test extracts the
-# block and executes it against staged fixture changes in throwaway repos
-# instead of restating the predicate (see tests/README.md). DEEPEN_HIT is on
+# block and executes it against fixture changes in throwaway repos — staged,
+# or committed and named by DIFF_RANGE as review-loop does — instead of
+# restating the predicate (see tests/README.md). DEEPEN_HIT is on
 # when any changed file lies outside documentation and data files (*.md,
 # *.markdown, *.json, *.yaml, *.yml, *.toml, *.lock, *.txt) and test paths.
 # It deliberately does not look for declarations: uncertainty means the
@@ -55,6 +56,10 @@ new_repo() {
 # Run the extracted trigger in $R and print on|off.
 trigger() { (cd "$R" && bash -c "$TRIGGER") 2>/dev/null | sed -n 's/^Deepening trigger: //p'; }
 stage() { git -C "$R" add -A; }
+# review-loop reads fetched commits, never the index: commit, then run the
+# trigger on that commit range with an empty index.
+trigger_range() { git -C "$R" add -A; git -C "$R" commit -qm change
+  (cd "$R" && DIFF_RANGE=HEAD~1..HEAD bash -c "$TRIGGER") 2>/dev/null | sed -n 's/^Deepening trigger: //p'; }
 
 # --- 1. Production code turns the trigger on --------------------------------
 new_repo indented-method
@@ -83,6 +88,15 @@ new_repo data-only
 printf '{"name": "x"}\n' > "$R/package.json"
 printf '# lock 2\n' > "$R/yarn.lock"; stage
 assert_eq "a lockfile and JSON-only change keeps the trigger off" "$(trigger)" "off"
+
+# --- 3. review-loop: a committed range with an empty index -----------------
+new_repo committed-source
+printf 'export function existing() {\n  return 3\n}\n' > "$R/src/core.ts"
+assert_eq "a committed source change in DIFF_RANGE turns the trigger on" "$(trigger_range)" "on"
+
+new_repo committed-docs
+printf '## More\n' >> "$R/docs/guide.md"
+assert_eq "a committed docs-only change in DIFF_RANGE keeps the trigger off" "$(trigger_range)" "off"
 
 printf '\n1..%d\n# pass %d fail %d\n' "$((PASS + FAIL))" "$PASS" "$FAIL"
 [ "$FAIL" -eq 0 ]

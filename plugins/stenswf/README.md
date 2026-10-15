@@ -311,7 +311,7 @@ trigger, loading the skill is the lens, and whether a finding is raised
 follows from its demonstrated consequence.
 
 - **Trigger.** Slice review runs a read-only deepening subagent whenever the
-  staged diff changes production code (`DEEPEN_HIT`: any file outside docs,
+  diff (staged, or review-loop's commit range) changes production code (`DEEPEN_HIT`: any file outside docs,
   data files and test paths). PRD review runs it in Axis 3 every time. Each
   review dispatches it once; `review-loop` only on its first pass.
 - **Ownership.** Deepening owns module structure — abstractions earning their
