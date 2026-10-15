@@ -98,7 +98,7 @@ assert_nomatch "sub-pages link lowercase file names (design-it-twice)" "$DPT$DTT
 DS="$REFS/deepening-subagent.md"
 DST=$(read_file "$DS")
 assert_file "references/deepening-subagent.md exists" "$DS"
-# AC4: dispatch contract and output format
+# Dispatch contract and output format
 assert_match "it loads codebase-design" "$DST" "SKILLS TO LOAD: codebase-design, brevity"
 assert_match "it takes the issue number and mode" "$DST" "Read-only deepening review for issue #<N> (<MODE> mode)."
 assert_match "it is read-only" "$DST" "You MUST NOT edit any"
@@ -114,7 +114,7 @@ assert_match "follow-up line format" "$DST" "follow-up: <module> — <friction> 
 assert_match "it never grills" "$DST" "grilling a candidate belongs to \`/stenswf:improve-codebase-architecture\`"
 assert_match "it owns module structure" "$DST" "The lens owns **module structure**"
 assert_match "each review dispatches it at most once" "$DST" "Each review dispatches it at most once"
-# AC5: severity, confidence and diff attribution
+# Severity, confidence and diff attribution
 assert_match "diff attribution: introduced or worsened only" "$DST" "Diff attribution: raise a finding only for a problem the diff introduced or materially worsened."
 assert_match "older friction is never a finding" "$DST" "is never a finding; list it as a follow-up line instead."
 assert_match "severity follows consequence" "$DST" "Severity follows demonstrated consequence"
@@ -129,7 +129,7 @@ assert_match "findings need file:line evidence" "$DST" "every finding needs file
 assert_match "no speculative redesigns" "$DST" "Never emit a speculative redesign"
 assert_match "recommendations name invariants" "$DST" "names the invariants it must keep"
 assert_nomatch "upstream strength is not mapped to severity" "$DST" "Worth exploring ->"
-# AC6: decision context
+# Decision context
 assert_match "every active decision entry, any category" "$DST" "every active entry in .stenswf/<N>/decisions.md, of any category"
 assert_match "inherited entries resolve through Source" "$DST" "Source #<P>/D<n> means entry D<n> in .stenswf/<P>/decisions.md"
 assert_match "archived slice decisions in PRD mode" "$DST" "in prd mode, archived slice decisions in .stenswf/.archive/<slice>/decisions.md"
