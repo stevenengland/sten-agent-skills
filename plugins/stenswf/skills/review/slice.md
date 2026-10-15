@@ -69,7 +69,7 @@ synthesized conventions.
 
 Inputs (read ranged, not full):
 
-- Staged diff: `git diff --staged > /tmp/review-$ARGUMENTS-staged.patch`.
+- Diff (staged, or `DIFF_RANGE` when `review-loop` sets it): `git diff ${DIFF_RANGE:---staged} > /tmp/review-$ARGUMENTS-staged.patch`.
 - Issue body: `/tmp/slice-$ARGUMENTS.md`.
 - `$CONV_FILE` (real or synthesized).
 - `.stenswf/$ARGUMENTS/acceptance-criteria.md` if present.

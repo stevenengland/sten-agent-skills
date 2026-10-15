@@ -184,6 +184,8 @@ assert_match "review-loop: the first pass is the one starting at the PR base" "$
 assert_nomatch "the once rule lives only in the two references" "$SLT$PRT$P1" "at most once per review"
 assert_nomatch "review-loop does not restate the once rule" "$P1" "dispatched twice"
 assert_match "review-loop: later passes write the verbatim skip line" "$P1" "\`Thermo and deepening: skipped (run on the first pass only).\`"
+assert_match "slice inputs read DIFF_RANGE, else the staged diff" "$SLT" "\`git diff \${DIFF_RANGE:---staged} > /tmp/review-\$ARGUMENTS-staged.patch\`"
+assert_match "review-loop: DIFF_RANGE drives the slice inputs" "$P1" "so the engine's diff inputs — its patch and its deepening trigger — read that range"
 assert_match "review-loop still scopes passes to the delta" "$RLT" "Then review only \`<last-reviewed-sha>..\$HEAD_SHA\` (delta scope; the first"
 
 # --- 6. Thermo hands module structure to deepening -------------------------
