@@ -297,7 +297,7 @@ Then **A appends a decision anchor before resuming — always.** A wall two agen
 argued to an agreement is by definition something a `git blame` reader would
 ask about.
 
-- `Source:` is the **host seam**, never `deliberate`, per
+- `Source:` is the **host skill**, never `deliberate`, per
   [decision-anchor-link.md](decision-anchor-link.md).
 - `Refs:` carries `delib#<issue>-<id>` alongside the file paths.
 
@@ -344,8 +344,8 @@ approval. Hence:
   replies on the thread with a `<!-- stenswf-delib: <id> -->` marker. That wakes
   `wait_for_change` and leaves the deliberation visible on the PR. It is a
   signal, not transport — the moves stay in files.
-- **Host seam filter:** the reviewer takes only deliberations whose tension
-  names `apply-loop` as the host seam, so it never answers one opened for
+- **Host skill filter:** the reviewer takes only deliberations whose tension
+  names `apply-loop` as the host skill, so it never answers one opened for
   another peer.
 
 The remaining risk is a stale reviewer cache left in this checkout by an earlier

@@ -86,7 +86,7 @@ delib_move "$DIR" A agreed result.md    # refused unless B's acceptance still ve
 ```
 
 Then **append the decision anchor** to `.stenswf/$ISSUE/decisions.md` with the
-canonical bootstrap and append snippets, **always**. `Source:` is the host seam,
+canonical bootstrap and append snippets, **always**. `Source:` is the host skill,
 never `deliberate`; add `delib#<issue>-<id>` to `Refs:`.
 
 Then **resume exactly where Phase 0 stopped.** The deliberation was an

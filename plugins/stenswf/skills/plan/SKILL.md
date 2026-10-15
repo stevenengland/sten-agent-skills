@@ -335,7 +335,7 @@ artifact shape, not reasoning quality. Pause and step back:
   keys, schema fields) but not declared in `blocked_by`?
 - **Ponytail (subtractive lens).** Run the plan — not code — through
   [../../references/ponytail-pass.md](../../references/ponytail-pass.md).
-  This seam is interactive (available by default): safe leanings simplify the
+  This checkpoint is interactive (available by default): safe leanings simplify the
   plan in place, contentious ones become ASK interview points (PARK when
   unattended). The reference owns the ladder, the safe/contentious test,
   and the never-override precedence rule.

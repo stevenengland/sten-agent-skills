@@ -1,7 +1,7 @@
 # Ponytail pass — subtractive self-review
 
 Single source for the ponytail (YAGNI / laziest-that-works) self-review
-pass. It adds a **subtractive** lens to the reflection seams stenswf already
+pass. It adds a **subtractive** lens to the reflection checkpoints stenswf already
 has: question whether code needs to exist, reach for stdlib before custom
 code, native platform features before dependencies, one line before fifty.
 
@@ -112,13 +112,13 @@ outcome, and recording. Reachability is **not** derived from the slice TYPE.
 
 - A **contentious** cut — applied after sign-off (available) or left as a
   pending `parked` note (unattended) — writes one `decision` entry under
-  the **host seam's** source (`plan` / `plan-light` / `ship` / `ship-light`)
+  the **host skill's** source (`plan` / `plan-light` / `ship` / `ship-light`)
   per [decision-anchor-link.md](decision-anchor-link.md). There is no
-  `ponytail` source; provenance stays with the seam that ran the pass.
+  `ponytail` source; provenance stays with the host skill that ran the pass.
 - A **safe** cut writes no decision entry — it gets only the marker below
   plus the one-line summary under Visibility. (Safe cuts are
   behavior-identical and touch nothing recorded; recording each one would
-  flood `decisions.md`, especially on the silent `plan-light` seam.)
+  flood `decisions.md`, especially on the silent `plan-light` checkpoint.)
 - Mark each deliberate simplification left in the code with a marker
   comment (below).
 
@@ -154,7 +154,7 @@ recorded decision.
 
 ---
 
-## Per-seam behavior
+## Per-checkpoint behavior
 
 - **`plan`** (interactive interview — available) — apply the ladder to
   the *plan itself*: a task

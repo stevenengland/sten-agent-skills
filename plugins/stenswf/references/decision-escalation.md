@@ -247,12 +247,12 @@ execute); `DECISION_NEEDED` is a healthy stop at a heavy fork.
 
 | Situation | Record |
 |---|---|
-| Easy, rejected an alternative | `decision` anchor (host seam's source) |
+| Easy, rejected an alternative | `decision` anchor (host skill's source) |
 | Easy, no alternative | nothing |
 | Heavy, answered via ASK | `decision` anchor (chosen + rejected) |
 | Heavy, parked | pending `decision` anchor (`status: parked`) + tracker block |
 | Heavy, deliberated to an accepted proposal | `decision` / `arch` anchor + `delib#` ref |
 
-Provenance stays with the host seam (`plan` / `plan-light` / `ship` /
+Provenance stays with the host skill (`plan` / `plan-light` / `ship` /
 `ship-light` / `apply`); there is no `decision-escalation` source. See
 [decision-anchor-link.md](decision-anchor-link.md).

@@ -305,7 +305,7 @@ invariant — at
 ## Subtractive pass (ponytail-lens)
 
 A subtractive (YAGNI / laziest-that-works) lens runs as a self-review
-pass on seams stenswf already has — it **adds to** `clean-code` and
+pass at checkpoints stenswf already has — it **adds to** `clean-code` and
 `tdd`, never overrides them. `plan` / `plan-light` apply it to the plan
 (cut speculative tasks before code exists); `ship` Phase 2 and
 `ship-light` Phase 3 apply it to the diff after green; `apply` carries
@@ -891,7 +891,7 @@ machine — invisible to CI, to a second clone, and to everyone else.
 | `apply` slice-mode | both, refreshed | Phase 3, after supersessions land |
 | `apply-loop` | both, refreshed | End-of-session, both converged and cap paths |
 | `apply` PRD-mode | committed excerpt (`--excerpt`) | Phase 3 |
-| `deliberate` | host seam's surfaces, refreshed | after the contradiction gate clears |
+| `deliberate` | host skill's surfaces, refreshed | after the contradiction gate clears |
 | `review`, `review-loop`, `deliberate-peer` | none | peers and reviewers never write or publish anchors |
 
 Every skill that commits also records the trailers (`ship`, `ship-light`,
@@ -979,7 +979,7 @@ human is reachable ([decision-escalation.md](references/decision-escalation.md))
 `deliberate-peer` (agent **B**, in a separate harness) argue over numbered move
 files in `.stenswf/<issue>/deliberations/<id>/` until B accepts a complete
 proposal. It ends `agreed` — recorded as an ordinary anchor, `Source:` the host
-seam, `delib#<issue>-<id>` in `Refs:` — or `escalated` / `parked` / `cancelled`,
+skill, `delib#<issue>-<id>` in `Refs:` — or `escalated` / `parked` / `cancelled`,
 which fall back to the existing ASK / PARK. Contradicting a decision already on
 record still needs a human.
 
