@@ -1,0 +1,24 @@
+diff --git a/src/profile/profilePage.ts b/src/profile/profilePage.ts
+index 76bb945..8f5a796 100644
+--- a/src/profile/profilePage.ts
++++ b/src/profile/profilePage.ts
+@@ -1,6 +1,6 @@
+-import { userRepo } from '../users/userRepo'
++import { getUser } from '../users/getUser'
+ 
+ export function profileTitle(id: string): string {
+-  const user = userRepo.find(id)
++  const user = getUser(id)
+   return user ? `Profile of ${user.name}` : 'Unknown user'
+ }
+diff --git a/src/users/getUser.ts b/src/users/getUser.ts
+new file mode 100644
+index 0000000..476b04a
+--- /dev/null
++++ b/src/users/getUser.ts
+@@ -0,0 +1,5 @@
++import { userRepo, User } from './userRepo'
++
++export function getUser(id: string): User | undefined {
++  return userRepo.find(id)
++}

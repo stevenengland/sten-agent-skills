@@ -1,0 +1,20 @@
+diff --git a/src/billing/invoice.ts b/src/billing/invoice.ts
+index 88fe88c..b00d6e1 100644
+--- a/src/billing/invoice.ts
++++ b/src/billing/invoice.ts
+@@ -1,4 +1,4 @@
+-import { discountFor } from '../pricing/discount'
++import { TIERS } from '../pricing/internal/tiers'
+ 
+ export interface Invoice {
+   customerTier: string
+@@ -7,5 +7,8 @@ export interface Invoice {
+ }
+ 
+ export function createInvoice(customerTier: string, totalCents: number): Invoice {
+-  return { customerTier, totalCents, discountCents: discountFor(customerTier, totalCents) }
++  // Gold customers on invoices over 1000 EUR get an extra 2 %.
++  const extra = customerTier === 'gold' && totalCents > 100_000 ? 0.02 : 0
++  const rate = (TIERS[customerTier] ?? 0) + extra
++  return { customerTier, totalCents, discountCents: Math.round(totalCents * rate) }
+ }

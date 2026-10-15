@@ -1,0 +1,68 @@
+diff --git a/src/app.ts b/src/app.ts
+index 1d4a879..220535a 100644
+--- a/src/app.ts
++++ b/src/app.ts
+@@ -1,5 +1,9 @@
++import Stripe from 'stripe'
+ import { checkout } from './orders/checkout'
++import { StripePaymentGateway } from './payments/stripePaymentGateway'
++
++const gateway = new StripePaymentGateway(new Stripe(process.env.STRIPE_KEY ?? ''))
+ 
+ export async function placeOrder(orderId: string, cents: number) {
+-  return checkout(orderId, cents)
++  return checkout(gateway, orderId, cents)
+ }
+diff --git a/src/orders/checkout.ts b/src/orders/checkout.ts
+index a5f68f3..bffaf29 100644
+--- a/src/orders/checkout.ts
++++ b/src/orders/checkout.ts
+@@ -1,8 +1,6 @@
+-import Stripe from 'stripe'
++import type { PaymentGateway } from '../payments/paymentGateway'
+ 
+-const stripe = new Stripe(process.env.STRIPE_KEY ?? '')
+-
+-export async function checkout(orderId: string, cents: number): Promise<'paid' | 'declined'> {
+-  const intent = await stripe.paymentIntents.create({ amount: cents, currency: 'eur', metadata: { orderId } })
+-  return intent.status === 'succeeded' ? 'paid' : 'declined'
++export async function checkout(gateway: PaymentGateway, orderId: string, cents: number): Promise<'paid' | 'declined'> {
++  const result = await gateway.charge(orderId, { cents, currency: 'eur' })
++  return result.kind
+ }
+diff --git a/src/payments/paymentGateway.ts b/src/payments/paymentGateway.ts
+new file mode 100644
+index 0000000..60f08de
+--- /dev/null
++++ b/src/payments/paymentGateway.ts
+@@ -0,0 +1,8 @@
++export type PaymentResult =
++  | { kind: 'paid'; reference: string }
++  | { kind: 'declined'; reason: string }
++
++/** Order code depends on this port; no Stripe type crosses it. */
++export interface PaymentGateway {
++  charge(orderId: string, amount: { cents: number; currency: 'eur' }): Promise<PaymentResult>
++}
+diff --git a/src/payments/stripePaymentGateway.ts b/src/payments/stripePaymentGateway.ts
+new file mode 100644
+index 0000000..39d1194
+--- /dev/null
++++ b/src/payments/stripePaymentGateway.ts
+@@ -0,0 +1,16 @@
++import Stripe from 'stripe'
++import type { PaymentGateway, PaymentResult } from './paymentGateway'
++
++export class StripePaymentGateway implements PaymentGateway {
++  constructor(private readonly stripe: Stripe) {}
++
++  async charge(orderId: string, amount: { cents: number; currency: 'eur' }): Promise<PaymentResult> {
++    const intent = await this.stripe.paymentIntents.create({
++      amount: amount.cents,
++      currency: amount.currency,
++      metadata: { orderId },
++    })
++    if (intent.status === 'succeeded') return { kind: 'paid', reference: intent.id }
++    return { kind: 'declined', reason: intent.last_payment_error?.message ?? intent.status }
++  }
++}

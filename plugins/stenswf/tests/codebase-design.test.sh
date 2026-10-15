@@ -345,6 +345,31 @@ assert_match "codebase-design lists its rule adaptations" "$(entry plugins/stens
 assert_match "improve-codebase-architecture lists the questions-not-verdicts adaptation" "$(entry plugins/stenswf/skills/improve-codebase-architecture)" "principles applied as questions, not verdicts"
 assert_nomatch "sources.yaml no longer tracks the stenswr port" "$(read_file "$SRC")" "skill: plugins/stenswr/skills/improve-codebase-architecture"
 
+# --- 13. Review scenarios --------------------------------------------------
+RS="$HERE/review-scenarios"
+RST=$(read_file "$RS/README.md")
+assert_file "review scenarios have a README" "$RS/README.md"
+assert_match "the README says when to run them" "$RST" "## When to run"
+assert_match "the README says how to run them" "$RST" "## How to run"
+assert_match "the README keeps expected verdicts from the reviewer" "$RST" "Never show \`expected.md\` to the reviewer"
+assert_match "the README says where results go" "$RST" "under \`## Review scenarios\`"
+# yes when the scenario's diff.patch applies cleanly to its before/ tree.
+scenario_applies() {
+  local w; w=$(mktemp -d)
+  cp -R "$1/before/." "$w/" 2>/dev/null
+  (cd "$w" && git init -q && git apply --check "$1/diff.patch" 2>/dev/null) && echo yes || echo no
+  rm -rf "$w"
+}
+for s in redundant-pass-through single-implementation-domain-port coupling-behind-unchanged-interface \
+         pre-existing-shallow-module decision-settled-abstraction; do
+  assert_file "$s has expected verdicts" "$RS/$s/expected.md"
+  assert_file "$s has a diff" "$RS/$s/diff.patch"
+  assert_eq "$s's diff applies to its before tree" "$(scenario_applies "$RS/$s")" "yes"
+done
+assert_file "discovery-to-prd-handoff has a brief" "$RS/discovery-to-prd-handoff/brief.md"
+assert_file "discovery-to-prd-handoff has expected verdicts" "$RS/discovery-to-prd-handoff/expected.md"
+assert_match "the handoff brief starts with its class line" "$(head -1 "$RS/discovery-to-prd-handoff/brief.md" 2>/dev/null)" "class: refactor"
+
 # --- footer (append new sections above this line) --------------------------
 printf '\n1..%d\n# pass %d fail %d\n' "$((PASS + FAIL))" "$PASS" "$FAIL"
 [ "$FAIL" -eq 0 ]
