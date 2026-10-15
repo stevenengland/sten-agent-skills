@@ -185,6 +185,31 @@ assert_match "review-loop: the first pass is the one starting at the PR base" "$
 assert_match "review-loop: later passes write the verbatim skip line" "$P1" "\`Thermo and deepening: skipped (run on the first pass only).\`"
 assert_match "review-loop still scopes passes to the delta" "$RLT" "Then review only \`<last-reviewed-sha>..\$HEAD_SHA\` (delta scope; the first"
 
+# --- 6. Thermo hands module structure to deepening -------------------------
+TS="$SKILLS/thermo-nuclear-code-quality-review/SKILL.md"
+TST=$(read_file "$TS")
+TC="$REFS/thermo-subagent.md"
+TCT=$(read_file "$TC")
+assert_match "thermo: module structure is out of scope" "$TST" "**Module structure is out of scope.**"
+assert_match "thermo: points module structure at codebase-design" "$TST" "belong to the \`codebase-design\` skill"
+assert_match "thermo: points standalone users at the architecture skill" "$TST" "\`/stenswf:improve-codebase-architecture\` on its own"
+ABQ="abstraction"" quality"
+assert_nomatch "thermo: the description no longer claims abstraction quality" "$(frontmatter "$TS")" "$ABQ"
+assert_nomatch "thermo: no pass-through-helper rule" "$TST" "identity wrappers, or pass-through helpers"
+assert_nomatch "thermo: no canonical-layer rule" "$TST" "Keep logic in the canonical layer"
+assert_nomatch "thermo: no earning-its-keep question" "$TST" "Is this abstraction actually earning its keep"
+assert_nomatch "thermo: no API-leak rule" "$TST" "implementation details leaking through APIs"
+assert_nomatch "thermo: no thin-wrapper flag" "$TST" "Thin wrappers or identity abstractions"
+assert_nomatch "thermo: no wrong-layer flag" "$TST" "Logic added in the wrong layer"
+assert_nomatch "thermo: no ownership-boundary remedy" "$TST" "Change the ownership boundary"
+assert_match "thermo keeps its code-level rules" "$TST" "**Do not allow random spaghetti growth in existing code.**"
+assert_eq "thermo's description passes the one-sentence lint" "$(lint_ok plugins/stenswf/skills/thermo-nuclear-code-quality-review/SKILL.md)" "pass"
+assert_match "thermo contract: module structure belongs to deepening" "$TCT" "belongs to the deepening subagent ([deepening-subagent.md](deepening-subagent.md)), never to thermo."
+assert_match "thermo contract: the dispatch leaves module structure alone" "$TCT" "to the deepening pass; do not flag it."
+assert_match "thermo contract: dispatched at most once" "$TCT" "Each review dispatches it at most once"
+assert_nomatch "thermo contract: no boundary-leak blocker" "$TCT" "boundary / canonical-layer leak"
+assert_nomatch "thermo contract: no wrong-layer blocker" "$TCT" "wrong-layer or duplicate-helper logic"
+
 # --- footer (append new sections above this line) --------------------------
 printf '\n1..%d\n# pass %d fail %d\n' "$((PASS + FAIL))" "$PASS" "$FAIL"
 [ "$FAIL" -eq 0 ]
