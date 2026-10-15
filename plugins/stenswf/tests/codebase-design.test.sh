@@ -312,6 +312,18 @@ assert_absent "the old tdd deep-modules page is gone" "$OLD_PAGE.md"
 DM_PAT='deep-modules[.]md'
 assert_eq "nothing in stenswf links the old tdd deep-modules page" "$(grep -rlE "$DM_PAT" "$ROOT" --include='*.md' --include='*.sh' || true)" ""
 
+# --- 11. One improve-codebase-architecture ---------------------------------
+ICA='improve-codebase-architecture'
+assert_absent "the stenswr port is gone" "$REPO/plugins/stenswr/skills/$ICA"
+assert_file "the stenswf skill remains" "$SKILLS/$ICA/SKILL.md"
+LEFT=$(cd "$REPO" && git grep -n "$ICA" -- ':!plugins/stenswf' ':!docs/stenswf' ':!sources.yaml' | grep -v "/stenswf:$ICA" || true)
+assert_eq "outside stenswf, only /stenswf: pointers name the skill" "$LEFT" ""
+assert_match "functional-bug-hunting pairs with the stenswf skill" "$(read_file "$REPO/plugins/stenswr/skills/functional-bug-hunting/SKILL.md")" "Pairs with \`/stenswf:$ICA\`"
+assert_match "security-bug-hunting pairs with the stenswf skill" "$(read_file "$REPO/plugins/stenswr/skills/security-bug-hunting/SKILL.md")" "Pairs with \`/stenswf:$ICA\`"
+for f in plugins/stenswr/plugin.json plugins/stenswr/.claude-plugin/plugin.json .claude-plugin/marketplace.json .github/plugin/marketplace.json; do
+  assert_match "$f lists the remaining discover skills" "$(read_file "$REPO/$f")" "discover (functional-bug-hunting, security-bug-hunting)"
+done
+
 # --- footer (append new sections above this line) --------------------------
 printf '\n1..%d\n# pass %d fail %d\n' "$((PASS + FAIL))" "$PASS" "$FAIL"
 [ "$FAIL" -eq 0 ]

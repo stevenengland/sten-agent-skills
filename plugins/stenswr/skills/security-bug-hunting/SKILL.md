@@ -8,7 +8,7 @@ disable-model-invocation: true
 
 Intended purpose: surface security defects (injection, deserialisation,
 auth, secrets, dependency risk) worth fixing during an upcoming
-refactor. Pairs with `improve-codebase-architecture` (structural
+refactor. Pairs with `/stenswf:improve-codebase-architecture` (structural
 opportunities) and `functional-bug-hunting` (behavioural defects) to
 form the "discover" phase of `stenswr`.
 
