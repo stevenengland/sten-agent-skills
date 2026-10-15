@@ -324,6 +324,27 @@ for f in plugins/stenswr/plugin.json plugins/stenswr/.claude-plugin/plugin.json 
   assert_match "$f lists the remaining discover skills" "$(read_file "$REPO/$f")" "discover (functional-bug-hunting, security-bug-hunting)"
 done
 
+# --- 12. Upstream tracking in sources.yaml ---------------------------------
+SRC="$REPO/sources.yaml"
+# The sources.yaml entry whose first line is "- skill: $1".
+entry() { awk -v k="- skill: $1" '
+  $0 == k { on = 1; print; next }
+  on && /^- skill: / { exit }
+  on { print }' "$SRC" 2>/dev/null; }
+for s in codebase-design improve-codebase-architecture; do
+  E=$(entry "plugins/stenswf/skills/$s")
+  assert_match "sources.yaml tracks $s" "$E" "- skill: plugins/stenswf/skills/$s"
+  assert_match "$s is tracked against mattpocock/skills" "$E" "upstream: https://github.com/mattpocock/skills/tree/main/skills/engineering/$s"
+  assert_match "$s is pinned to the reviewed upstream ref" "$E" 'ref: "d80fa0f4ebe0c5714af0adf8670336065233ecc6"'
+  assert_eq "$s records when it was reviewed" "$(printf '%s\n' "$E" | grep -cE '^  last_reviewed: "[0-9]{4}-[0-9]{2}-[0-9]{2}"$')" "1"
+  assert_match "$s lists its adaptations" "$E" "Adaptations:"
+done
+assert_match "codebase-design maps upstream file names" "$(entry plugins/stenswf/skills/codebase-design)" "DEEPENING.md -> deepening.md, DESIGN-IT-TWICE.md -> design-it-twice.md"
+assert_match "improve-codebase-architecture maps upstream file names" "$(entry plugins/stenswf/skills/improve-codebase-architecture)" "HTML-REPORT.md -> html-report.md"
+assert_match "codebase-design lists its rule adaptations" "$(entry plugins/stenswf/skills/codebase-design)" "Rule adaptations:"
+assert_match "improve-codebase-architecture lists the questions-not-verdicts adaptation" "$(entry plugins/stenswf/skills/improve-codebase-architecture)" "principles applied as questions, not verdicts"
+assert_nomatch "sources.yaml no longer tracks the stenswr port" "$(read_file "$SRC")" "skill: plugins/stenswr/skills/improve-codebase-architecture"
+
 # --- footer (append new sections above this line) --------------------------
 printf '\n1..%d\n# pass %d fail %d\n' "$((PASS + FAIL))" "$PASS" "$FAIL"
 [ "$FAIL" -eq 0 ]
