@@ -253,6 +253,28 @@ assert_nomatch "no domain-modeling dependency" "$ICT" "domain-modeling"
 assert_nomatch "no OS temp dir" "$ICT" "TMPDIR"
 assert_nomatch "no hand-rolled opener" "$ICT" "xdg-open"
 
+# --- 8. HTML report design guide -------------------------------------------
+HR="$SKILLS/improve-codebase-architecture/html-report.md"
+HRT=$(read_file "$HR")
+assert_file "html-report.md exists" "$HR"
+assert_match "the report lives in the local state directory" "$HRT" "in the local state directory (\`.stenswf/.show-me/\`, see step 2 of [SKILL.md](SKILL.md))"
+assert_match "card: files" "$HRT" "- **Files**: monospaced list"
+assert_match "card: problem" "$HRT" "- **Problem**: one sentence. What hurts."
+assert_match "card: solution" "$HRT" "- **Solution**: one sentence. What changes."
+assert_match "card: wins" "$HRT" "- **Wins**: bullets"
+assert_match "card: before/after diagram" "$HRT" "- **Before / After diagram**: the centrepiece."
+assert_match "card: strength badge" "$HRT" "- **Badge row**: recommendation strength (\`Strong\` = emerald, \`Worth exploring\` = amber, \`Speculative\` = slate)"
+assert_match "card: ADR callout" "$HRT" "- **ADR callout** (if applicable)"
+assert_match "diagram patterns" "$HRT" "## Diagram patterns"
+assert_match "top-recommendation section" "$HRT" "## Top recommendation section"
+assert_match "tone: mandatory vocabulary" "$HRT" "**Use exactly:** module, interface, implementation, depth, deep, shallow, seam, adapter, leverage, locality."
+assert_match "tone: forbidden substitutes" "$HRT" "**Never substitute:**"
+assert_nomatch "no OS temp directory" "$HRT" "OS temp directory"
+CDN=$(printf '%s\n' "$HRT" | grep -oE 'https://cdn[^"]+' || true)
+assert_eq "the report loads exactly two CDN scripts" "$(printf '%s\n' "$CDN" | grep -c .)" "2"
+UNPINNED=$(printf '%s\n' "$CDN" | grep -vE '[@/][0-9]+\.[0-9]+\.[0-9]+(/|$)' || true)
+assert_eq "every CDN script URL pins an exact version" "$UNPINNED" ""
+
 # --- footer (append new sections above this line) --------------------------
 printf '\n1..%d\n# pass %d fail %d\n' "$((PASS + FAIL))" "$PASS" "$FAIL"
 [ "$FAIL" -eq 0 ]
