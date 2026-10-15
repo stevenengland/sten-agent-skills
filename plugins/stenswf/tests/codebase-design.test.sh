@@ -206,7 +206,7 @@ assert_nomatch "thermo: no ownership-boundary remedy" "$TST" "Change the ownersh
 assert_match "thermo keeps its code-level rules" "$TST" "**Do not allow random spaghetti growth in existing code.**"
 assert_eq "thermo's description passes the one-sentence lint" "$(lint_ok plugins/stenswf/skills/thermo-nuclear-code-quality-review/SKILL.md)" "pass"
 assert_match "thermo contract: module structure belongs to deepening" "$TCT" "belongs to the deepening subagent ([deepening-subagent.md](deepening-subagent.md)), never to thermo."
-assert_match "thermo contract: the dispatch leaves module structure alone" "$TCT" "to the deepening pass; do not flag it."
+assert_match "thermo contract: the dispatch leaves module structure alone" "$TCT" "Leave module structure to the deepening pass; do not flag it."
 assert_match "thermo contract: dispatched at most once" "$TCT" "Each review dispatches it at most once"
 assert_nomatch "thermo contract: no boundary-leak blocker" "$TCT" "boundary / canonical-layer leak"
 assert_nomatch "thermo contract: no wrong-layer blocker" "$TCT" "wrong-layer or duplicate-helper logic"

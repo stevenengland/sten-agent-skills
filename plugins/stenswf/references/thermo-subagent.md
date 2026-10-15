@@ -25,7 +25,7 @@ run state-modifying git/gh. Review ONLY the diff at <DIFF_PATH>; read ranged
 hunks and ranged file context — never cat whole files needlessly.
 
 Apply the thermo-nuclear-code-quality-review skill at full strength.
-Leave module structure (abstractions, wrappers and pass-throughs earning their keep, interface leaks, coupling between modules, which module owns logic) to the deepening pass; do not flag it.
+Leave module structure to the deepening pass; do not flag it.
 
 Return findings as a flat list, highest-conviction first. Each finding is a
 four-line block, nothing else between blocks:
