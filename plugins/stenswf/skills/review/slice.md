@@ -225,8 +225,6 @@ Single numbered list of suggestions. Per item:
 Include the AC coverage matrix (if produced) as its own section above
 the suggestions. Close with: `Summary: N high | M medium | K low`.
 
-When the deepening pass returned `follow-up:` lines, add `## Follow-ups (not counted)` after the `Summary:` line, one bullet per line, with no `**Priority:**`; omit the section otherwise.
-
 Write to `.stenswf/$ARGUMENTS/review/slice.md`:
 
 ```
