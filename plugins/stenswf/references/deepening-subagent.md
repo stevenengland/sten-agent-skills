@@ -30,10 +30,11 @@ hunks and ranged file context — never cat whole files needlessly.
 
 Inspect broadly: for every module the diff touches, read the module and its callers (git grep for call sites), whether or not its interface changed.
 
-Read the decision context before judging, when present:
-- every active entry in .stenswf/<N>/decisions.md, of any category (skip struck-through ~~D<n>~~ entries)
-- for an inherited entry, its full text in the parent's file: Source #<P>/D<n> means entry D<n> in .stenswf/<P>/decisions.md
-- in prd mode, archived slice decisions in .stenswf/.archive/<slice>/decisions.md
+Read the decision context before judging, when present. Issue <I>'s anchor is
+.stenswf/<I>/decisions.md, else the newest .stenswf/.archive/<I>-*/decisions.md (shipping archives it dated).
+- every active entry in <N>'s anchor, of any category (skip struck-through ~~D<n>~~ entries)
+- for an inherited entry, its full text in the parent's file: Source #<P>/D<n> means entry D<n> in <P>'s anchor
+- in prd mode, each slice's anchor
 - ADRs in docs/adr/ or any docs/**/decisions/ directory
 - the glossary: GLOSSARY.md, CONTEXT.md or UBIQUITOUS_LANGUAGE.md
 

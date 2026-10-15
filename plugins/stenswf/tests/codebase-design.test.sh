@@ -130,9 +130,11 @@ assert_match "no speculative redesigns" "$DST" "Never emit a speculative redesig
 assert_match "recommendations name invariants" "$DST" "names the invariants it must keep"
 assert_nomatch "upstream strength is not mapped to severity" "$DST" "Worth exploring ->"
 # Decision context
-assert_match "every active decision entry, any category" "$DST" "every active entry in .stenswf/<N>/decisions.md, of any category"
-assert_match "inherited entries resolve through Source" "$DST" "Source #<P>/D<n> means entry D<n> in .stenswf/<P>/decisions.md"
-assert_match "archived slice decisions in PRD mode" "$DST" "in prd mode, archived slice decisions in .stenswf/.archive/<slice>/decisions.md"
+assert_match "every active decision entry, any category" "$DST" "every active entry in <N>'s anchor, of any category"
+assert_match "inherited entries resolve through Source" "$DST" "Source #<P>/D<n> means entry D<n> in <P>'s anchor"
+assert_match "an anchor is live or the newest dated archive" "$DST" "else the newest .stenswf/.archive/<I>-*/decisions.md (shipping archives it dated)"
+assert_match "slice decisions in PRD mode use the same lookup" "$DST" "in prd mode, each slice's anchor"
+assert_nomatch "no undated archive path" "$DST" ".stenswf/.archive/<slice>/decisions.md"
 assert_match "ADR locations" "$DST" "ADRs in docs/adr/ or any docs/**/decisions/ directory"
 assert_match "glossary files" "$DST" "GLOSSARY.md, CONTEXT.md or UBIQUITOUS_LANGUAGE.md"
 # Caller-side merge rules
@@ -366,6 +368,8 @@ for s in redundant-pass-through single-implementation-domain-port coupling-behin
   assert_file "$s has a diff" "$RS/$s/diff.patch"
   assert_eq "$s's diff applies to its before tree" "$(scenario_applies "$RS/$s")" "yes"
 done
+assert_file "decision-settled-abstraction's parent anchor is archived, dated" \
+  "$RS/decision-settled-abstraction/before/dot-stenswf/.archive/890-2026-09-30/decisions.md"
 assert_file "discovery-to-prd-handoff has a brief" "$RS/discovery-to-prd-handoff/brief.md"
 assert_file "discovery-to-prd-handoff has expected verdicts" "$RS/discovery-to-prd-handoff/expected.md"
 assert_match "the handoff brief starts with its class line" "$(head -1 "$RS/discovery-to-prd-handoff/brief.md" 2>/dev/null)" "class: refactor"

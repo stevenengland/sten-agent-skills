@@ -1,7 +1,7 @@
 # Expected — abstraction settled by an inherited decision
 
 - **Reviewers:** deepening (slice mode, `<N>=900`; after setup the decision files sit under `.stenswf/`)
-- **Checks:** the decision context resolves an inherited entry through its `Source:`
+- **Checks:** the decision context resolves an inherited entry through its `Source:`, from a shipped parent whose anchor sits in a dated archive (`.stenswf/.archive/890-2026-09-30/`)
 
 ## Pass when
 

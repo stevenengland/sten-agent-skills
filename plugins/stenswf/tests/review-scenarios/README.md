@@ -20,7 +20,7 @@ of `skills/prd-from-grill-me/`. Never during a normal review.
 | `single-implementation-domain-port` | a single-adapter seam that keeps vendor types out of domain code is not flagged |
 | `coupling-behind-unchanged-interface` | new coupling is caught although no interface changed |
 | `pre-existing-shallow-module` | older friction is a follow-up line, never a finding |
-| `decision-settled-abstraction` | an inherited decision is resolved through its `Source:` and respected |
+| `decision-settled-abstraction` | an inherited decision is resolved through its `Source:`, from a dated archive, and respected |
 | `discovery-to-prd-handoff` | `prd-from-grill-me` takes the brief and asks only what it leaves open |
 
 ## How to run
