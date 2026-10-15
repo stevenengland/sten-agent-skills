@@ -78,12 +78,14 @@ If `$ORIG` is set:
 5. Record `class:` in the PRD front-matter (Step 5 already requires it
    per [../../references/prd-template.md](../../references/prd-template.md)).
 
-If `$ORIG` is empty, behave as before (blank-page interview from Step 1).
+**Inline brief.** If `$ARGUMENTS` is text rather than an issue number — for example the grilled brief `/stenswf:improve-codebase-architecture` hands over — that text is the Step-1 description: skip Step 1's question. A leading `class: <value>` line proposes the PRD class; confirm it with the user as in step 2 above. The brief has already been argued through, so Step 3 asks only what it leaves open and never re-asks a decision the brief records.
+
+If `$ARGUMENTS` is empty, behave as before (blank-page interview from Step 1).
 
 ## Phase 1 — Steps
 
 1. Ask the user for a long, detailed description of the problem and any
-   solution ideas. **Skip if Phase 0 already populated `/tmp/req-$ORIG.md`.**
+   solution ideas. **Skip if Phase 0 already populated `/tmp/req-$ORIG.md` or an inline brief was given.**
 
 2. Explore the repo via an Explore subagent (≤300 words, thoroughness: medium).
    Do NOT read files directly.
@@ -95,6 +97,7 @@ If `$ORIG` is empty, behave as before (blank-page interview from Step 1).
 
 3. Interview relentlessly about every aspect of the plan. Walk each
    branch of the design tree. Resolve dependencies one-by-one.
+   With an inline brief, cover only what it leaves open.
 
    - Provide a recommended answer and reasoning for each question.
    - Delegate codebase questions to targeted Explore subagents.
@@ -113,8 +116,9 @@ If `$ORIG` is empty, behave as before (blank-page interview from Step 1).
 
 4. Sketch modules to build/modify — with `show-me` views where they clarify
    (file tree, call tree, pseudocode, Mermaid; `diff` against today's shape).
-   Look for deep modules extractable in isolation. Consult the `architecture`
-   skill. Keep the agreed design in the PRD's `## Change outline` as a
+   Look for deep modules extractable in isolation.
+   Consult the `codebase-design` skill (deletion test, seam and adapter rules) alongside the `architecture` skill.
+   Keep the agreed design in the PRD's `## Change outline` as a
    GitHub-renderable view; translate an accepted HTML view, do not paste it.
 
    Check with the user that modules match their expectations. Check

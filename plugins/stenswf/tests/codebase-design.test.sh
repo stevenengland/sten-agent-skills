@@ -275,6 +275,27 @@ assert_eq "the report loads exactly two CDN scripts" "$(printf '%s\n' "$CDN" | g
 UNPINNED=$(printf '%s\n' "$CDN" | grep -vE '[@/][0-9]+\.[0-9]+\.[0-9]+(/|$)' || true)
 assert_eq "every CDN script URL pins an exact version" "$UNPINNED" ""
 
+# --- 9. prd-from-grill-me intake and Step 4, architecture ------------------
+PGT=$(read_file "$SKILLS/prd-from-grill-me/SKILL.md")
+ART=$(read_file "$SKILLS/architecture/SKILL.md")
+assert_match "inline brief: the rule exists" "$PGT" "**Inline brief.**"
+assert_match "inline brief: it is the Step-1 description" "$PGT" "that text is the Step-1 description: skip Step 1's question."
+assert_match "inline brief: a class line is proposed and confirmed" "$PGT" "A leading \`class: <value>\` line proposes the PRD class"
+assert_match "inline brief: the interview asks only what is open" "$PGT" "Step 3 asks only what it leaves open"
+assert_match "inline brief: Step 1 is skipped" "$PGT" "or an inline brief was given.**"
+assert_match "inline brief: Step 3 covers only the gaps" "$PGT" "With an inline brief, cover only what it leaves open."
+assert_match "issue-number intake is unchanged" "$PGT" "If \`\$ARGUMENTS\` is a GitHub issue number"
+assert_match "prd-from-grill-me Step 4 consults codebase-design alongside architecture" "$PGT" "Consult the \`codebase-design\` skill (deletion test, seam and adapter rules) alongside the \`architecture\` skill."
+assert_match "prd-from-grill-me Step 4 still sketches with views" "$PGT" "Sketch modules to build/modify — with \`show-me\` views where they clarify"
+assert_match "architecture keeps the Module Deepening pattern" "$ART" "**Module Deepening (Pocock Approach):**"
+assert_match "architecture keeps the pattern in its table" "$ART" "| Good core logic, poor structure | Module Deepening (Pocock approach) |"
+assert_match "architecture links codebase-design for the theory" "$ART" "live in [\`codebase-design\`](../codebase-design/SKILL.md)"
+assert_match "architecture points interface design at design-it-twice" "$ART" "[design-it-twice](../codebase-design/design-it-twice.md)"
+assert_match "architecture points scans at the workflow skill" "$ART" "run \`/stenswf:improve-codebase-architecture\`."
+assert_nomatch "architecture no longer restates the deepening process" "$ART" "Module deepening process:"
+DAI="design-an""-interface"   # split so this file never names the dropped skill
+assert_nomatch "architecture no longer links a skill stenswf does not ship" "$ART" "$DAI"
+
 # --- footer (append new sections above this line) --------------------------
 printf '\n1..%d\n# pass %d fail %d\n' "$((PASS + FAIL))" "$PASS" "$FAIL"
 [ "$FAIL" -eq 0 ]
