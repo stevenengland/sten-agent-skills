@@ -96,7 +96,7 @@ to pass and no way to wake on your own move or sleep through the peer's.
 # Tension — #<issue>
 
 - **Issue:** #<issue>
-- **Host seam:** <the skill that hit the wall>
+- **Host skill:** <the skill that hit the wall>
 - **Blocked at:** <what A was doing when it stopped>
 
 ## What blocks

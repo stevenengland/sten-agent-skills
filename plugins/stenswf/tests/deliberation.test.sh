@@ -31,8 +31,8 @@ WORK=$(mktemp -d); ORIG=$PWD
 trap 'cd "$ORIG"; rm -rf "$WORK"' EXIT
 cd "$WORK" && git init -q . && git config user.email t@t && git config user.name t
 
-printf '# Tension\n\n- **Host seam:** ship\n' > "$WORK/tension.md"
-printf '# Tension\n\n- **Host seam:** apply-loop\n' > "$WORK/tension-pr.md"
+printf '# Tension\n\n- **Host skill:** ship\n' > "$WORK/tension.md"
+printf '# Tension\n\n- **Host skill:** apply-loop\n' > "$WORK/tension-pr.md"
 printf '# Turn\n\n## Read\nsrc/x.ts\n' > "$WORK/t.md"
 printf '# Rejection\n\nclause 2 double-counts the backoff\n' > "$WORK/rej.md"
 printf '# Closing\n\nno convergence\n' > "$WORK/close.md"
@@ -164,10 +164,16 @@ move "$W" A cancelled "$WORK/close.md"
 assert_eq "both sides wake on the end" "$(delib_wait "$W" B 0 1)" "ended cancelled 04-A-cancelled.md"
 refused "waiting on no deliberation is an error" delib_wait "$WORK/nowhere" B 1 1
 
-# --- 7. Open deliberations, by issue and by host seam ---------------------
+# --- 7. Open deliberations, by issue and by host skill --------------------
 P1=$(delib_new 60 "$WORK/tension-pr.md"); P2=$(delib_new 60 "$WORK/tension.md")
 assert_eq "every open deliberation is listed" "$(delib_open_for_issue 60 | wc -l | tr -d ' ')" "2"
-assert_eq "a host seam filters to its own" "$(delib_open_for_issue 60 apply-loop)" "$P1"
+assert_eq "a host skill filters to its own" "$(delib_open_for_issue 60 apply-loop)" "$P1"
+# A deliberation opened before the rename carries the old label. It must stay
+# visible to the host filter, or review-loop would converge past it.
+LEGACY_KEY='Host'' seam'
+printf '# Tension\n\n- **%s:** apply-loop\n' "$LEGACY_KEY" > "$WORK/tension-legacy.md"
+P3=$(delib_new 61 "$WORK/tension-legacy.md")
+assert_eq "a tension with the pre-rename label still matches its host" "$(delib_open_for_issue 61 apply-loop)" "$P3"
 
 # --- 8. The bootstrap names the installed skill, not this repo's layout ---
 BOOT=$(delib_bootstrap "$D")
