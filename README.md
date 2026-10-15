@@ -7,8 +7,8 @@ installable plugins for **Claude Code** and **GitHub Copilot CLI**.
 
 | Plugin | Description |
 |---|---|
-| [`stenswf`](plugins/stenswf/README.md) | Opinionated SDLC bundle spanning four tracks — heavy slice (plan → ship → review/slice → apply/slice), lite slice (plan-light → ship-light → review/slice → apply/slice), PRD capstone (review/prd → apply/prd), and PRD inception (prd-from-grill-me → prd-to-issues) — plus always-on craft skills (tdd, clean-code, lint-escape, architecture, brevity, show-me, visual-pr, …). Maintains a cross-skill [decision anchor](plugins/stenswf/README.md#decision-anchor-contract) with committed excerpts under `docs/decisions/`. |
-| [`stenswr`](plugins/stenswr/README.md) | Language-agnostic refactor bundle: orthogonal skills across four phases — understand, discover (architecture / functional bugs / security bugs), critique (plan-reviewer), test hygiene (lossless + lossy). One distinct refactor purpose per skill. |
+| [`stenswf`](plugins/stenswf/README.md) | Opinionated SDLC bundle spanning four tracks — heavy slice (plan → ship → review/slice → apply/slice), lite slice (plan-light → ship-light → review/slice → apply/slice), PRD capstone (review/prd → apply/prd), and PRD inception (prd-from-grill-me → prd-to-issues) — plus always-on craft skills (tdd, clean-code, lint-escape, architecture, codebase-design, brevity, show-me, visual-pr, …). Maintains a cross-skill [decision anchor](plugins/stenswf/README.md#decision-anchor-contract) with committed excerpts under `docs/decisions/`. |
+| [`stenswr`](plugins/stenswr/README.md) | Language-agnostic refactor bundle: orthogonal skills across four phases — understand, discover (functional bugs / security bugs; architecture scans moved to `/stenswf:improve-codebase-architecture`), critique (plan-reviewer), test hygiene (lossless + lossy). One distinct refactor purpose per skill. |
 | [`python-refactor`](plugins/python-refactor/README.md) | Agentic Python codebase analysis suite (complexity, PBT bug hunting, architecture RFCs, refactor plan). |
 
 ## Install
