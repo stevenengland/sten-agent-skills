@@ -275,7 +275,7 @@ Per slice:
       `## Assumptions`.
 - [ ] Identify deep-module opportunities for any *new* module the slice
       introduces (small interface, deep implementation; see
-      [../tdd/deep-modules.md](../tdd/deep-modules.md)). Record the
+      [../codebase-design/SKILL.md](../codebase-design/SKILL.md) and apply its deletion test and adapter-count question). Record the
       chosen shape in `## Assumptions`. Do NOT propose restructuring
       existing modules — that is heavy `plan` territory.
 - [ ] Confirm the implied interface satisfies

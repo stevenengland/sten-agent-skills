@@ -296,6 +296,22 @@ assert_nomatch "architecture no longer restates the deepening process" "$ART" "M
 DAI="design-an""-interface"   # split so this file never names the dropped skill
 assert_nomatch "architecture no longer links a skill stenswf does not ship" "$ART" "$DAI"
 
+# --- 10. Design-time pointers: tdd, plan, plan-light -----------------------
+PLT=$(read_file "$SKILLS/plan/SKILL.md")
+PLLT=$(read_file "$SKILLS/plan-light/SKILL.md")
+TDT=$(read_file "$SKILLS/tdd/SKILL.md")
+assert_match "plan links codebase-design for deep modules" "$PLT" "[deep modules](../codebase-design/SKILL.md)"
+assert_match "plan applies the deletion test and the adapter-count question" "$PLT" "Apply the deletion test and the adapter-count question from \`codebase-design\`"
+assert_match "plan-light links codebase-design and applies its questions" "$PLLT" "[../codebase-design/SKILL.md](../codebase-design/SKILL.md) and apply its deletion test and adapter-count question"
+assert_match "tdd links codebase-design" "$TDT" "[codebase-design](../codebase-design/SKILL.md):"
+assert_match "tdd still applies interface-design" "$TDT" "Apply [interface-design.md](interface-design.md) and"
+assert_match "tdd stays in the plan dispatch prefix" "$(read_file "$REFS/plan-artifact-schemas.md")" "SKILLS TO LOAD: tdd, clean-code, lint-escape"
+assert_match "tdd stays in the ship-light dispatch" "$(read_file "$SKILLS/slice-e2e/SKILL.md")" "SKILLS TO LOAD: ship-light, visual-pr, tdd, clean-code, lint-escape, brevity"
+OLD_PAGE="$SKILLS/tdd/deep-modules"
+assert_absent "the old tdd deep-modules page is gone" "$OLD_PAGE.md"
+DM_PAT='deep-modules[.]md'
+assert_eq "nothing in stenswf links the old tdd deep-modules page" "$(grep -rlE "$DM_PAT" "$ROOT" --include='*.md' --include='*.sh' || true)" ""
+
 # --- footer (append new sections above this line) --------------------------
 printf '\n1..%d\n# pass %d fail %d\n' "$((PASS + FAIL))" "$PASS" "$FAIL"
 [ "$FAIL" -eq 0 ]
