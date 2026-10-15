@@ -78,7 +78,7 @@ If `$ORIG` is set:
 5. Record `class:` in the PRD front-matter (Step 5 already requires it
    per [../../references/prd-template.md](../../references/prd-template.md)).
 
-**Inline brief.** If `$ARGUMENTS` is text rather than an issue number — for example the grilled brief `/stenswf:improve-codebase-architecture` hands over — that text is the Step-1 description: skip Step 1's question. A leading `class: <value>` line proposes the PRD class; confirm it with the user as in step 2 above. The brief has already been argued through, so Step 3 asks only what it leaves open and never re-asks a decision the brief records.
+**Inline brief.** If `$ARGUMENTS` is text rather than an issue number — for example the grilled brief `/stenswf:improve-codebase-architecture` hands over — that text is the Step-1 description: skip Step 1's question. A leading `class: <value>` line proposes the PRD class; confirm it with the user as in step 2 above, then apply steps 4–5. The brief has already been argued through, so Step 3 asks only what it leaves open and never re-asks a decision the brief records.
 
 If `$ARGUMENTS` is empty, behave as before (blank-page interview from Step 1).
 

@@ -283,6 +283,7 @@ ART=$(read_file "$SKILLS/architecture/SKILL.md")
 assert_match "inline brief: the rule exists" "$PGT" "**Inline brief.**"
 assert_match "inline brief: it is the Step-1 description" "$PGT" "that text is the Step-1 description: skip Step 1's question."
 assert_match "inline brief: a class line is proposed and confirmed" "$PGT" "A leading \`class: <value>\` line proposes the PRD class"
+assert_match "inline brief: the class bias of steps 4-5 applies" "$PGT" "confirm it with the user as in step 2 above, then apply steps 4–5."
 assert_match "inline brief: the interview asks only what is open" "$PGT" "Step 3 asks only what it leaves open"
 assert_match "inline brief: Step 1 is skipped" "$PGT" "or an inline brief was given.**"
 assert_match "inline brief: Step 3 covers only the gaps" "$PGT" "With an inline brief, cover only what it leaves open."
