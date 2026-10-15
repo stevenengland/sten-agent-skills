@@ -370,6 +370,36 @@ assert_file "discovery-to-prd-handoff has a brief" "$RS/discovery-to-prd-handoff
 assert_file "discovery-to-prd-handoff has expected verdicts" "$RS/discovery-to-prd-handoff/expected.md"
 assert_match "the handoff brief starts with its class line" "$(head -1 "$RS/discovery-to-prd-handoff/brief.md" 2>/dev/null)" "class: refactor"
 
+# --- 14. Registration and rationale ----------------------------------------
+RD="$ROOT/README.md"
+RDT=$(read_file "$RD")
+assert_match "the routing table lists the workflow skill" "$RDT" "| \`/stenswf:improve-codebase-architecture\` | Opus |"
+assert_match "the craft table lists codebase-design" "$RDT" "| \`/stenswf:codebase-design\` |"
+assert_match "the repository tree lists codebase-design" "$RDT" "│       │   ├── codebase-design/"
+assert_match "the repository tree lists improve-codebase-architecture" "$RDT" "│       │   ├── improve-codebase-architecture/"
+LENS=$(section '## Deepening lens' "$RD" '^## ')
+assert_match "the README has a Deepening lens section" "$LENS" "## Deepening lens"
+assert_match "the lens section explains the trigger" "$LENS" "- **Trigger.**"
+assert_match "the lens section explains the thermo split" "$LENS" "- **Ownership.**"
+assert_match "the lens section links the scenarios" "$LENS" "[tests/review-scenarios/](tests/review-scenarios/README.md)"
+assert_match "the lens section links the contract" "$LENS" "Contract: [references/deepening-subagent.md](references/deepening-subagent.md)."
+assert_match "the lens section links the rationale" "$LENS" "[docs/stenswf/decisions/2026-10-14-deepening-lens.md](../../docs/stenswf/decisions/2026-10-14-deepening-lens.md)"
+L_TDD=$(grep -n '^## TDD-as-lens$' "$RD" | cut -d: -f1)
+L_DEEP=$(grep -n '^## Deepening lens$' "$RD" | cut -d: -f1)
+L_PONY=$(grep -n '^## Subtractive pass (ponytail-lens)$' "$RD" | cut -d: -f1)
+assert_eq "the Deepening lens sits between TDD-as-lens and the ponytail lens" \
+  "$([ -n "$L_TDD" ] && [ -n "$L_DEEP" ] && [ -n "$L_PONY" ] && [ "$L_TDD" -lt "$L_DEEP" ] && [ "$L_DEEP" -lt "$L_PONY" ] && echo yes || echo no)" "yes"
+DR="$REPO/docs/stenswf/decisions/2026-10-14-deepening-lens.md"
+DRT=$(read_file "$DR")
+assert_file "the decision record exists" "$DR"
+assert_match "the record names the decision" "$DRT" "# Decision: Deepening lens (2026-10-14)"
+assert_match "the record explains the trigger" "$DRT" "- **Trigger.**"
+assert_match "the record explains the lens" "$DRT" "- **Lens.**"
+assert_match "the record explains consequence-based findings" "$DRT" "- **Finding.**"
+assert_match "the record explains the thermo split" "$DRT" "- **Ownership.**"
+assert_match "the record says why the lens is not part of thermo" "$DRT" "- **Fold the deepening pass into the thermo subagent.**"
+assert_match "the record keeps the convergence invariant" "$DRT" "\`review-loop\` never converges while a deliberation is open."
+
 # --- footer (append new sections above this line) --------------------------
 printf '\n1..%d\n# pass %d fail %d\n' "$((PASS + FAIL))" "$PASS" "$FAIL"
 [ "$FAIL" -eq 0 ]

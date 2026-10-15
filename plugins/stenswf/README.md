@@ -241,6 +241,7 @@ your harness (or manually invoke) accordingly.
 | `/stenswf:slice-e2e` | Any (cheapest orchestrator OK) | Thin facade; dispatches subagents; zero judgment calls |
 | `/stenswf:review` | Opus | Capstone synthesis; 5-axis architectural critique |
 | `/stenswf:apply` | Sonnet | Execution against a structured findings list |
+| `/stenswf:improve-codebase-architecture` | Opus | Hot-spot exploration, deletion-test judgment and before/after design synthesis |
 
 Craft skills (`tdd`, `clean-code`, `lint-escape`, etc.) run in whatever
 parent session invokes them — no separate routing.
@@ -253,6 +254,7 @@ parent session invokes them — no separate routing.
 | `/stenswf:tdd` | Red-green-refactor; integration-style tests |
 | `/stenswf:lint-escape` | Tiered protocol for unresolvable lint/type errors |
 | `/stenswf:architecture` | Architectural decision guidance |
+| `/stenswf:codebase-design` | Deep-module vocabulary (module, interface, depth, seam, adapter, leverage, locality), deletion test, design-it-twice |
 | `/stenswf:show-me` | Views (trees, pseudocode, Mermaid, focused HTML asides) where they clarify a decision |
 | `/stenswf:visual-pr` | PR description: why, special things to note, change outline |
 | `/stenswf:deliberate` | Work a blocking tension out with a peer agent (agent A) |
@@ -299,6 +301,35 @@ carries it as a capstone Test-quality perspective.
 Full contract — heuristic ladder, manifest schema, ceremony
 invariant — at
 [references/behavior-change-signal.md](references/behavior-change-signal.md).
+
+---
+
+## Deepening lens
+
+`codebase-design` runs as a *lens* the way `tdd` does: detection is the
+trigger, loading the skill is the lens, and whether a finding is raised
+follows from its demonstrated consequence.
+
+- **Trigger.** Slice review runs a read-only deepening subagent whenever the
+  staged diff changes production code (`DEEPEN_HIT`: any file outside docs,
+  data files and test paths). PRD review runs it in Axis 3 every time. Each
+  review dispatches it once; `review-loop` only on its first pass.
+- **Ownership.** Deepening owns module structure — abstractions earning their
+  keep, interface leaks, coupling, where logic lives. Thermo keeps code-level
+  quality and hands module structure over.
+- **Findings.** Thermo's four-line shape, merged into the existing review
+  schemas. Severity follows consequence, never critical; only problems the
+  diff introduced or worsened are findings. Older friction becomes an
+  uncounted follow-up pointing to `/stenswf:improve-codebase-architecture`.
+- **Design time.** `plan`, `plan-light`, `tdd` and `prd-from-grill-me` link
+  the same skill, so modules are judged in one vocabulary before and after
+  code exists. Review never grills; the standalone skill does.
+- **Judgment checks.** [tests/review-scenarios/](tests/review-scenarios/README.md)
+  holds sample diffs with expected verdicts, run whenever the reviewer
+  instructions change.
+
+Contract: [references/deepening-subagent.md](references/deepening-subagent.md).
+Rationale: [docs/stenswf/decisions/2026-10-14-deepening-lens.md](../../docs/stenswf/decisions/2026-10-14-deepening-lens.md).
 
 ---
 
@@ -383,11 +414,13 @@ STEN-AGENT-SKILLS/                       ← Repo root
 │       │   ├── prd-from-grill-me/
 │       │   ├── prd-to-issues/
 │       │   ├── triage-issue/
+│       │   ├── improve-codebase-architecture/
 │       │   ├── bootstrap/
 │       │   ├── clean-code/
 │       │   ├── tdd/
 │       │   ├── lint-escape/
 │       │   ├── architecture/
+│       │   ├── codebase-design/
 │       │   ├── show-me/
 │       │   ├── visual-pr/
 │       │   └── brevity/
