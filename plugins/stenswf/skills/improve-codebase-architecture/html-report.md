@@ -48,7 +48,7 @@ Each candidate is one `<article>`:
 - **Files**: monospaced list, `font-mono text-sm`.
 - **Before / After diagram**: the centrepiece. Two columns, side by side. See patterns below.
 - **Problem**: one sentence. What hurts.
-- **Solution**: one sentence. What changes.
+- **Solution**: what changes, and the invariants it keeps (transaction boundaries, error behaviour, authorization, ordering).
 - **Wins**: bullets, ≤6 words each. e.g. "Tests hit one interface", "Pricing logic stops leaking", "Delete 4 shallow wrappers".
 - **ADR callout** (if applicable): one line in an amber-tinted box.
 
