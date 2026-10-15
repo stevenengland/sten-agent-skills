@@ -126,7 +126,7 @@ copilot plugin install stenswr@sten-agent-skills-marketplace
 
 ```bash
 copilot plugin list
-# → stenswr  0.1.0
+# → stenswr  0.2.0
 
 /stenswr:plan-reviewer
 ```
