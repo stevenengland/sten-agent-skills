@@ -115,8 +115,7 @@ assert_match "it never grills" "$DST" "grilling a candidate belongs to \`/stensw
 assert_match "it owns module structure" "$DST" "The lens owns **module structure**"
 assert_match "each review dispatches it at most once" "$DST" "Each review dispatches it at most once"
 # Severity, confidence and diff attribution
-assert_match "diff attribution: introduced or worsened only" "$DST" "Diff attribution: raise a finding only for a problem the diff introduced or materially worsened."
-assert_match "older friction is never a finding" "$DST" "is never a finding; list it as a follow-up line instead."
+assert_match "diff attribution: introduced or worsened only, older friction a follow-up" "$DST" "Diff attribution: raise a finding only for a problem the diff introduced or materially worsened; list older friction as a follow-up line."
 assert_match "severity follows consequence" "$DST" "Severity follows demonstrated consequence"
 assert_match "high: duplicated business rule" "$DST" "duplicated business rule"
 assert_match "high: invariant leaking across an interface" "$DST" "an invariant leaking across an interface"

@@ -44,8 +44,7 @@ and never substitute component, service, unit, API, signature, boundary,
 layer or wrapper. Its rules are questions, not verdicts: a single-adapter
 seam can earn its keep.
 
-Diff attribution: raise a finding only for a problem the diff introduced or materially worsened.
-Friction the diff did not introduce or worsen is never a finding; list it as a follow-up line instead.
+Diff attribution: raise a finding only for a problem the diff introduced or materially worsened; list older friction as a follow-up line.
 
 Severity follows demonstrated consequence, not how strongly you would recommend the change:
 - high   — the diff introduces or materially worsens a duplicated business rule, an invariant leaking across an interface, a change that must propagate through callers, or a materially obscured contract.
