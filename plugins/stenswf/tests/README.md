@@ -77,6 +77,26 @@ Dev-only. Not packaged for end users.
   **Not covered — by design:** it guards that the instructions are present,
   not the quality of planning judgment. A green run says the planning skills
   are told to ask the question, never that they answer it well.
+- [`deepening-trigger.test.sh`](deepening-trigger.test.sh) — extracts the
+  deepening trigger block (`DEEPEN_HIT`) from `skills/review/slice.md` and runs
+  it against staged fixture changes in throwaway repos: production code turns
+  it on (indented methods and removals included); docs, data files and test
+  paths keep it off.
+- [`codebase-design.test.sh`](codebase-design.test.sh) — presence tests for
+  the deepening lens: the `codebase-design` vocabulary, rule adaptations and
+  sub-pages, the deepening review subagent and its slice/PRD/review-loop
+  wiring, the thermo hand-off, the `improve-codebase-architecture` skill and
+  report guide, the `prd-from-grill-me` inline brief, the design-time
+  pointers, `sources.yaml` tracking, README registration, the review
+  scenarios' completeness, and the legacy-gone checks (old tdd page, stenswr
+  port). Also that every test in this directory is registered here.
+
+  **Not covered — by design:** it pins contract tokens, not the quality of
+  the judgments the instructions produce — that is what `review-scenarios/`
+  is for.
+- [`review-scenarios/`](review-scenarios/README.md) — sample diffs with the
+  verdict a good reviewer should reach. Not part of the bash suite: run them
+  by hand, per their README, whenever the reviewer instructions change.
 - [`fixtures/`](fixtures/) — hand-authored issue bodies exercising the
   front-matter parser (`references/extractors.md`) and the
   route-selection gates in `plan-light`, `ship-light`, `plan`,
@@ -93,6 +113,10 @@ bash plugins/stenswf/tests/publish-decisions.test.sh
 bash plugins/stenswf/tests/show-me.test.sh
 bash plugins/stenswf/tests/visual-pr.test.sh
 bash plugins/stenswf/tests/strategic-programming.test.sh
+bash plugins/stenswf/tests/deliberation.test.sh
+bash plugins/stenswf/tests/issue-comments.test.sh
+bash plugins/stenswf/tests/deepening-trigger.test.sh
+bash plugins/stenswf/tests/codebase-design.test.sh
 ```
 
 The GitHub-facing suites inject a fake `gh` on `PATH` rather than calling

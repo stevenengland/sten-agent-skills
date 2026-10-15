@@ -400,6 +400,15 @@ assert_match "the record explains the thermo split" "$DRT" "- **Ownership.**"
 assert_match "the record says why the lens is not part of thermo" "$DRT" "- **Fold the deepening pass into the thermo subagent.**"
 assert_match "the record keeps the convergence invariant" "$DRT" "\`review-loop\` never converges while a deliberation is open."
 
+# --- 15. Every test is registered ------------------------------------------
+TRD=$(read_file "$HERE/README.md")
+for t in "$HERE"/*.test.sh; do
+  n=$(basename "$t")
+  assert_match "tests/README describes $n" "$TRD" "[\`$n\`]($n)"
+  assert_match "tests/README runs $n" "$TRD" "bash plugins/stenswf/tests/$n"
+done
+assert_match "tests/README points at the review scenarios" "$TRD" "[\`review-scenarios/\`](review-scenarios/README.md)"
+
 # --- footer (append new sections above this line) --------------------------
 printf '\n1..%d\n# pass %d fail %d\n' "$((PASS + FAIL))" "$PASS" "$FAIL"
 [ "$FAIL" -eq 0 ]
