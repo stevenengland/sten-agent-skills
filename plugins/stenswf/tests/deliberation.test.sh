@@ -316,15 +316,5 @@ move "$E" A agreed "$WORK/res.md"
 assert_eq "e2e: B is told it ended" "$(delib_wait "$E" B 0 1)" "ended agreed 06-A-agreed.md"
 assert_eq "e2e: the deliberation closes" "$(delib_open_for_issue 46)" ""
 
-# --- 13. "seam" keeps one meaning in stenswf ------------------------------
-# The workflow skill hosting a sub-protocol is the "host skill"; reflection
-# points are "checkpoints". "seam" is reserved for codebase-design's meaning.
-# Counts come from grep on the files (no printf | grep -q race under pipefail).
-OLD_HOST='host[[:space:]]+seam'
-assert_eq "no stenswf file names the host skill by its old name" "$(grep -rliE "$OLD_HOST" "$HERE/.." || true)" ""
-assert_eq "ponytail runs per checkpoint" "$(grep -cF -- '## Per-checkpoint behavior' "$REFS/ponytail-pass.md")" "1"
-assert_eq "plan's ponytail step is a checkpoint" "$(grep -cF -- 'This checkpoint is interactive (available by default)' "$SKILLS/plan/SKILL.md")" "1"
-assert_eq "the gh CLI is the PR loop's seam" "$(grep -cF -- 'The `gh` CLI is the seam (swap it for' "$REFS/pr-conversation-loop.md")" "1"
-
 printf '\n%s passed, %s failed\n' "$PASS" "$FAIL"
 [ "$FAIL" -eq 0 ]

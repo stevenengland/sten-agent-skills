@@ -79,21 +79,23 @@ Dev-only. Not packaged for end users.
   are told to ask the question, never that they answer it well.
 - [`deepening-trigger.test.sh`](deepening-trigger.test.sh) — extracts the
   deepening trigger block (`DEEPEN_HIT`) from `skills/review/slice.md` and runs
-  it against staged fixture changes in throwaway repos: production code turns
-  it on (indented methods and removals included); docs, data files and test
-  paths keep it off.
-- [`codebase-design.test.sh`](codebase-design.test.sh) — presence tests for
-  the deepening lens: the `codebase-design` vocabulary, rule adaptations and
-  sub-pages, the deepening review subagent and its slice/PRD/review-loop
-  wiring, the thermo hand-off, the `improve-codebase-architecture` skill and
-  report guide, the `prd-from-grill-me` inline brief, the design-time
-  pointers, `sources.yaml` tracking, README registration, the review
-  scenarios' completeness, and the legacy-gone checks (old tdd page, stenswr
-  port). Also that every test in this directory is registered here.
+  it in throwaway repos, against staged changes and against a committed
+  `DIFF_RANGE` with an empty index and the checkout at the base, as
+  `review-loop` runs it: production code turns it on (indented methods and
+  removals included); docs, data files and test paths keep it off. It also
+  runs Step 1's patch command on a committed range and checks the patch
+  carries the change.
+- [`codebase-design.test.sh`](codebase-design.test.sh) — structural smoke
+  check for the deepening lens: files and front-matter exist, relative links
+  resolve, the review callers link the shared contracts, the output tokens
+  other code parses are present, CDN scripts are version-pinned, the replaced
+  artifacts are gone, `sources.yaml` pins a full upstream commit, the review
+  scenarios are complete, and every test here is registered.
 
-  **Not covered — by design:** it pins contract tokens, not the quality of
+  **Not covered — by design:** the wording of the rules, and the quality of
   the judgments the instructions produce — that is what `review-scenarios/`
-  is for.
+  is for. A green run says the lens is wired up, never that its rules are
+  right.
 - [`review-scenarios/`](review-scenarios/README.md) — sample diffs with the
   verdict a good reviewer should reach. Not part of the bash suite: run them
   by hand, per their README, whenever the reviewer instructions change.
