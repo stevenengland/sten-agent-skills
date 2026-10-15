@@ -115,6 +115,11 @@ findings per that reference; survivors are emitted into this axis's
 `<finding>` list at Step 5 (continuing the `F`-number sequence). Thermo is
 code-quality only — no `critical`.
 
+**Deepening subagent pass.** On every PRD review (no gate), dispatch a **read-only** deepening subagent on the delivered diff per
+[../../references/deepening-subagent.md](../../references/deepening-subagent.md), with `DIFF_PATH=/tmp/prd-$ARGUMENTS-diff.patch` (the delta patch on idempotent re-review), `<N>=$ARGUMENTS` and `<MODE>=prd`.
+Dedup its findings against this axis's native and thermo findings per that reference; survivors are emitted into this axis's `<finding>` list at Step 5 (continuing the `F`-number sequence) with the severity the subagent assigned. Deepening contributes no `critical`.
+Dispatch each pass at most once per review.
+
 ### Axis 4 — Test strategy
 
 Coverage matches PRD risk surface? Critical stories without E2E? Gaps?
@@ -166,11 +171,13 @@ Write `.stenswf/$ARGUMENTS/review/prd-review.xml`:
 </prd-review>
 ```
 
-Deduped thermo survivors (from the Axis-3 pass) are emitted as ordinary
+Deduped thermo and deepening survivors (from the Axis-3 passes) are emitted as ordinary
 `<finding id="F<n>" severity="high|medium|low">` elements **inside
 `<axis name="architectural-coherence">`**, continuing the `F`-number sequence
-so IDs stay unique, and counted in `<counts>`. Thermo contributes no
+so IDs stay unique, and counted in `<counts>`. Thermo and deepening contribute no
 `critical`.
+
+Deepening `follow-up:` lines become `<follow-up module="<module>">friction — /stenswf:improve-codebase-architecture <module></follow-up>` elements inside `<axis name="architectural-coherence">`, after its findings. They are not findings: no `id`, no `severity`, not counted in `<counts>`.
 
 ### Schema validation (self-check)
 

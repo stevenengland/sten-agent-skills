@@ -162,6 +162,7 @@ padding.
 
 **Perspective 4 — Software Architect.** *Only if `ARCH_GATE=on`.*
 Structural fit, coupling, abstraction level, doc updates required.
+Module-structure judgments — shallow modules, single-adapter seams, leaks across an interface — come from the deepening subagent pass below.
 
 If `ARCH_GATE=off`: one line — `Architect: skipped (diff below structural threshold).`
 
@@ -182,13 +183,26 @@ After the five perspectives, dispatch a **read-only** thermo subagent on the
 staged diff per
 [../../references/thermo-subagent.md](../../references/thermo-subagent.md),
 with `DIFF_PATH=/tmp/review-$ARGUMENTS-staged.patch` and `<N>=$ARGUMENTS`.
-This pass is always-on and additive — it does not replace any perspective.
+This pass is always-on and additive — it does not replace any perspective. Dispatch it at most once per review.
 
 Parse the returned finding blocks and apply the merge/dedup rules from that
 reference: dedup against the five-perspective findings (most overlap is with
 Perspective 4 — Architect), then carry survivors into the `## Suggestions`
 list below. Thermo `severity` maps 1:1 to `**Priority:**`. If
 `THERMO_SUMMARY` is all-zero, add nothing and say so.
+
+### Deepening subagent pass (codebase-design lens)
+
+*Only if `DEEPEN_HIT` is set.* After the thermo pass, dispatch a **read-only** deepening subagent on the staged diff per
+[../../references/deepening-subagent.md](../../references/deepening-subagent.md), with `DIFF_PATH=/tmp/review-$ARGUMENTS-staged.patch`, `<N>=$ARGUMENTS` and `<MODE>=slice`.
+Dispatch it at most once per review. It judges module structure and replaces no perspective.
+
+Parse the returned blocks and apply that reference's merge/dedup rules:
+dedup across Architect, thermo and deepening findings (higher severity wins), carry survivors into the `## Suggestions` list below, and fold them into the `Summary:` counts.
+Deepening `severity` carries over to `**Priority:**` unchanged. If `DEEPENING_SUMMARY` is all-zero, add no findings and say so.
+List any `follow-up:` lines under `## Follow-ups (not counted)` in the output, never as suggestions.
+
+If `DEEPEN_HIT` is empty: one line — `Deepening: skipped (no production code in diff).`
 
 ### Severity guide
 
@@ -197,7 +211,7 @@ list below. Thermo `severity` maps 1:1 to `**Priority:**`. If
 - **Medium** — maintainability, clarity, coverage gap with real cost.
 - **Low** — nit, style.
 
-Thermo findings are code-quality only (no Critical); they enter as ordinary
+Thermo and deepening findings are maintainability only (no Critical); they enter as ordinary
 suggestions at their mapped Priority.
 
 ## Slice-mode Output
@@ -211,6 +225,8 @@ Single numbered list of suggestions. Per item:
 
 Include the AC coverage matrix (if produced) as its own section above
 the suggestions. Close with: `Summary: N high | M medium | K low`.
+
+When the deepening pass returned `follow-up:` lines, add `## Follow-ups (not counted)` after the `Summary:` line, one bullet per line, with no `**Priority:**`; omit the section otherwise.
 
 Write to `.stenswf/$ARGUMENTS/review/slice.md`:
 
@@ -226,6 +242,10 @@ Write to `.stenswf/$ARGUMENTS/review/slice.md`:
    **Priority:** high
 
 Summary: N high | M medium | K low
+
+## Follow-ups (not counted)
+<!-- omit when the deepening pass returned no follow-up lines -->
+- follow-up: <module> — <friction> — /stenswf:improve-codebase-architecture <module>
 
 <!-- reviewed-at: <HEAD-SHA> diff-sha256: <staged-diff-sha256> -->
 ```

@@ -94,7 +94,7 @@ assert_match "design-it-twice honors an existing domain glossary" "$DTT" "(GLOSS
 assert_nomatch "sub-pages link lowercase file names" "$DPT$DTT$CDT" "DEEPENING.md"
 assert_nomatch "sub-pages link lowercase file names (design-it-twice)" "$DPT$DTT$CDT" "DESIGN-IT-TWICE.md"
 
-# --- 3. Deepening review subagent (AC4, AC5, AC6) --------------------------
+# --- 3. Deepening review subagent ------------------------------------------
 DS="$REFS/deepening-subagent.md"
 DST=$(read_file "$DS")
 assert_file "references/deepening-subagent.md exists" "$DS"
@@ -138,6 +138,43 @@ assert_match "glossary files" "$DST" "GLOSSARY.md, CONTEXT.md or UBIQUITOUS_LANG
 # Caller-side merge rules
 assert_match "callers dedup across Architect, thermo and deepening" "$DST" "**Dedup across Architect, thermo and deepening.**"
 assert_match "follow-up lines stay outside the counts" "$DST" "**Follow-up lines are not findings.**"
+
+# --- 4. Review wiring: slice and PRD modes ---------------------------------
+SL="$SKILLS/review/slice.md"
+PR="$SKILLS/review/prd.md"
+SLT=$(read_file "$SL")
+PRT=$(read_file "$PR")
+DEEP=$(section '### Deepening subagent pass (codebase-design lens)' "$SL" '^### ')
+THS=$(section '### Thermo subagent pass (aggressive maintainability)' "$SL" '^### ')
+assert_match "slice review has a deepening pass" "$DEEP" "### Deepening subagent pass (codebase-design lens)"
+assert_match "the slice pass runs on DEEPEN_HIT" "$DEEP" "*Only if \`DEEPEN_HIT\` is set.*"
+assert_match "the slice pass dispatches the shared contract" "$DEEP" "[../../references/deepening-subagent.md](../../references/deepening-subagent.md)"
+assert_match "the slice pass passes the staged diff" "$DEEP" "\`DIFF_PATH=/tmp/review-\$ARGUMENTS-staged.patch\`"
+assert_match "the slice pass runs in slice mode" "$DEEP" "\`<MODE>=slice\`"
+assert_match "the slice deepening pass runs once" "$DEEP" "Dispatch it at most once per review."
+assert_match "the slice thermo pass runs once" "$THS" "Dispatch it at most once per review."
+assert_match "the slice pass dedups across all three sources" "$DEEP" "dedup across Architect, thermo and deepening findings (higher severity wins)"
+assert_match "the slice pass folds survivors into the Summary counts" "$DEEP" "fold them into the \`Summary:\` counts"
+assert_match "the slice pass writes the verbatim skip line" "$DEEP" "\`Deepening: skipped (no production code in diff).\`"
+assert_match "the slice pass routes follow-ups outside the counts" "$DEEP" "\`## Follow-ups (not counted)\`"
+assert_match "the slice output has the follow-ups section" "$SLT" "## Follow-ups (not counted)"
+line_in() { grep -nF -- "$2" "$1" | head -1 | cut -d: -f1; }
+TH=$(line_in "$SL" "### Thermo subagent pass"); DP4=$(line_in "$SL" "### Deepening subagent pass (codebase-design lens)")
+assert_eq "the deepening pass follows the thermo pass" "$([ -n "$TH" ] && [ -n "$DP4" ] && [ "$TH" -lt "$DP4" ] && echo yes || echo no)" "yes"
+assert_match "Perspective 4 leaves depth to the subagent" "$SLT" "come from the deepening subagent pass below."
+assert_match "deepening findings are never Critical" "$SLT" "Thermo and deepening findings are maintainability only (no Critical)"
+assert_match "the Summary schema is unchanged" "$SLT" "Close with: \`Summary: N high | M medium | K low\`."
+assert_match "the Priority schema is unchanged" "$SLT" "\`**Priority:** <level>\` (schema check below depends on this)."
+AX3=$(section '### Axis 3 — Architectural coherence' "$PR" '^### ')
+assert_match "PRD Axis 3 has a deepening pass" "$AX3" "**Deepening subagent pass.**"
+assert_match "PRD Axis 3 runs it on every review" "$AX3" "On every PRD review (no gate)"
+assert_match "PRD Axis 3 dispatches the shared contract" "$AX3" "[../../references/deepening-subagent.md](../../references/deepening-subagent.md)"
+assert_match "PRD Axis 3 passes the PRD diff in prd mode" "$AX3" "(the delta patch on idempotent re-review), \`<N>=\$ARGUMENTS\` and \`<MODE>=prd\`"
+assert_match "PRD Axis 3 deepening and thermo run once" "$AX3" "Dispatch each pass at most once per review."
+assert_match "PRD Axis 3 never emits critical" "$AX3" "Deepening contributes no \`critical\`."
+assert_match "PRD Step 5 emits deepening survivors as findings" "$PRT" "Deduped thermo and deepening survivors (from the Axis-3 passes)"
+assert_match "PRD Step 5 emits follow-ups as uncounted elements" "$PRT" "<follow-up module=\"<module>\">"
+assert_match "the PRD finding schema is unchanged" "$PRT" "<finding id=\"F<n>\" severity=\"high|medium|low\">"
 
 # --- footer (append new sections above this line) --------------------------
 printf '\n1..%d\n# pass %d fail %d\n' "$((PASS + FAIL))" "$PASS" "$FAIL"
