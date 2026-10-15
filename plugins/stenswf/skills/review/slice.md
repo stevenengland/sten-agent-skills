@@ -109,6 +109,19 @@ fi
 echo "Architect gate: $ARCH_GATE"
 ```
 
+### Deepening trigger (rule-based)
+
+The deepening subagent (below) runs when the staged diff changes any file outside documentation and data files and test paths. It looks for no declarations: when in doubt, the subagent inspects and decides.
+
+```bash
+# Any changed file outside docs/data files and test paths turns the trigger on.
+DEEPEN_HIT=$(git diff --staged --name-only | awk '
+  /\.(md|markdown|json|yaml|yml|toml|lock|txt)$/ { next }
+  /(^|\/)(tests?|spec|__tests__)\// || /(^|\/)test_[^\/]*$/ || /(_test|\.test|\.spec)\.[^\/]+$/ { next }
+  { print; exit }')
+echo "Deepening trigger: $([ -n "$DEEPEN_HIT" ] && echo on || echo off)"
+```
+
 ### Five perspectives (axis-by-axis; do not collapse)
 
 **Guard:** If a perspective has no significant findings, say so
