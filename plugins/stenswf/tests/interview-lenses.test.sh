@@ -198,6 +198,14 @@ assert_match "Phase 0 resumes an Inline brief: intake issue as a brief" \
 assert_nomatch "Step 5 does not write parked questions after publishing" \
   "$(between '^5[.] Write the PRD' "$PRD" '^## ')" "Write parked questions"
 
+# --- 10. The business-logic question (AC10) ----------------------------------
+Q='Which option is cleanest from a business-logic point of view?'
+RULE_HEAD=$(between '^## The rule' "$WEIGHTING" '^### Strategic over tactical')
+SUB=$(between '^### Strategic over tactical' "$WEIGHTING" '^---')
+assert_match "## The rule asks the business-logic question before the subsection" "$RULE_HEAD" "$Q"
+assert_nomatch "the question stays outside the strategic subsection" "$SUB" "$Q"
+assert_eq "the question appears once, on one line" "$(grep -cF -- "$Q" "$WEIGHTING")" "1"
+
 # --- footer (append new sections above this line) --------------------------
 printf '\n1..%d\n# pass %d fail %d\n' "$((PASS + FAIL))" "$PASS" "$FAIL"
 [ "$FAIL" -eq 0 ]
