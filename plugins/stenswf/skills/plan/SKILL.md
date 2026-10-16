@@ -189,6 +189,15 @@ Dispatch `Explore` subagent (don't read files directly):
 >
 > No file contents. Symbol paths + 1-sentence descriptions only.
 
+### Lens pass
+
+Before asking the user anything, run the lens pass per
+[../../references/interview-lenses.md](../../references/interview-lenses.md):
+draft every substantive open decision as a question — including interface
+changes and the behaviors to test — dispatch the lenses, verify their
+verdicts, and hand them to decision-escalation's classifier. At full depth
+(HITL) dispatch Design, Strategy and Precedent.
+
 ### Interview
 
 Interview relentlessly about every aspect until shared understanding:
