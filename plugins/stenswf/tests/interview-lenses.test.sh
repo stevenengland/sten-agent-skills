@@ -206,6 +206,31 @@ assert_match "## The rule asks the business-logic question before the subsection
 assert_nomatch "the question stays outside the strategic subsection" "$SUB" "$Q"
 assert_eq "the question appears once, on one line" "$(grep -cF -- "$Q" "$WEIGHTING")" "1"
 
+# --- 11. Registration, decision record and links (AC11) ----------------------
+RDT=$(read_file "$ROOT/README.md")
+assert_match "README links the lens-pass contract" "$RDT" "(references/interview-lenses.md)"
+assert_match "README links the decision record" "$RDT" "(../../docs/stenswf/decisions/2026-10-16-interview-lenses.md)"
+assert_file "the decision record exists" "$ADR"
+ADRT=$(read_file "$ADR")
+for h in "## Decision" "## Consequences" "## Rejected alternatives" "## Carved invariants"; do
+  assert_match "the decision record has $h" "$ADRT" "$h"
+done
+assert_match "the record names the topology hypothesis" "$ADRT" "hypothesis"
+for f in "$LENSES" "$PLAN" "$PRD" "$WEIGHTING" "$ROOT/README.md" "$ADR"; do
+  d=$(dirname "$f"); bad=""
+  while IFS= read -r link; do
+    [ -e "$d/$link" ] || bad="$bad $link"
+  done < <(grep -oE '\]\([^)#:]+\)' "$f" 2>/dev/null | sed 's/^](//; s/)$//' | sort -u)
+  assert_eq "links resolve: ${f#"$REPO"/}" "$bad" ""
+done
+
+# --- 12. Out of scope stays out (AC12) ---------------------------------------
+for f in "$SKILLS/plan-light/SKILL.md" "$REFS/decision-escalation.md"; do
+  assert_nomatch "${f#"$ROOT"/} stays off the lens pass" "$(read_file "$f")" "interview-lenses"
+done
+assert_match "prd Step 3 keeps its practice-citation rule" \
+  "$(between '^3[.] Interview' "$PRD" '^4[.] Sketch')" "Cite winning practices"
+
 # --- footer (append new sections above this line) --------------------------
 printf '\n1..%d\n# pass %d fail %d\n' "$((PASS + FAIL))" "$PASS" "$FAIL"
 [ "$FAIL" -eq 0 ]

@@ -333,6 +333,43 @@ Rationale: [docs/stenswf/decisions/2026-10-14-deepening-lens.md](../../docs/sten
 
 ---
 
+## Interview lenses
+
+`plan` Phase 1 and `prd-from-grill-me` route every substantive decision
+through one research and classification procedure: read-only lens subagents
+research the drafted questions first, decision-escalation decides who may
+answer each, and the user sees only what stays heavy, plus final approval.
+
+- **Responsibilities.** Research (the lens pass) → weighing
+  (`decision-weighting`) → authority (`decision-escalation`, the only
+  easy/heavy definition) → the caller (approval, recording, resume).
+- **Lenses.** Design (`codebase-design`, `clean-code`), Strategy
+  (`architecture`, decision-weighting), Precedent (conventions, decision
+  anchors, docs, git history, open and closed issues, callers and contracts).
+  The topology is a recorded hypothesis; the result format is the contract.
+- **Depth.** No open question → no dispatch; abbreviated `plan` runs (AFK,
+  spike) → Precedent only; HITL `plan` and `prd-from-grill-me` → all three.
+  Each lens runs at most once per run, in parallel.
+- **Verification.** Verdicts are hypotheses (`confirmed` / `rejected` /
+  `inconclusive`) checked against code, requirements, decisions and tests,
+  starting from the citations; disagreements are investigated; the caller runs
+  a pre-mortem. Existing behavior never settles a `[business]` question.
+- **Asks.** Heavy questions carry each option's evidence and downsides.
+  `Keep` / `Exempt this work` / `Supersede` is asked only when proceeding needs
+  an exception; an unchosen conflicting alternative is rejected without asking.
+- **Lifecycle.** Easy decisions are listed under `Decided without asking`
+  before approval; a vetoed line becomes a question. A changed premise reopens
+  the conclusions that depended on it, with approval asked again if the
+  approved design changed. On `plan --resume` only resolved decisions are
+  pinned and parked ones come first. Unattended runs PARK and halt; a PRD
+  session parks on an `Intake: <topic>` issue and resumes from it, never
+  publishing a PRD around a parked question.
+
+Contract: [references/interview-lenses.md](references/interview-lenses.md).
+Rationale: [docs/stenswf/decisions/2026-10-16-interview-lenses.md](../../docs/stenswf/decisions/2026-10-16-interview-lenses.md).
+
+---
+
 ## Subtractive pass (ponytail-lens)
 
 A subtractive (YAGNI / laziest-that-works) lens runs as a self-review
