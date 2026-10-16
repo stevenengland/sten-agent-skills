@@ -78,7 +78,7 @@ If `$ORIG` is set:
 5. Record `class:` in the PRD front-matter (Step 5 already requires it
    per [../../references/prd-template.md](../../references/prd-template.md)).
 
-**Inline brief.** If `$ARGUMENTS` is text rather than an issue number — for example the grilled brief `/stenswf:improve-codebase-architecture` hands over — that text is the Step-1 description: skip Step 1's question. A leading `class: <value>` line proposes the PRD class; confirm it with the user as in step 2 above, then apply steps 4–5. The brief has already been argued through, so Step 3 asks only what it leaves open and never re-asks a decision the brief records.
+**Inline brief.** If `$ARGUMENTS` is text rather than an issue number — for example the grilled brief `/stenswf:improve-codebase-architecture` hands over — that text is the Step-1 description: skip Step 1's question. A leading `class: <value>` line proposes the PRD class; confirm it with the user as in step 2 above, then apply steps 4–5. The brief has already been argued through, so Step 3 asks only what it leaves open and never re-asks a decision the brief records. An intake issue whose body starts with the line `Inline brief:` — written by an unattended park — is resumed as that brief.
 
 If `$ARGUMENTS` is empty, behave as before (blank-page interview from Step 1).
 
@@ -101,6 +101,12 @@ If `$ARGUMENTS` is empty, behave as before (blank-page interview from Step 1).
     the design branches for Step 3, the module and test choices for Step 4,
     the bikesheds for Step 4a. With an inline brief, every decision the brief
     records is pinned.
+
+    **Unattended.** A heavy question that cannot be asked stops the session at
+    that question — it never reaches Step 5. Park it on `$ORIG`, or on a new
+    plain `Intake: <topic>` issue when there is none, per the lens-pass
+    reference's `## Unattended runs`; resume with
+    `/stenswf:prd-from-grill-me <intake>`.
 
 3. Interview about every question the lens pass left heavy, and every vetoed
    digest line. Walk each remaining branch of the design tree. Resolve

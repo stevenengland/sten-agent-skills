@@ -172,6 +172,32 @@ assert_match "Step 4a lists classifier-settled bikesheds in the digest" "$STEP4A
 assert_match "Step 4a closes with the user's approval" "$STEP4A" "approval"
 assert_match "Step 4a turns a vetoed line into an ask" "$STEP4A" "vetoed"
 
+# --- 8. Depth and resume (AC6) -----------------------------------------------
+WHEN=$(between '^## When to run' "$LENSES" '^## ')
+assert_match "no open question means no dispatch" "$WHEN" "no dispatch"
+assert_match "abbreviated plan runs dispatch Precedent only" "$WHEN" "Precedent only"
+assert_match "plan --resume is covered" "$WHEN" "plan --resume"
+assert_match "parked anchors are not pinned" "$WHEN" "Status: parked"
+assert_match "parked questions are handled first" "$WHEN" "first"
+DEPTH=$(between '^- [[] []] [*][*]Interview depth' "$PLAN" '^---$')
+assert_match "plan's depth list names the abbreviated lens depth" "$DEPTH" "Precedent only"
+assert_match "plan's depth list names the full lens depth" "$DEPTH" "Design, Strategy, Precedent"
+
+# --- 9. Unattended runs (AC7) ------------------------------------------------
+UNATTENDED=$(between '^## Unattended runs' "$LENSES" '^## ')
+assert_match "unattended detection uses STENSWF_UNATTENDED" "$UNATTENDED" "STENSWF_UNATTENDED"
+assert_match "the PARK carries the research in the DECISION_NEEDED envelope" "$UNATTENDED" "DECISION_NEEDED"
+assert_match "a PARK halts the run" "$UNATTENDED" "halt"
+assert_match "a PRD session parks on an intake issue" "$UNATTENDED" "Intake: <topic>"
+assert_match "an inline brief survives the intake issue" "$UNATTENDED" "Inline brief:"
+assert_match "a parked PRD session resumes from its intake issue" "$UNATTENDED" "/stenswf:prd-from-grill-me <intake>"
+assert_match "prd-from-grill-me stops at a parked question instead of reaching Step 5" \
+  "$(between '^2a[.] ' "$PRD" '^3[.] Interview')" "never reaches Step 5"
+assert_match "Phase 0 resumes an Inline brief: intake issue as a brief" \
+  "$(between '^[*][*]Inline brief[.][*][*]' "$PRD" '^## ')" "Inline brief:"
+assert_nomatch "Step 5 does not write parked questions after publishing" \
+  "$(between '^5[.] Write the PRD' "$PRD" '^## ')" "Write parked questions"
+
 # --- footer (append new sections above this line) --------------------------
 printf '\n1..%d\n# pass %d fail %d\n' "$((PASS + FAIL))" "$PASS" "$FAIL"
 [ "$FAIL" -eq 0 ]

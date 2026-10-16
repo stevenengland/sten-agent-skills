@@ -38,8 +38,15 @@ first question to the user.
 
 | Caller and depth | Lenses dispatched |
 |---|---|
+| Any caller, no open question after drafting | none — no dispatch |
+| `plan`, abbreviated depth (AFK, spike) | Precedent only |
 | `plan`, full depth (HITL) | Design, Strategy, Precedent |
 | `prd-from-grill-me` | Design, Strategy, Precedent |
+
+On `plan --resume`, pin only the resolved entries in
+`.stenswf/<N>/decisions.md` — active (not struck through) and without
+`Status: parked`. Each parked entry is an unanswered question: draft it as a
+question and handle it first. Lens verdicts are never persisted.
 
 ## 1. Draft the questions
 
@@ -257,3 +264,29 @@ targeted Explore, never a second lens dispatch — then verify them per §3 and
 classify them per §4. Refresh the digest; if the design the user already
 approved changed, ask for approval again. Decisions that surface late, after an
 approval checkpoint, go through the same rule.
+
+## Unattended runs
+
+When no user can answer (`STENSWF_UNATTENDED` set, per
+[decision-escalation.md](decision-escalation.md)), a heavy question PARKs per
+that file's PARK contract. The `DECISION_NEEDED` block carries the verified
+research — the recommendation, every option with its evidence and downsides,
+what stayed uncertain — and goes to the tracker; a parked anchor is written;
+and the run halts before any work that depends on the answer.
+
+- `plan` parks on its slice issue, or the PR body if one exists — as today.
+- `prd-from-grill-me` never builds or publishes a PRD around a parked
+  question. With an intake issue from Phase 0 (`$ORIG`), it parks there.
+  Without one — a blank-page session or an inline brief — it first creates a
+  plain intake issue titled `Intake: <topic>`, with no `stenswf:v1`
+  front-matter and the description as its body (an inline brief goes in
+  verbatim under a first line `Inline brief:`), parks there, writes the parked
+  anchor under `.stenswf/<intake>/decisions.md`, and stops.
+- **Resume.** A fresh `/stenswf:prd-from-grill-me <intake>` run picks it up:
+  Phase 0 accepts the plain issue and reads its comments (the
+  `DECISION_NEEDED` blocks and any answers), the parked questions are drafted
+  first, an `Inline brief:` body is treated as an inline brief, and Step 5
+  closes the intake issue once the PRD exists. The PRD is published only after
+  every parked question is resolved and the design approved.
+- The `Decided without asking` digest goes into the caller's decision log
+  instead of to a user.
