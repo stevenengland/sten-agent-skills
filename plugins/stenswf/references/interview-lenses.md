@@ -172,3 +172,85 @@ the plan.
 End with exactly one line:
   LENS_SUMMARY: <lens> answered=<n> added=<n> tiebreakers=<n> contradictions=<n>
 ```
+
+## 3. Verify the verdicts
+
+Treat every verdict as a hypothesis, the way
+[review-finding-validation.md](review-finding-validation.md) treats review
+findings: check it against the current code, requirements, active decisions and
+tests, and mark it `confirmed`, `rejected` or `inconclusive`.
+
+- Start from the cited evidence. Expand narrowly only where needed: to check
+  that a precedent applies here (its callers, its constraints, later
+  decisions), to look for counterevidence that would defeat the
+  recommendation, or to resolve a disagreement between lenses. Do not
+  re-explore the codebase.
+- Drop `rejected` verdicts. Uncertainty you cannot resolve stays
+  `inconclusive`, and an inconclusive tiebreaker counts as `none`.
+- When lenses recommend different options, investigate. If a verified,
+  applicable tiebreaker decides the question, the lenses only weighted
+  different priorities and the question is settled. Only a conflict
+  investigation cannot resolve leaves the question without a tiebreaker.
+- A `[business]` question has no precedent tiebreaker: only the issue, the PRD
+  or a recorded decision can settle it.
+- Drop a lens-added question whose answer would not change the plan; keep the
+  rest as ordinary questions.
+
+Run a **pre-mortem** on each surviving recommendation — you wrote none of the
+verdicts, so you are the critic. Assume it failed a year from now and ask why:
+complete every option's `downsides`, check what else a proper solution would
+fix (`also_solves`), and apply the business-logic question from
+[decision-weighting.md](decision-weighting.md). If the pre-mortem favours
+another option, re-verify that option — its evidence, tiebreaker,
+reversibility and contradictions — before it becomes the recommendation.
+
+## 4. Classify and ask
+
+Hand each verified question to
+[decision-escalation.md](decision-escalation.md)'s classifier. It alone defines
+easy and heavy; this file restates no rule. Hand it the verified tiebreaker and
+its evidence, the reversibility, the contradictions, the remaining uncertainty,
+and whether the choice changes observable behavior not pinned by an AC or
+crosses modules. Lens consensus is never a tiebreaker — the lenses are one
+model, so their agreement is weak evidence.
+
+- **Easy** → decide it, log it with its source lens as provenance, and list it
+  in the digest (§5).
+- **Heavy** → ask it with `AskUserQuestion`, per decision-escalation's ASK
+  contract. Put the recommended option first, labelled `(Recommended)`; each
+  option's description carries that option's own evidence and downsides; name
+  the heavy trigger the classifier found.
+- **Contradictions.** A conflicting alternative that is not chosen is
+  rejected without asking; record its conflict as the rejected-alternative
+  reason. Ask `Keep` / `Exempt this work` / `Supersede` only when proceeding
+  with the recommended or the chosen option requires an exception to, or a
+  supersession of, a recorded decision or invariant:
+  - `Keep` — the record holds; choose another option.
+  - `Exempt this work` — record a new `arch` anchor that cites the invariant's
+    source and scopes the exemption to this work.
+  - `Supersede` — record a new anchor with `Supersedes:` and strike the old ID
+    through, per [decision-anchor-link.md](decision-anchor-link.md).
+
+  The anchor schema gains no new field.
+- **Caller-owned.** Final approval, recording and resume stay with the caller.
+
+## 5. Decided without asking
+
+Before the caller's approval checkpoint, show every easy decision under the
+heading `Decided without asking`, one line each:
+
+    - Q<n> <decision> — tiebreaker: <kind> (<evidence>) — via <lens>
+
+A vetoed line becomes a heavy question and is asked per §4. The digest is not
+the approval — the caller's approval checkpoint still follows it.
+
+## 6. Changed premises
+
+The lens budget (at most once per run) is separate from ongoing decision
+handling. When an answer, a veto or new evidence changes a premise, reopen
+every conclusion that depended on it — easy decisions already in the digest
+included. Research new or affected questions narrowly — targeted reads or a
+targeted Explore, never a second lens dispatch — then verify them per §3 and
+classify them per §4. Refresh the digest; if the design the user already
+approved changed, ask for approval again. Decisions that surface late, after an
+approval checkpoint, go through the same rule.

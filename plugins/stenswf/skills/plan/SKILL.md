@@ -200,7 +200,10 @@ verdicts, and hand them to decision-escalation's classifier. At full depth
 
 ### Interview
 
-Interview relentlessly about every aspect until shared understanding:
+Interview about every question the lens pass left heavy, and every vetoed
+digest line, until shared understanding. Easy questions are already decided —
+do not re-ask them unless an answer changes their premise; then reopen them
+per the lens pass's changed-premises rule:
 
 - Recommended answer + reasoning per question.
 - Codebase questions → targeted Explore subagents.
@@ -217,11 +220,12 @@ No code in this phase.
 
 ### Interface and behavior interview
 
-Before recording Design Decisions, work through the following with the
-user. Lead with your recommendation; iterate.
+Before recording Design Decisions, settle the following. Each open item is a
+question in the lens pass; ask the user only what the classifier leaves
+heavy, leading with your recommendation.
 
-- [ ] Confirm with user what interface changes are needed.
-- [ ] Confirm with user which behaviors to test (prioritize).
+- [ ] Decide what interface changes are needed.
+- [ ] Decide which behaviors to test, and their priority.
 - [ ] Identify opportunities for [deep modules](../codebase-design/SKILL.md)
       (small interface, deep implementation).
       Apply the deletion test and the adapter-count question from `codebase-design` to every module the plan adds or reshapes.
@@ -229,13 +233,12 @@ user. Lead with your recommendation; iterate.
 - [ ] List the behaviors to test (not implementation steps).
 - [ ] When an interface or flow changes, show the smallest `show-me` view
       that clarifies it (Load `show-me`) — no diagram for its own sake.
-- [ ] Get user approval on the plan.
+- [ ] Show the `Decided without asking` digest from the lens pass; a vetoed
+      line becomes an interview question.
+- [ ] Get user approval on the plan — a separate checkpoint, even when no
+      question needed the user.
 
-Ask: "What should the public interface look like? Which behaviors are
-most important to test?"
-
-**You can't test everything.** Confirm with the user exactly which
-behaviors matter most. Focus testing effort on critical paths and
+**You can't test everything.** Focus testing effort on critical paths and
 complex logic, not every possible edge case.
 
 ### Design Decisions Log

@@ -108,6 +108,49 @@ assert_match "lenses add at most 3 questions" "$RETURN" "at most 3"
 assert_match "each lens ends with one LENS_SUMMARY line" "$RETURN" \
   "LENS_SUMMARY: <lens> answered=<n> added=<n> tiebreakers=<n> contradictions=<n>"
 
+# --- 4. Verification (AC4) ---------------------------------------------------
+VERIFY=$(between '^## 3[.] Verify the verdicts' "$LENSES" '^## ')
+for outcome in confirmed rejected inconclusive; do
+  assert_match "verification can mark a verdict $outcome" "$VERIFY" "\`$outcome\`"
+done
+assert_match "verification follows review-finding validation" "$VERIFY" "(review-finding-validation.md)"
+assert_match "verification checks against requirements, not only citations" "$VERIFY" "requirements"
+assert_match "verification looks for counterevidence" "$VERIFY" "counterevidence"
+assert_nomatch "verification is not limited to the cited evidence" "$VERIFY" "only the cited"
+assert_match "existing behavior never settles a business question" "$VERIFY" "[business]"
+assert_match "surviving recommendations get a pre-mortem" "$VERIFY" "pre-mortem"
+assert_match "a replaced recommendation is re-verified" "$VERIFY" "re-verify"
+assert_match "the pre-mortem applies decision-weighting's business-logic question" "$VERIFY" "(decision-weighting.md)"
+
+# --- 5. Classification, asks and the digest (AC5) ----------------------------
+CLASSIFY=$(between '^## 4[.] Classify and ask' "$LENSES" '^## ')
+assert_match "classification is handed to decision-escalation" "$CLASSIFY" "(decision-escalation.md)"
+assert_match "lens consensus is never a tiebreaker" "$CLASSIFY" "never a tiebreaker"
+assert_match "heavy questions go through AskUserQuestion" "$CLASSIFY" "AskUserQuestion"
+for opt in Keep "Exempt this work" Supersede; do
+  assert_match "a needed exception offers $opt" "$CLASSIFY" "\`$opt\`"
+done
+assert_match "Supersede uses the existing anchor field" "$CLASSIFY" "\`Supersedes:\`"
+assert_match "an unchosen conflicting alternative is rejected without asking" "$CLASSIFY" "rejected without asking"
+DIGEST=$(between '^## 5[.] Decided without asking' "$LENSES" '^## ')
+assert_match "the digest is headed Decided without asking" "$DIGEST" "\`Decided without asking\`"
+assert_match "a vetoed digest line becomes an ask" "$DIGEST" "vetoed"
+INTERVIEW=$(between '^### Interview$' "$PLAN" '^### ')
+assert_match "plan's interview asks only the heavy remainder" "$INTERVIEW" "heavy"
+CHANGED=$(between '^## 6[.] Changed premises' "$LENSES" '^## ')
+assert_match "a changed premise reopens the affected conclusions" "$CHANGED" "reopen"
+assert_match "reopened questions do not spend a second lens dispatch" "$CHANGED" "second lens dispatch"
+assert_match "a changed approved design is approved again" "$CHANGED" "approval"
+assert_match "plan's interview points at the changed-premises rule" "$INTERVIEW" "premise"
+
+# --- 6. plan's interface checklist (AC13) ------------------------------------
+CHECKLIST=$(between '^### Interface and behavior interview$' "$PLAN" '^### ')
+assert_match "the checklist routes its items through the lens pass" "$CHECKLIST" "lens pass"
+assert_nomatch "the checklist no longer confirms interfaces and tests unconditionally" "$CHECKLIST" "Confirm with user"
+assert_nomatch "the checklist no longer asks the interface question unconditionally" "$CHECKLIST" "What should the public interface look like?"
+assert_eq "plan shows the digest before its approval checkpoint" \
+  "$(in_order "$PLAN" '^- [[] []] .*Decided without asking' '^- [[] []] Get user approval on the plan')" "in order"
+
 # --- footer (append new sections above this line) --------------------------
 printf '\n1..%d\n# pass %d fail %d\n' "$((PASS + FAIL))" "$PASS" "$FAIL"
 [ "$FAIL" -eq 0 ]
