@@ -151,6 +151,27 @@ assert_nomatch "the checklist no longer asks the interface question unconditiona
 assert_eq "plan shows the digest before its approval checkpoint" \
   "$(in_order "$PLAN" '^- [[] []] .*Decided without asking' '^- [[] []] Get user approval on the plan')" "in order"
 
+# --- 7. prd-from-grill-me (AC8, AC9) -----------------------------------------
+RT=$(read_file "$PRD")
+assert_match "prd-from-grill-me links the lens-pass reference" "$RT" "(../../references/interview-lenses.md)"
+assert_eq "prd-from-grill-me runs the lens pass between Step 2 and Step 3" \
+  "$(in_order "$PRD" '^2[.] Explore the repo' '^2a[.] [*][*]Lens pass' '^3[.] Interview')" "in order"
+assert_match "prd-from-grill-me runs all three lenses" \
+  "$(between '^## When to run' "$LENSES" '^## ')" "| \`prd-from-grill-me\` | Design, Strategy, Precedent |"
+assert_match "an inline brief's decisions are pinned" "$(between '^2a[.] ' "$PRD" '^3[.] Interview')" "inline brief"
+assert_match "Step 3 asks only the heavy remainder" "$(between '^3[.] Interview' "$PRD" '^4[.] Sketch')" "heavy"
+assert_match "Step 3 points at the changed-premises rule" "$(between '^3[.] Interview' "$PRD" '^4[.] Sketch')" "premise"
+assert_match "Step 4b routes late decisions through the changed-premises rule" \
+  "$(between '^4b[.] ' "$PRD" '^5[.] Write the PRD')" "changed-premises"
+STEP4=$(between '^4[.] Sketch' "$PRD" '^4a[.] ')
+assert_match "Step 4 routes module and test choices through the lens pass" "$STEP4" "lens-pass questions"
+assert_nomatch "Step 4 no longer confirms modules unconditionally" "$STEP4" "Check with the user that modules match"
+STEP4A=$(between '^4a[.] ' "$PRD" '^4b[.] ')
+assert_nomatch "Step 4a no longer asks every bikeshed" "$STEP4A" "For each, ask the user their preference"
+assert_match "Step 4a lists classifier-settled bikesheds in the digest" "$STEP4A" "Decided without asking"
+assert_match "Step 4a closes with the user's approval" "$STEP4A" "approval"
+assert_match "Step 4a turns a vetoed line into an ask" "$STEP4A" "vetoed"
+
 # --- footer (append new sections above this line) --------------------------
 printf '\n1..%d\n# pass %d fail %d\n' "$((PASS + FAIL))" "$PASS" "$FAIL"
 [ "$FAIL" -eq 0 ]

@@ -26,8 +26,10 @@ current producer. Only `## When to run` and the lens blocks name lenses, so a
 different producer would change only those. Whether lenses beat a strengthened
 Explore pass is a recorded hypothesis, not an invariant.
 
-**Callers.** `plan` Phase 1 ([plan](../skills/plan/SKILL.md)). Each caller
-names its depth; everything else lives here.
+**Callers.** `plan` Phase 1 ([plan](../skills/plan/SKILL.md)) and
+`prd-from-grill-me` Step 2a
+([prd-from-grill-me](../skills/prd-from-grill-me/SKILL.md)). Each caller names
+its depth; everything else lives here.
 
 ## When to run
 
@@ -37,6 +39,7 @@ first question to the user.
 | Caller and depth | Lenses dispatched |
 |---|---|
 | `plan`, full depth (HITL) | Design, Strategy, Precedent |
+| `prd-from-grill-me` | Design, Strategy, Precedent |
 
 ## 1. Draft the questions
 
