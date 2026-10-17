@@ -17,6 +17,8 @@ heavy decision PARKs instead (write the tension to an issue comment, or the PR
 body if one exists, plus a pending
 `parked` anchor in `decisions.md`), per
 [../../references/decision-escalation.md](../../references/decision-escalation.md).
+The final plan approval parks the same way, at the same target, per
+[../../references/interview-lenses.md#unattended-runs](../../references/interview-lenses.md#unattended-runs).
 
 ## Audience
 
@@ -240,7 +242,9 @@ heavy, leading with your recommendation.
 - [ ] Show the `Decided without asking` digest from the lens pass; a vetoed
       line becomes an interview question.
 - [ ] Get user approval on the plan — a separate checkpoint, even when no
-      question needed the user.
+      question needed the user. Unattended, it parks with the digest
+      ([../../references/interview-lenses.md#unattended-runs](../../references/interview-lenses.md#unattended-runs))
+      and Phase 2 does not run.
 
 **You can't test everything.** Focus testing effort on critical paths and
 complex logic, not every possible edge case.
@@ -313,7 +317,8 @@ When invoked with `--resume`:
 2. Preserve `status == "done"` entries — their `sha` and `commit_subject`
    stay as-is.
 3. Re-run Phase 0 + Phase 1 (orientation + relevant interview) against
-   current issue body.
+   current issue body. The lens pass pins only resolved anchors; parked
+   ones — a parked plan approval included — come first.
 4. Re-write `concept.md`, `stable-prefix.md`, `conventions.md`,
    `house-rules.md`, `acceptance-criteria.md`, `file-structure.md`,
    `review-step.md`, `design-summary.md`. **Do not touch

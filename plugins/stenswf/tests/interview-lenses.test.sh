@@ -188,9 +188,21 @@ UNATTENDED=$(between '^## Unattended runs' "$LENSES" '^## ')
 assert_match "unattended detection uses STENSWF_UNATTENDED" "$UNATTENDED" "STENSWF_UNATTENDED"
 assert_match "the PARK carries the research in the DECISION_NEEDED envelope" "$UNATTENDED" "DECISION_NEEDED"
 assert_match "a PARK halts the run" "$UNATTENDED" "halt"
-assert_match "a PRD session parks on an intake issue" "$UNATTENDED" "Intake: <topic>"
-assert_match "an inline brief survives the intake issue" "$UNATTENDED" "Inline brief:"
-assert_match "a parked PRD session resumes from its intake issue" "$UNATTENDED" "/stenswf:prd-from-grill-me <intake>"
+assert_nomatch "the reference leaves park targets to the callers" "$UNATTENDED" "prd-from-grill-me"
+assert_nomatch "the reference has no unreachable blank-page park" "$UNATTENDED" "blank-page"
+STEP2A=$(between '^2a[.] ' "$PRD" '^3[.] Interview')
+assert_match "a PRD session parks on an intake issue" "$STEP2A" "Intake: <topic>"
+assert_match "an inline brief survives the intake issue" "$STEP2A" "Inline brief:"
+assert_match "a parked PRD session resumes from its intake issue" "$STEP2A" "/stenswf:prd-from-grill-me <intake>"
+UL='interview-lenses.md#unattended-runs'
+assert_match "prd Phase 0's classification confirmation has an unattended outcome" \
+  "$(between '^2[.] Print a 5-line summary' "$PRD" '^3[.] Use ')" "$UL"
+assert_match "prd Step 4a's approval has an unattended outcome" "$(between '^4a[.] ' "$PRD" '^4b[.] ')" "$UL"
+assert_match "an unattended blank-page PRD run stops before research" \
+  "$(between '^1[.] Ask the user' "$PRD" '^2[.] Explore')" "BLOCKED:"
+assert_match "plan's approval has an unattended outcome" \
+  "$(between '^- [[] []] Get user approval on the plan' "$PLAN" '^[*][*]You')" "$UL"
+assert_match "plan's decisions note covers the approval" "$(between '^[*][*]Decisions[.][*][*]' "$PLAN" '^## ')" "$UL"
 assert_match "prd-from-grill-me stops at a parked question instead of reaching Step 5" \
   "$(between '^2a[.] ' "$PRD" '^3[.] Interview')" "never reaches Step 5"
 assert_match "Phase 0 resumes an Inline brief: intake issue as a brief" \

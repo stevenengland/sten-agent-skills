@@ -43,10 +43,10 @@ first question to the user.
 | `plan`, full depth (HITL) | Design, Strategy, Precedent |
 | `prd-from-grill-me` | Design, Strategy, Precedent |
 
-On `plan --resume`, pin only the resolved entries in
-`.stenswf/<N>/decisions.md` — active (not struck through) and without
-`Status: parked`. Each parked entry is an unanswered question: draft it as a
-question and handle it first. Lens verdicts are never persisted.
+On a resumed run (`plan --resume`, or a parked run re-invoked), pin only the
+resolved entries in `.stenswf/<N>/decisions.md` — active (not struck through)
+and without `Status: parked`. Each parked entry is an unanswered question:
+draft it as a question and handle it first. Lens verdicts are never persisted.
 
 ## 1. Draft the questions
 
@@ -242,7 +242,8 @@ model, so their agreement is weak evidence.
     through, per [decision-anchor-link.md](decision-anchor-link.md).
 
   The anchor schema gains no new field.
-- **Caller-owned.** Final approval, recording and resume stay with the caller.
+- **Caller-owned.** Final approval, recording and resume stay with the caller;
+  an unattended run parks the approval (see `## Unattended runs`).
 
 ## 5. Decided without asking
 
@@ -267,26 +268,21 @@ approval checkpoint, go through the same rule.
 
 ## Unattended runs
 
-When no user can answer (`STENSWF_UNATTENDED` set, per
-[decision-escalation.md](decision-escalation.md)), a heavy question PARKs per
-that file's PARK contract. The `DECISION_NEEDED` block carries the verified
-research — the recommendation, every option with its evidence and downsides,
-what stayed uncertain — and goes to the tracker; a parked anchor is written;
-and the run halts before any work that depends on the answer.
+When no user can answer (`STENSWF_UNATTENDED` set, or a dispatch prompt that
+says so, per [decision-escalation.md](decision-escalation.md)
+`## Availability`), read availability once, at the caller's intake, and apply
+it to every user checkpoint — not only to heavy questions. Availability never
+changes who decides: what needs the user in an attended run still needs the
+user.
 
-- `plan` parks on its slice issue, or the PR body if one exists — as today.
-- `prd-from-grill-me` never builds or publishes a PRD around a parked
-  question. With an intake issue from Phase 0 (`$ORIG`), it parks there.
-  Without one — a blank-page session or an inline brief — it first creates a
-  plain intake issue titled `Intake: <topic>`, with no `stenswf:v1`
-  front-matter and the description as its body (an inline brief goes in
-  verbatim under a first line `Inline brief:`), parks there, writes the parked
-  anchor under `.stenswf/<intake>/decisions.md`, and stops.
-- **Resume.** A fresh `/stenswf:prd-from-grill-me <intake>` run picks it up:
-  Phase 0 accepts the plain issue and reads its comments (the
-  `DECISION_NEEDED` blocks and any answers), the parked questions are drafted
-  first, an `Inline brief:` body is treated as an inline brief, and Step 5
-  closes the intake issue once the PRD exists. The PRD is published only after
-  every parked question is resolved and the design approved.
-- The `Decided without asking` digest goes into the caller's decision log
-  instead of to a user.
+- A **heavy question** PARKs per decision-escalation's PARK contract; its
+  `DECISION_NEEDED` block carries the verified research.
+- A **checkpoint the user owns** — a confirmation the caller asks for, the
+  final approval — parks the same way: the pending item is the decision, the
+  caller's proposal the recommendation.
+- **Easy decisions** are still decided. The `Decided without asking` digest
+  goes into the parked block and the caller's decision log instead of to a
+  user.
+
+Park everything pending at that point together and halt before any work that
+depends on it. Each caller names its park target and its resume steps.

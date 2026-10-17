@@ -63,6 +63,12 @@ If `$ORIG` is set:
 2. Print a 5-line summary + the classification. Ask the user to
    confirm. On disagreement, re-classify and re-confirm.
 
+   **Unattended** (per
+   [../../references/interview-lenses.md#unattended-runs](../../references/interview-lenses.md#unattended-runs)):
+   do not ask, and do not settle the class yourself. Carry it as a pending
+   confirmation into the session's park — at the latest Step 4a's approval;
+   the resumed run confirms it first.
+
 3. Use `/tmp/req-$ORIG.md` as the Step-1 long description input —
    skip Step 1's open-ended question.
 
@@ -87,6 +93,11 @@ If `$ARGUMENTS` is empty, behave as before (blank-page interview from Step 1).
 1. Ask the user for a long, detailed description of the problem and any
    solution ideas. **Skip if Phase 0 already populated `/tmp/req-$ORIG.md` or an inline brief was given.**
 
+   An unattended run with neither an issue nor a brief has nothing to research
+   and nowhere to park: stop with
+   `BLOCKED: no description — rerun with an issue number or an inline brief`,
+   creating nothing.
+
 2. Explore the repo via an Explore subagent (≤300 words, thoroughness: medium).
    Do NOT read files directly.
 
@@ -102,11 +113,20 @@ If `$ARGUMENTS` is empty, behave as before (blank-page interview from Step 1).
     the bikesheds for Step 4a. With an inline brief, every decision the brief
     records is pinned.
 
-    **Unattended.** A heavy question that cannot be asked stops the session at
-    that question — it never reaches Step 5. Park it on `$ORIG`, or on a new
-    plain `Intake: <topic>` issue when there is none, per the lens-pass
-    reference's `## Unattended runs`; resume with
-    `/stenswf:prd-from-grill-me <intake>`.
+    **Unattended.** Per the lens-pass reference's `## Unattended runs`, a
+    heavy question parks, and so do Phase 0's classification and Step 4a's
+    approval — the session never reaches Step 5 with anything pending.
+
+    - **Park target.** `$ORIG`. Without one (an inline brief), first create a
+      plain intake issue titled `Intake: <topic>`, with no `stenswf:v1`
+      front-matter and the brief verbatim under a first line `Inline brief:`.
+      Write the parked anchors under `.stenswf/<intake>/decisions.md`, then
+      stop.
+    - **Resume** with `/stenswf:prd-from-grill-me <intake>`. Phase 0 accepts
+      the plain issue and reads its comments — the parked blocks and any
+      answers — and an `Inline brief:` body is resumed as the brief. Pending
+      items are handled first; Step 5 closes the intake issue once the PRD
+      exists.
 
 3. Interview about every question the lens pass left heavy, and every vetoed
    digest line. Walk each remaining branch of the design tree. Resolve
@@ -159,7 +179,8 @@ If `$ARGUMENTS` is empty, behave as before (blank-page interview from Step 1).
     Close the step by showing the module sketch together with the
     `Decided without asking` digest — the easy decisions from Steps 3, 4 and
     here — and get the user's approval before Step 4b. A vetoed line becomes
-    a question.
+    a question. Unattended, the approval parks with the sketch and the digest
+    ([../../references/interview-lenses.md#unattended-runs](../../references/interview-lenses.md#unattended-runs)).
 
 4b. **Step back and reflect before writing the PRD.**
 
