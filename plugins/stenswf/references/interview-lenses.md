@@ -74,7 +74,7 @@ authority for what the change should do.
 
 Dispatch the lenses for the run's depth in parallel, in one message, as
 read-only subagents. Each lens is dispatched at most once per run; a lens that
-fails or returns nothing is not retried. Do not override the model.
+fails or returns nothing is not retried — its questions stay open (§3). Do not override the model.
 
 Each dispatch message is three parts pasted verbatim in order — the lens block,
 the shared context block, the return format — with the `<…>` slots
@@ -197,6 +197,10 @@ tests, and mark it `confirmed`, `rejected` or `inconclusive`.
   re-explore the codebase.
 - Drop `rejected` verdicts. Uncertainty you cannot resolve stays
   `inconclusive`, and an inconclusive tiebreaker counts as `none`.
+- Never drop a drafted question. One left with no `confirmed` or
+  `inconclusive` verdict — every verdict rejected, or its lens failed —
+  stays open: research it narrowly yourself, as §6 allows (never a second
+  lens dispatch), and hand it to §4 with whatever uncertainty remains.
 - When lenses recommend different options, investigate. If a verified,
   applicable tiebreaker decides the question, the lenses only weighted
   different priorities and the question is settled. Only a conflict

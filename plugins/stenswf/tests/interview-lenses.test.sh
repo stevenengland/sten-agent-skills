@@ -118,6 +118,7 @@ assert_match "verification checks against requirements, not only citations" "$VE
 assert_match "verification looks for counterevidence" "$VERIFY" "counterevidence"
 assert_nomatch "verification is not limited to the cited evidence" "$VERIFY" "only the cited"
 assert_match "existing behavior never settles a business question" "$VERIFY" "[business]"
+assert_match "a question with no surviving verdict is researched narrowly, not dropped" "$VERIFY" "§6"
 assert_match "surviving recommendations get a pre-mortem" "$VERIFY" "pre-mortem"
 assert_match "a replaced recommendation is re-verified" "$VERIFY" "re-verify"
 assert_match "the pre-mortem applies decision-weighting's business-logic question" "$VERIFY" "(decision-weighting.md)"
