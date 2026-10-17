@@ -65,9 +65,11 @@ If `$ORIG` is set:
 
    **Unattended** (per
    [../../references/interview-lenses.md#unattended-runs](../../references/interview-lenses.md#unattended-runs)):
-   do not ask, and do not settle the class yourself. Carry it as a pending
-   confirmation into the session's park — at the latest Step 4a's approval;
-   the resumed run confirms it first.
+   do not ask, and do not settle the class yourself. The one exception to
+   halting at once: Steps 1–2a (Explore and the lens pass) do not depend on
+   the class and may run. Nothing class-dependent runs: no class bias (item 4
+   below) and nothing from Step 3 on. The confirmation parks at the end of Step 2a, together with
+   any heavy questions, and the resumed run confirms it first.
 
 3. Use `/tmp/req-$ORIG.md` as the Step-1 long description input —
    skip Step 1's open-ended question.
@@ -114,8 +116,9 @@ If `$ARGUMENTS` is empty, behave as before (blank-page interview from Step 1).
     records is pinned.
 
     **Unattended.** Per the lens-pass reference's `## Unattended runs`, a
-    heavy question parks, and so do Phase 0's classification and Step 4a's
-    approval — the session never reaches Step 5 with anything pending.
+    heavy question parks, and so do Phase 0's classification (at the end of
+    this step) and Step 4a's approval — the session never reaches Step 5 with
+    anything pending.
 
     - **Park target.** `$ORIG`. Without one (an inline brief), first create a
       plain intake issue titled `Intake: <topic>`, with no `stenswf:v1`

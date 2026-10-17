@@ -198,6 +198,9 @@ assert_match "a parked PRD session resumes from its intake issue" "$STEP2A" "/st
 UL='interview-lenses.md#unattended-runs'
 assert_match "prd Phase 0's classification confirmation has an unattended outcome" \
   "$(between '^2[.] Print a 5-line summary' "$PRD" '^3[.] Use ')" "$UL"
+P0STEP2=$(between '^2[.] Print a 5-line summary' "$PRD" '^3[.] Use ')
+assert_match "an unconfirmed class parks no later than the end of Step 2a" "$P0STEP2" "end of Step 2a"
+assert_nomatch "an unconfirmed class is not carried to Step 4a" "$P0STEP2" "Step 4a"
 assert_match "prd Step 4a's approval has an unattended outcome" "$(between '^4a[.] ' "$PRD" '^4b[.] ')" "$UL"
 assert_match "an unattended blank-page PRD run stops before research" \
   "$(between '^1[.] Ask the user' "$PRD" '^2[.] Explore')" "BLOCKED:"
