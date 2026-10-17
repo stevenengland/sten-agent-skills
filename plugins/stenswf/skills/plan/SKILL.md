@@ -166,12 +166,11 @@ Record:
   `.stenswf/<blocker>/plan-light.md` if present; else the issue body's
   `Files (hint)`.
 - [ ] **Interview depth:**
-  - **AFK**: abbreviated. Lens pass: Precedent only. 3–5 Design Decision
+  - **AFK**: abbreviated (lens depth `abbreviated`). 3–5 Design Decision
     entries, then Phase 2.
-  - **HITL**: full. Lens pass: Design, Strategy, Precedent. Resolve all
-    branches.
-  - **spike**: abbreviated; exists to land types/vocabulary. Lens pass:
-    Precedent only.
+  - **HITL**: full (lens depth `full`). Resolve all branches.
+  - **spike**: abbreviated (lens depth `abbreviated`); exists to land
+    types/vocabulary.
 
 ---
 
@@ -200,9 +199,9 @@ Before asking the user anything, run the lens pass per
 [../../references/interview-lenses.md](../../references/interview-lenses.md):
 draft every substantive open decision as a question — including interface
 changes and the behaviors to test — dispatch the lenses, verify their
-verdicts, and hand them to decision-escalation's classifier. Dispatch the
-lenses Phase 0's **Interview depth** names for this slice; with no open
-question after drafting, skip the dispatch.
+verdicts, and hand them to decision-escalation's classifier. Pass the lens
+depth Phase 0's **Interview depth** names for this slice; the reference maps it
+to lenses.
 
 ### Interview
 

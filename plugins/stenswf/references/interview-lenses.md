@@ -22,13 +22,14 @@ applicable precedents, alternatives, and uncertainty.
 4. The **caller** owns approval, recording and resume.
 
 **Topology.** The research result is the contract; the three lenses are its
-current producer. Only `## When to run` and the lens blocks name lenses, so a
-different producer would change only those. Whether lenses beat a strengthened
+current producer. Callers pass only a depth — `full` or `abbreviated` — and
+only `## When to run` maps it to lenses, so a different producer would change
+that table and the lens blocks. Whether lenses beat a strengthened
 Explore pass is a recorded hypothesis, not an invariant.
 
 **Callers.** `plan` Phase 1 ([plan](../skills/plan/SKILL.md)) and
 `prd-from-grill-me` Step 2a
-([prd-from-grill-me](../skills/prd-from-grill-me/SKILL.md)). Each caller names
+([prd-from-grill-me](../skills/prd-from-grill-me/SKILL.md)). Each caller passes
 its depth; everything else lives here.
 
 ## When to run
@@ -36,12 +37,11 @@ its depth; everything else lives here.
 Run once per caller run, after the caller's Explore orientation and before its
 first question to the user.
 
-| Caller and depth | Lenses dispatched |
+| Depth | Lenses dispatched |
 |---|---|
-| Any caller, no open question after drafting | none — no dispatch |
-| `plan`, abbreviated depth (AFK, spike) | Precedent only |
-| `plan`, full depth (HITL) | Design, Strategy, Precedent |
-| `prd-from-grill-me` | Design, Strategy, Precedent |
+| Any, no open question after drafting | none — no dispatch |
+| `abbreviated` | Precedent only |
+| `full` | Design, Strategy, Precedent |
 
 On a resumed run (`plan --resume`, or a parked run re-invoked), pin only the
 resolved entries in `.stenswf/<N>/decisions.md` — active (not struck through)
@@ -280,7 +280,8 @@ changes who decides: what needs the user in an attended run still needs the
 user.
 
 - A **heavy question** PARKs per decision-escalation's PARK contract; its
-  `DECISION_NEEDED` block carries the verified research.
+  `DECISION_NEEDED` block carries the verified research (`### The parked
+  block` below).
 - A **checkpoint the user owns** — a confirmation the caller asks for, the
   final approval — parks the same way: the pending item is the decision, the
   caller's proposal the recommendation.
@@ -290,3 +291,21 @@ user.
 
 Park everything pending at that point together and halt before any work that
 depends on it. Each caller names its park target and its resume steps.
+
+### The parked block
+
+Each parked item is one `DECISION_NEEDED` envelope in decision-escalation's
+wire format, unchanged, filled from the verified verdict:
+
+| Envelope field | Filled from |
+|---|---|
+| `Decision` | the question, in one sentence |
+| `Reversible` | the verified `reversible` |
+| `Alternatives` | one line per option: `<option> — evidence: <…>; downsides: <…>` |
+| `Recommendation` | the verified recommendation, with its tiebreaker or the heavy trigger |
+
+A parked checkpoint fills the same fields from the caller's proposal. Below the
+envelopes, in the same tracker write, add the verified verdicts under a
+`Research` heading — the full option lines, `contradicts`, `also_solves`,
+`tiebreaker` and `uncertain`. Verdicts are not persisted anywhere else, so a
+resumed run asks from this block.

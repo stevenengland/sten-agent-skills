@@ -157,8 +157,8 @@ RT=$(read_file "$PRD")
 assert_match "prd-from-grill-me links the lens-pass reference" "$RT" "(../../references/interview-lenses.md)"
 assert_eq "prd-from-grill-me runs the lens pass between Step 2 and Step 3" \
   "$(in_order "$PRD" '^2[.] Explore the repo' '^2a[.] [*][*]Lens pass' '^3[.] Interview')" "in order"
-assert_match "prd-from-grill-me runs all three lenses" \
-  "$(between '^## When to run' "$LENSES" '^## ')" "| \`prd-from-grill-me\` | Design, Strategy, Precedent |"
+assert_match "prd-from-grill-me passes full depth" "$(between '^2a[.] ' "$PRD" '^3[.] Interview')" "\`full\` depth"
+assert_nomatch "prd-from-grill-me leaves lens names to the reference" "$(between '^2a[.] ' "$PRD" '^3[.] Interview')" "three lenses"
 assert_match "an inline brief's decisions are pinned" "$(between '^2a[.] ' "$PRD" '^3[.] Interview')" "inline brief"
 assert_match "Step 3 asks only the heavy remainder" "$(between '^3[.] Interview' "$PRD" '^4[.] Sketch')" "heavy"
 assert_match "Step 3 points at the changed-premises rule" "$(between '^3[.] Interview' "$PRD" '^4[.] Sketch')" "premise"
@@ -176,19 +176,25 @@ assert_match "Step 4a turns a vetoed line into an ask" "$STEP4A" "vetoed"
 # --- 8. Depth and resume (AC6) -----------------------------------------------
 WHEN=$(between '^## When to run' "$LENSES" '^## ')
 assert_match "no open question means no dispatch" "$WHEN" "no dispatch"
-assert_match "abbreviated plan runs dispatch Precedent only" "$WHEN" "Precedent only"
+assert_match "abbreviated depth dispatches Precedent only" "$WHEN" "| \`abbreviated\` | Precedent only |"
+assert_match "full depth dispatches all three lenses" "$WHEN" "| \`full\` | Design, Strategy, Precedent |"
 assert_match "plan --resume is covered" "$WHEN" "plan --resume"
 assert_match "parked anchors are not pinned" "$WHEN" "Status: parked"
 assert_match "parked questions are handled first" "$WHEN" "first"
 DEPTH=$(between '^- [[] []] [*][*]Interview depth' "$PLAN" '^---$')
-assert_match "plan's depth list names the abbreviated lens depth" "$DEPTH" "Precedent only"
-assert_match "plan's depth list names the full lens depth" "$DEPTH" "Design, Strategy, Precedent"
+assert_match "plan's depth list passes abbreviated depth" "$DEPTH" "\`abbreviated\`"
+assert_match "plan's depth list passes full depth" "$DEPTH" "\`full\`"
+assert_nomatch "plan's depth list leaves lens names to the reference" "$DEPTH" "Precedent"
 
 # --- 9. Unattended runs (AC7) ------------------------------------------------
 UNATTENDED=$(between '^## Unattended runs' "$LENSES" '^## ')
 assert_match "unattended detection uses STENSWF_UNATTENDED" "$UNATTENDED" "STENSWF_UNATTENDED"
 assert_match "the PARK carries the research in the DECISION_NEEDED envelope" "$UNATTENDED" "DECISION_NEEDED"
-assert_match "a PARK halts the run" "$UNATTENDED" "halt"
+PARKED=$(between '^### The parked block' "$LENSES" '^###? ')
+for field in Decision Reversible Alternatives Recommendation; do
+  assert_match "the parked block maps a verdict onto the envelope's $field" "$PARKED" "\`$field\`"
+done
+assert_match "the parked block keeps the verdicts as research" "$PARKED" "\`Research\`"
 assert_nomatch "the reference leaves park targets to the callers" "$UNATTENDED" "prd-from-grill-me"
 assert_nomatch "the reference has no unreachable blank-page park" "$UNATTENDED" "blank-page"
 STEP2A=$(between '^2a[.] ' "$PRD" '^3[.] Interview')

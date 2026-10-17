@@ -108,7 +108,7 @@ If `$ARGUMENTS` is empty, behave as before (blank-page interview from Step 1).
 
 2a. **Lens pass.** Before asking anything, run the lens pass per
     [../../references/interview-lenses.md](../../references/interview-lenses.md)
-    with all three lenses. Draft every substantive decision as a question —
+    at `full` depth. Draft every substantive decision as a question —
     the design branches for Step 3, the module and test choices for Step 4,
     the bikesheds for Step 4a. With an inline brief, every decision the brief
     records is pinned.
