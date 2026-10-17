@@ -103,9 +103,10 @@ Dev-only. Not packaged for end users.
   settled decisions unconditionally, `decision-weighting` carries the
   business-logic question, and out-of-scope files stay off it.
 
-  **Not covered — by design:** the wording of the rules, whether a lens
-  judges well, whether fewer questions reach the user, and whether escalation
-  behaves as before. A green run says the lens pass is wired up, never that
+  **Not covered — by design:** whether a lens judges well, whether fewer
+  questions reach the user, and whether escalation behaves as before. A few
+  acceptance-criteria phrases are pinned on purpose; the rest of the wording
+  is free. A green run says the lens pass is wired up, never that
   its verdicts are right.
 - [`review-scenarios/`](review-scenarios/README.md) — sample diffs with the
   verdict a good reviewer should reach. Not part of the bash suite: run them

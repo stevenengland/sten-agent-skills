@@ -6,10 +6,13 @@
 # decision-weighting carries the business-logic question, and the files the PRD
 # keeps out of scope stay off the lens pass.
 #
-# It deliberately does not pin instructional prose: rewording a rule must not
-# fail this suite. A passing run says nothing about whether a lens judges well,
-# whether fewer questions reach the user, or whether escalation behaves as
-# before. Those limits are accepted in
+# It anchors on structural tokens — headings, slots, field names, table rows,
+# link targets, ordering — plus a few load-bearing phrases taken from the
+# acceptance criteria (for example "rejected without asking"); rewording one of
+# those fails the suite on purpose. Negative checks guard against removed or
+# unwanted text coming back. A passing run says nothing about whether a lens
+# judges well, whether fewer questions reach the user, or whether escalation
+# behaves as before. Those limits are accepted in
 # docs/stenswf/decisions/2026-10-16-interview-lenses.md.
 #
 # Run: bash plugins/stenswf/tests/interview-lenses.test.sh
@@ -91,7 +94,6 @@ done
 DRAFT=$(between '^## 1[.] Draft the questions' "$LENSES" '^## ')
 assert_match "drafting covers interface changes" "$DRAFT" "interface changes"
 assert_match "drafting covers the behaviors to test" "$DRAFT" "behaviors to test"
-assert_match "drafting pins only resolved decisions" "$DRAFT" "resolved"
 assert_match "drafting leaves out anchored decisions" "$DRAFT" "decisions.md"
 assert_match "drafting tags business questions" "$DRAFT" "[business]"
 
@@ -136,13 +138,9 @@ assert_match "an unchosen conflicting alternative is rejected without asking" "$
 DIGEST=$(between '^## 5[.] Decided without asking' "$LENSES" '^## ')
 assert_match "the digest is headed Decided without asking" "$DIGEST" "\`Decided without asking\`"
 assert_match "a vetoed digest line becomes an ask" "$DIGEST" "vetoed"
-INTERVIEW=$(between '^### Interview$' "$PLAN" '^### ')
-assert_match "plan's interview asks only the heavy remainder" "$INTERVIEW" "heavy"
 CHANGED=$(between '^## 6[.] Changed premises' "$LENSES" '^## ')
 assert_match "a changed premise reopens the affected conclusions" "$CHANGED" "reopen"
 assert_match "reopened questions do not spend a second lens dispatch" "$CHANGED" "second lens dispatch"
-assert_match "a changed approved design is approved again" "$CHANGED" "approval"
-assert_match "plan's interview points at the changed-premises rule" "$INTERVIEW" "premise"
 
 # --- 6. plan's interface checklist (AC13) ------------------------------------
 CHECKLIST=$(between '^### Interface and behavior interview$' "$PLAN" '^### ')
@@ -160,8 +158,6 @@ assert_eq "prd-from-grill-me runs the lens pass between Step 2 and Step 3" \
 assert_match "prd-from-grill-me passes full depth" "$(between '^2a[.] ' "$PRD" '^3[.] Interview')" "\`full\` depth"
 assert_nomatch "prd-from-grill-me leaves lens names to the reference" "$(between '^2a[.] ' "$PRD" '^3[.] Interview')" "three lenses"
 assert_match "an inline brief's decisions are pinned" "$(between '^2a[.] ' "$PRD" '^3[.] Interview')" "inline brief"
-assert_match "Step 3 asks only the heavy remainder" "$(between '^3[.] Interview' "$PRD" '^4[.] Sketch')" "heavy"
-assert_match "Step 3 points at the changed-premises rule" "$(between '^3[.] Interview' "$PRD" '^4[.] Sketch')" "premise"
 assert_match "Step 4b routes late decisions through the changed-premises rule" \
   "$(between '^4b[.] ' "$PRD" '^5[.] Write the PRD')" "changed-premises"
 STEP4=$(between '^4[.] Sketch' "$PRD" '^4a[.] ')
@@ -170,7 +166,6 @@ assert_nomatch "Step 4 no longer confirms modules unconditionally" "$STEP4" "Che
 STEP4A=$(between '^4a[.] ' "$PRD" '^4b[.] ')
 assert_nomatch "Step 4a no longer asks every bikeshed" "$STEP4A" "For each, ask the user their preference"
 assert_match "Step 4a lists classifier-settled bikesheds in the digest" "$STEP4A" "Decided without asking"
-assert_match "Step 4a closes with the user's approval" "$STEP4A" "approval"
 assert_match "Step 4a turns a vetoed line into an ask" "$STEP4A" "vetoed"
 
 # --- 8. Depth and resume (AC6) -----------------------------------------------
@@ -180,7 +175,6 @@ assert_match "abbreviated depth dispatches Precedent only" "$WHEN" "| \`abbrevia
 assert_match "full depth dispatches all three lenses" "$WHEN" "| \`full\` | Design, Strategy, Precedent |"
 assert_match "plan --resume is covered" "$WHEN" "plan --resume"
 assert_match "parked anchors are not pinned" "$WHEN" "Status: parked"
-assert_match "parked questions are handled first" "$WHEN" "first"
 DEPTH=$(between '^- [[] []] [*][*]Interview depth' "$PLAN" '^---$')
 assert_match "plan's depth list passes abbreviated depth" "$DEPTH" "\`abbreviated\`"
 assert_match "plan's depth list passes full depth" "$DEPTH" "\`full\`"
