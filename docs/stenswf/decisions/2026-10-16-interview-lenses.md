@@ -19,28 +19,12 @@ confirm modules, ask every bikeshed. The fix routes every substantive decision
 through one research stage and decision-escalation's unchanged classifier, and
 removes those instructions. Final approval stays a separate checkpoint.
 
-**The research stage.** One shared reference with the interface "research
-these unresolved decisions under these constraints":
-
-- The caller drafts the questions. Design, Strategy and Precedent research
-  them in parallel, at most once per run, each adding at most 3.
-- The caller verifies every verdict against code, requirements, decisions and
-  tests — starting from the citations and expanding narrowly — investigates
-  disagreements, runs a pre-mortem, and re-verifies a replaced recommendation.
-  Existing behavior never settles a `[business]` question.
-- decision-escalation classifies. Easy decisions go to a vetoable
-  `Decided without asking` digest; heavy ones are asked with each option's
-  evidence and downsides. `Keep` / `Exempt this work` / `Supersede` is asked
-  only when proceeding needs an exception.
-- A changed premise reopens the conclusions that depended on it: narrow
-  re-research, the same verification and classification, and re-approval if
-  the approved design changed. The lens budget stays once per run.
-- Resume pins only resolved decisions. Unattended runs PARK and halt; a PRD
-  session parks on its intake issue — creating a plain `Intake: <topic>` issue
-  when it has none — so a fresh run can resume and nothing is published around
-  an open question.
-- `decision-weighting` gains the business-logic question for every weighing
-  skill.
+**The research stage.** The caller drafts the open questions, the Design,
+Strategy and Precedent lenses research them once per run, the caller verifies
+the verdicts and runs a pre-mortem, and decision-escalation classifies what
+remains. The contract is
+[interview-lenses.md](../../../plugins/stenswf/references/interview-lenses.md);
+this record keeps only why it has that shape.
 
 ## Consequences
 
@@ -50,9 +34,9 @@ these unresolved decisions under these constraints":
 - **The topology is a hypothesis.** Three lenses were chosen because the user
   asked for lens subagents, and isolated contexts give each criterion a
   dedicated pass without loading the caller's context. Nothing shows they
-  beat a strengthened Explore pass. Only `## When to run` and the lens blocks
-  name lenses, so the producer can be swapped on evidence without touching
-  verification, classification or the callers.
+  beat a strengthened Explore pass. Callers pass only a depth and only
+  `## When to run` maps it to lenses, so the producer can be swapped on
+  evidence without touching verification, classification or the callers.
 - **Same-model lenses.** The lenses are not independent authors. This is
   mitigated by verification beyond the citations, the caller's pre-mortem, and
   never counting consensus as a tiebreaker.
@@ -99,7 +83,8 @@ these unresolved decisions under these constraints":
   definition.
 - No unilateral heavy decision.
 - PARK halts, and nothing is published around a parked question.
-- Final approval stays a separate checkpoint.
+- Final approval stays a separate checkpoint; an unattended run parks it
+  rather than skipping it, because availability does not change who decides.
 - `decision-weighting`'s `### Strategic over tactical` subsection is
   unchanged.
 - `plan-light` is out of scope.

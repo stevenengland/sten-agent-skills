@@ -361,7 +361,8 @@ answer each, and the user sees only what stays heavy, plus final approval.
   before approval; a vetoed line becomes a question. A changed premise reopens
   the conclusions that depended on it, with approval asked again if the
   approved design changed. On `plan --resume` only resolved decisions are
-  pinned and parked ones come first. Unattended runs PARK and halt; a PRD
+  pinned and parked ones come first. Unattended runs PARK their heavy
+  questions and the final approval, then halt; a PRD
   session parks on an `Intake: <topic>` issue and resumes from it, never
   publishing a PRD around a parked question.
 
