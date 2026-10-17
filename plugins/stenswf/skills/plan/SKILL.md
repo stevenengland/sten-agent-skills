@@ -17,6 +17,8 @@ heavy decision PARKs instead (write the tension to an issue comment, or the PR
 body if one exists, plus a pending
 `parked` anchor in `decisions.md`), per
 [../../references/decision-escalation.md](../../references/decision-escalation.md).
+The final plan approval parks the same way, at the same target, per
+[../../references/interview-lenses.md#unattended-runs](../../references/interview-lenses.md#unattended-runs).
 
 ## Audience
 
@@ -164,9 +166,11 @@ Record:
   `.stenswf/<blocker>/plan-light.md` if present; else the issue body's
   `Files (hint)`.
 - [ ] **Interview depth:**
-  - **AFK**: abbreviated. 3–5 Design Decision entries, then Phase 2.
-  - **HITL**: full. Resolve all branches.
-  - **spike**: abbreviated; exists to land types/vocabulary.
+  - **AFK**: abbreviated (lens depth `abbreviated`). 3–5 Design Decision
+    entries, then Phase 2.
+  - **HITL**: full (lens depth `full`). Resolve all branches.
+  - **spike**: abbreviated (lens depth `abbreviated`); exists to land
+    types/vocabulary.
 
 ---
 
@@ -189,9 +193,22 @@ Dispatch `Explore` subagent (don't read files directly):
 >
 > No file contents. Symbol paths + 1-sentence descriptions only.
 
+### Lens pass
+
+Before asking the user anything, run the lens pass per
+[../../references/interview-lenses.md](../../references/interview-lenses.md):
+draft every substantive open decision as a question — including interface
+changes and the behaviors to test — dispatch the lenses, verify their
+verdicts, and hand them to decision-escalation's classifier. Pass the lens
+depth Phase 0's **Interview depth** names for this slice; the reference maps it
+to lenses.
+
 ### Interview
 
-Interview relentlessly about every aspect until shared understanding:
+Interview about every question the lens pass left heavy, and every vetoed
+digest line, until shared understanding. Easy questions are already decided —
+do not re-ask them unless an answer changes their premise; then reopen them
+per the lens pass's changed-premises rule:
 
 - Recommended answer + reasoning per question.
 - Codebase questions → targeted Explore subagents.
@@ -208,11 +225,12 @@ No code in this phase.
 
 ### Interface and behavior interview
 
-Before recording Design Decisions, work through the following with the
-user. Lead with your recommendation; iterate.
+Before recording Design Decisions, settle the following. Each open item is a
+question in the lens pass; ask the user only what the classifier leaves
+heavy, leading with your recommendation.
 
-- [ ] Confirm with user what interface changes are needed.
-- [ ] Confirm with user which behaviors to test (prioritize).
+- [ ] Decide what interface changes are needed.
+- [ ] Decide which behaviors to test, and their priority.
 - [ ] Identify opportunities for [deep modules](../codebase-design/SKILL.md)
       (small interface, deep implementation).
       Apply the deletion test and the adapter-count question from `codebase-design` to every module the plan adds or reshapes.
@@ -220,13 +238,14 @@ user. Lead with your recommendation; iterate.
 - [ ] List the behaviors to test (not implementation steps).
 - [ ] When an interface or flow changes, show the smallest `show-me` view
       that clarifies it (Load `show-me`) — no diagram for its own sake.
-- [ ] Get user approval on the plan.
+- [ ] Show the `Decided without asking` digest from the lens pass; a vetoed
+      line becomes an interview question.
+- [ ] Get user approval on the plan — a separate checkpoint, even when no
+      question needed the user. Unattended, it parks with the digest
+      ([../../references/interview-lenses.md#unattended-runs](../../references/interview-lenses.md#unattended-runs))
+      and Phase 2 does not run.
 
-Ask: "What should the public interface look like? Which behaviors are
-most important to test?"
-
-**You can't test everything.** Confirm with the user exactly which
-behaviors matter most. Focus testing effort on critical paths and
+**You can't test everything.** Focus testing effort on critical paths and
 complex logic, not every possible edge case.
 
 ### Design Decisions Log
@@ -297,7 +316,8 @@ When invoked with `--resume`:
 2. Preserve `status == "done"` entries — their `sha` and `commit_subject`
    stay as-is.
 3. Re-run Phase 0 + Phase 1 (orientation + relevant interview) against
-   current issue body.
+   current issue body. The lens pass pins only resolved anchors; parked
+   ones — a parked plan approval included — come first.
 4. Re-write `concept.md`, `stable-prefix.md`, `conventions.md`,
    `house-rules.md`, `acceptance-criteria.md`, `file-structure.md`,
    `review-step.md`, `design-summary.md`. **Do not touch

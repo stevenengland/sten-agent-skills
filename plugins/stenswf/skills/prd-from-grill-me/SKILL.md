@@ -63,6 +63,14 @@ If `$ORIG` is set:
 2. Print a 5-line summary + the classification. Ask the user to
    confirm. On disagreement, re-classify and re-confirm.
 
+   **Unattended** (per
+   [../../references/interview-lenses.md#unattended-runs](../../references/interview-lenses.md#unattended-runs)):
+   do not ask, and do not settle the class yourself. The one exception to
+   halting at once: Steps 1–2a (Explore and the lens pass) do not depend on
+   the class and may run. Nothing class-dependent runs: no class bias (item 4
+   below) and nothing from Step 3 on. The confirmation parks at the end of Step 2a, together with
+   any heavy questions, and the resumed run confirms it first.
+
 3. Use `/tmp/req-$ORIG.md` as the Step-1 long description input —
    skip Step 1's open-ended question.
 
@@ -78,7 +86,7 @@ If `$ORIG` is set:
 5. Record `class:` in the PRD front-matter (Step 5 already requires it
    per [../../references/prd-template.md](../../references/prd-template.md)).
 
-**Inline brief.** If `$ARGUMENTS` is text rather than an issue number — for example the grilled brief `/stenswf:improve-codebase-architecture` hands over — that text is the Step-1 description: skip Step 1's question. A leading `class: <value>` line proposes the PRD class; confirm it with the user as in step 2 above, then apply steps 4–5. The brief has already been argued through, so Step 3 asks only what it leaves open and never re-asks a decision the brief records.
+**Inline brief.** If `$ARGUMENTS` is text rather than an issue number — for example the grilled brief `/stenswf:improve-codebase-architecture` hands over — that text is the Step-1 description: skip Step 1's question. A leading `class: <value>` line proposes the PRD class; confirm it with the user as in step 2 above, then apply steps 4–5. The brief has already been argued through, so Step 3 asks only what it leaves open and never re-asks a decision the brief records. An intake issue whose body starts with the line `Inline brief:` — written by an unattended park — is resumed as that brief.
 
 If `$ARGUMENTS` is empty, behave as before (blank-page interview from Step 1).
 
@@ -86,6 +94,11 @@ If `$ARGUMENTS` is empty, behave as before (blank-page interview from Step 1).
 
 1. Ask the user for a long, detailed description of the problem and any
    solution ideas. **Skip if Phase 0 already populated `/tmp/req-$ORIG.md` or an inline brief was given.**
+
+   An unattended run with neither an issue nor a brief has nothing to research
+   and nowhere to park: stop with
+   `BLOCKED: no description — rerun with an issue number or an inline brief`,
+   creating nothing.
 
 2. Explore the repo via an Explore subagent (≤300 words, thoroughness: medium).
    Do NOT read files directly.
@@ -95,9 +108,35 @@ If `$ARGUMENTS` is empty, behave as before (blank-page interview from Step 1).
    > <affected modules>. Return a report ≤300 words: what exists,
    > what's missing, risks. Thoroughness: medium.
 
-3. Interview relentlessly about every aspect of the plan. Walk each
-   branch of the design tree. Resolve dependencies one-by-one.
-   With an inline brief, cover only what it leaves open.
+2a. **Lens pass.** Before asking anything, run the lens pass per
+    [../../references/interview-lenses.md](../../references/interview-lenses.md)
+    at `full` depth. Draft every substantive decision as a question —
+    the design branches for Step 3, the module and test choices for Step 4,
+    the bikesheds for Step 4a. With an inline brief, every decision the brief
+    records is pinned.
+
+    **Unattended.** Per the lens-pass reference's `## Unattended runs`, a
+    heavy question parks, and so do Phase 0's classification (at the end of
+    this step) and Step 4a's approval — the session never reaches Step 5 with
+    anything pending.
+
+    - **Park target.** `$ORIG`. Without one (an inline brief), first create a
+      plain intake issue titled `Intake: <topic>`, with no `stenswf:v1`
+      front-matter and the brief verbatim under a first line `Inline brief:`.
+      Write the parked anchors under `.stenswf/<intake>/decisions.md`, then
+      stop.
+    - **Resume** with `/stenswf:prd-from-grill-me <intake>`. Phase 0 accepts
+      the plain issue and reads its comments — the parked blocks and any
+      answers — and an `Inline brief:` body is resumed as the brief. Pending
+      items are handled first; Step 5 closes the intake issue once the PRD
+      exists.
+
+3. Interview about every question the lens pass left heavy, and every vetoed
+   digest line. Walk each remaining branch of the design tree. Resolve
+   dependencies one-by-one. Easy questions are already decided — do not
+   re-ask them unless an answer changes their premise; then reopen them per
+   the lens pass's changed-premises rule. With an inline brief, cover only
+   what it leaves open.
 
    - Provide a recommended answer and reasoning for each question.
    - Delegate codebase questions to targeted Explore subagents.
@@ -121,21 +160,30 @@ If `$ARGUMENTS` is empty, behave as before (blank-page interview from Step 1).
    Keep the agreed design in the PRD's `## Change outline` as a
    GitHub-renderable view; translate an accepted HTML view, do not paste it.
 
-   Check with the user that modules match their expectations. Check
-   which modules they want tests written for.
+   Module boundaries and which modules get tests are lens-pass questions;
+   ask only what the classifier leaves heavy. The sketch itself is approved
+   at the end of Step 4a.
 
 4a. **Lock bikeshed decisions now.** Surface every decision that would
     otherwise be re-litigated inside slice issues (naming, shape,
     layout, test layout, error surfacing, vocabularies). Resolve them
     upfront so downstream issues stay AFK and Lite.
 
-    For each, ask the user their preference (with your recommendation).
+    Settle each through the lens pass: a bikeshed the classifier settles goes
+    under `Decided without asking`; ask the user about the rest (with your
+    recommendation).
     Record the resolved decision in the PRD's `## Conventions` section.
     That section is copied verbatim into every slice by `prd-to-issues`.
 
     Typical prompts (use whichever apply): module/file naming, exported
     function naming, descriptor shape, test-file split, error surfacing,
     domain vocabulary.
+
+    Close the step by showing the module sketch together with the
+    `Decided without asking` digest — the easy decisions from Steps 3, 4 and
+    here — and get the user's approval before Step 4b. A vetoed line becomes
+    a question. Unattended, the approval parks with the sketch and the digest
+    ([../../references/interview-lenses.md#unattended-runs](../../references/interview-lenses.md#unattended-runs)).
 
 4b. **Step back and reflect before writing the PRD.**
 
@@ -164,6 +212,10 @@ If `$ARGUMENTS` is empty, behave as before (blank-page interview from Step 1).
     accordingly. Advisory only — `prd-to-issues` re-tags every AC
     against the heuristic ladder per
     [../../references/behavior-change-signal.md](../../references/behavior-change-signal.md).
+
+    Any decision this reflection surfaces or changes goes through the lens
+    pass's changed-premises rule; if the design approved in Step 4a changes,
+    ask for approval again before Step 5.
 5. Write the PRD using the template at
    [../../references/prd-template.md](../../references/prd-template.md).
    Create as an issue (CLI when available; otherwise present formatted

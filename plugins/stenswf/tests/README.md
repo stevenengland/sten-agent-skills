@@ -96,6 +96,18 @@ Dev-only. Not packaged for end users.
   the judgments the instructions produce — that is what `review-scenarios/`
   is for. A green run says the lens is wired up, never that its rules are
   right.
+- [`interview-lenses.test.sh`](interview-lenses.test.sh) — structural smoke
+  check for the interview lens pass: the shared reference and its three lens
+  blocks exist, the result and summary tokens are present, `plan` and
+  `prd-from-grill-me` run the pass in the right place and no longer confirm
+  settled decisions unconditionally, `decision-weighting` carries the
+  business-logic question, and out-of-scope files stay off it.
+
+  **Not covered — by design:** whether a lens judges well, whether fewer
+  questions reach the user, and whether escalation behaves as before. A few
+  acceptance-criteria phrases are pinned on purpose; the rest of the wording
+  is free. A green run says the lens pass is wired up, never that
+  its verdicts are right.
 - [`review-scenarios/`](review-scenarios/README.md) — sample diffs with the
   verdict a good reviewer should reach. Not part of the bash suite: run them
   by hand, per their README, whenever the reviewer instructions change.
@@ -119,6 +131,7 @@ bash plugins/stenswf/tests/deliberation.test.sh
 bash plugins/stenswf/tests/issue-comments.test.sh
 bash plugins/stenswf/tests/deepening-trigger.test.sh
 bash plugins/stenswf/tests/codebase-design.test.sh
+bash plugins/stenswf/tests/interview-lenses.test.sh
 ```
 
 The GitHub-facing suites inject a fake `gh` on `PATH` rather than calling
