@@ -27,6 +27,10 @@ disproportionate over-engineering. The deepest, simplest design that serves
 the quality attributes wins — that is usually neither the cheapest-to-build
 nor the most elaborate.
 
+When comparing options, ask: **Which option is cleanest from a business-logic point of view?**
+The option that models the domain's rules most directly, with the fewest
+special cases and workarounds, usually wins.
+
 ### Strategic over tactical
 
 Applies to the planning skills `architecture`, `grill-me`, `prd-from-grill-me`,
